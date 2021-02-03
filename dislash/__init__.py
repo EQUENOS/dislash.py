@@ -1,0 +1,1 @@
+# It's a small extension for discord.py that supports slash commands
