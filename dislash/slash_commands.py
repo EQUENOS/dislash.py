@@ -2,7 +2,21 @@ from typing import List, Union
 import discord
 from discord.ext import tasks
 from discord.http import Route
+from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 import asyncio
+
+
+#-----------------------------------+
+#              Utils                |
+#-----------------------------------+
+def class_name(func):
+    res = func.__qualname__[:-len(func.__name__)]
+    return None if len(res) == 0 else res[:-1]
+
+
+class PseudoCog:
+    def __init__(self, client):
+        self.client = client
 
 
 #-----------------------------------+
@@ -22,6 +36,11 @@ class SlashCommandError(discord.DiscordException):
 
 class NotGuildOwner(SlashCommandError):
     pass
+
+
+class MissingGuildPermissions(SlashCommandError):
+    def __init__(self, perms):
+        self.perms = perms
 
 
 class MissingPermissions(SlashCommandError):
@@ -273,10 +292,25 @@ class SlashCommand:
 #      Slash-commands client        |
 #-----------------------------------+
 class SlashCommandResponse:
-    def __init__(self, func):
-        self.is_from_cog = '.' in func.__qualname__
+    def __init__(self, client, func, name):
+        cogname = class_name(func)
+        if cogname is not None:
+            self.cog = PseudoCog(client)
+        else:
+            self.cog = None
+        if hasattr(func, '__slash_checks__'):
+            self.checks = func.__slash_checks__
+        else:
+            self.checks = []
+        self.name = name
         self.func = func
-        self.checks = []
+        self._buckets = None
+    
+    async def __call__(self, interaction):
+        if self.cog is not None:
+            return await self.func(self.cog, interaction)
+        else:
+            return await self.func(interaction)
 
 
 class SlashClient:
@@ -314,7 +348,7 @@ class SlashClient:
         name = func.__name__
         if name.startswith('on_'):
             name = name[3:]
-            if name in ['slash_command_error']:
+            if name in ['slash_command_error', 'ready']:
                 self.events[name] = func
         return func
 
@@ -336,19 +370,19 @@ class SlashClient:
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             name = kwargs.get('name', func.__name__)
-            self.commands[name] = SlashCommandResponse(func)
-            return func
+            new_func = SlashCommandResponse(self.client, func, name)
+            self.commands[name] = new_func
+            return new_func
         return decorator
     
     def check(self, predicate):
         def decorator(func):
-            name = None
-            for kw, scr in self.commands.items():
-                if scr.func == func:
-                    name = kw
-                    break
-            if name is not None:
-                self.commands[name].checks.append(predicate)
+            if isinstance(func, SlashCommandResponse):
+                func.checks.append(predicate)
+            else:
+                if not hasattr(func, '__slash_checks__'):
+                    func.__slash_checks__ = []
+                func.__slash_checks__.append(predicate)
             return func
         return decorator
     
@@ -359,17 +393,39 @@ class SlashClient:
             raise NotGuildOwner("You don't own this guild")
         return self.check(predicate)
     
-    def has_permissions(self, **kwargs):
+    def has_guild_permissions(self, **perms):
         def predicate(inter):
             if inter.member.id == inter.guild.owner_id:
                 return True
             has = inter.member.guild_permissions
             if has.administrator:
                 return True
-            if all(getattr(has, kw, v) == v for kw, v in kwargs.items()):
+            if all(getattr(has, kw, True) for kw in perms):
                 return True
-            raise MissingPermissions([])
+            raise MissingGuildPermissions([kw for kw in perms if getattr(has, kw, None) is not None])
         return self.check(predicate)
+    
+    def has_permissions(self, **perms):
+        invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
+        if invalid:
+            raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+        def predicate(inter):
+            ch = inter.channel
+            permissions = ch.permissions_for(inter.member)
+            missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
+            if not missing:
+                return True
+            raise MissingPermissions(missing)
+        return self.check(predicate)
+    # FIXME
+    def cooldown(self, rate, per, type=BucketType.default):
+        def decorator(func):
+            if isinstance(func, SlashCommandResponse):
+                func._buckets = CooldownMapping(Cooldown(rate, per, type))
+            else:
+                func.__slash_cooldown__ = Cooldown(rate, per, type)
+            return func
+        return decorator
 
     # Working with slash-commands
     async def fetch_global_commands(self):
@@ -461,6 +517,7 @@ class SlashClient:
             await asyncio.sleep(1)
         self.is_ready = True
         self._interactions_tracker.start()
+        self.client.loop.create_task(self._activate_event('ready'))
         self.registered_global_commands = await self.fetch_global_commands()
     @tasks.loop()
     async def _interactions_tracker(self):
@@ -469,6 +526,15 @@ class SlashClient:
         '''
         payload = await self.client.ws.wait_for('INTERACTION_CREATE', lambda data: True)
         self.client.loop.create_task(self._invoke_slash_command(payload))
+
+    async def _activate_event(self, event_name, *args, **kwargs):
+        func = self.events.get(event_name)
+        if func is not None:
+            cogname = class_name(func)
+            if cogname is not None:
+                await func(PseudoCog(self.client), *args, **kwargs)
+            else:
+                await func(*args, **kwargs)
 
     async def _invoke_slash_command(self, payload):
         '''
@@ -490,14 +556,9 @@ class SlashClient:
                     break
             # Activate error handler in case checks failed
             if err is not None:
-                func = self.events['slash_command_error']
-                if '.' in func.__qualname__:
-                    await func(self, inter, err)
-                else:
-                    await func(inter, err)
+                if 'slash_command_error' not in self.events:
+                    raise err
+                await self._activate_event('slash_command_error', inter, err)
                 return
             # Invoke the command
-            if SCR.is_from_cog:
-                await SCR.func(self, inter)
-            else:
-                await SCR.func(inter)
+            await SCR(inter)
