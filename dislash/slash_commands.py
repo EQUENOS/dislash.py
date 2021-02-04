@@ -515,19 +515,21 @@ class SlashClient:
         '''# Don't use it'''
         while self.client.user is None:
             await asyncio.sleep(1)
+        self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.is_ready = True
-        self._interactions_tracker.start()
         self.client.loop.create_task(self._activate_event('ready'))
         self.registered_global_commands = await self.fetch_global_commands()
-    @tasks.loop()
-    async def _interactions_tracker(self):
+    
+    def _do_invokation(self, payload):
         '''
         # Don't use it
         '''
-        payload = await self.client.ws.wait_for('INTERACTION_CREATE', lambda data: True)
         self.client.loop.create_task(self._invoke_slash_command(payload))
 
     async def _activate_event(self, event_name, *args, **kwargs):
+        '''
+        # Don't use it
+        '''
         func = self.events.get(event_name)
         if func is not None:
             cogname = class_name(func)
