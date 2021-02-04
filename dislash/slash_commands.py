@@ -1,9 +1,9 @@
-from typing import List, Union
 import discord
-from discord.ext import tasks
 from discord.http import Route
 from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 import asyncio
+from .interactions import Interaction, SlashCommand
+import datetime
 
 
 #-----------------------------------+
@@ -16,22 +16,93 @@ def class_name(func):
 
 class PseudoCog:
     def __init__(self, client):
+        '''
+        A shitty solution for slash-commands in cogs
+        '''
         self.client = client
+
+
+class HANDLER:
+    '''
+    # Internal use only
+    ## A global SLashCommand handler
+    This is done in order to give an ability to
+    decorate functions across multiple files
+    ```
+    from dislash import slash_commands
+
+    @slash_commands.command()
+    async def hello(interaction):
+        await interaction.reply('Hi')
+    ```
+    ### Note that you should init `SlashClient` to track `interaction_create` events
+    '''
+    client = None
+    commands = {}
+
+
+class SlashCommandResponse:
+    def __init__(self, client, func, name):
+        cogname = class_name(func)
+        if cogname is not None:
+            self.cog = PseudoCog(client)
+        else:
+            self.cog = None
+        if hasattr(func, '__slash_checks__'):
+            self.checks = func.__slash_checks__
+        else:
+            self.checks = []
+        try:
+            cooldown = func.__slash_cooldown__
+        except AttributeError:
+            cooldown = None
+        finally:
+            self._buckets = CooldownMapping(cooldown)
+        self.name = name
+        self.func = func
+    
+    async def __call__(self, interaction):
+        if self.cog is not None:
+            return await self.func(self.cog, interaction)
+        else:
+            return await self.func(interaction)
+    
+    async def invoke(self, interaction):
+        self._prepare_cooldowns(interaction)
+        await self(interaction)
+
+    def _prepare_cooldowns(self, inter):
+        if self._buckets.valid:
+            dt = inter.created_at
+            current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
+            bucket = self._buckets.get_bucket(inter, current)
+            retry_after = bucket.update_rate_limit(current)
+            if retry_after:
+                raise CommandOnCooldown(bucket, retry_after)
 
 
 #-----------------------------------+
 #            Exceptions             |
 #-----------------------------------+
-class NotSlashCommand(discord.DiscordException):
-    pass
-
-
-class BadOption(discord.DiscordException):
-    pass
-
-
 class SlashCommandError(discord.DiscordException):
     pass
+
+
+class CommandOnCooldown(SlashCommandError):
+    """Exception raised when the slash-command being invoked is on cooldown.
+
+    This inherits from `SlashCommandError`
+
+    ## Attributes
+    
+    `cooldown`: `Cooldown` (a class with attributes `rate`, `per`, and `type`)
+
+    `retry_after`: `float` (the amount of seconds to wait before you can retry again)
+    """
+    def __init__(self, cooldown, retry_after):
+        self.cooldown = cooldown
+        self.retry_after = retry_after
+        super().__init__('You are on cooldown. Try again in {:.2f}s'.format(retry_after))
 
 
 class NotGuildOwner(SlashCommandError):
@@ -49,270 +120,122 @@ class MissingPermissions(SlashCommandError):
 
 
 #-----------------------------------+
-#       Interaction wrappers        |
+#            Decorators             |
 #-----------------------------------+
-class InteractionDataOption:
-    def __init__(self, data: dict):
-        self.name = data['name']
-        self.value = data.get('value')
-        self.options = [InteractionDataOption(o) for o in data.get('options', [])]
-    
-    def get_option(self, name: str):
-        for o in self.options:
-            if o.name == name:
-                return o
-        return InteractionDataOption({'name': name, 'value': None})
+def command(*args, **kwargs):
+    '''
+    A decorator that registers a function below as response for specified slash-command
+
+    `name` - name of the slash-command you want to respond to
+    (equals to function name by default)
+
+    (defaults to `None`, in this case function responds to
+    both global and local commands with the same names)
+
+    ## Example 
+    ```
+    @slash_commands.command(name='user-info')
+    async def user_info(interaction):
+        # Your code
+    ```
+    '''
+    def decorator(func):
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
+        name = kwargs.get('name', func.__name__)
+        # is_global = kwargs.get('global')
+        new_func = SlashCommandResponse(HANDLER.client, func, name)
+        HANDLER.commands[name] = new_func
+        return new_func
+    return decorator
 
 
-class InteractionData:
-    def __init__(self, data: dict):
-        self.id = int(data['id'])
-        self.name = data['name']
-        self.options = [InteractionDataOption(o) for o in data.get('options', [])]
-    
-    def get_option(self, name: str):
-        for o in self.options:
-            if o.name == name:
-                return o
-        return InteractionDataOption({'name': name, 'value': None})
-
-
-class Interaction:
-    def __init__(self, client, payload: dict):
-        self.client = client
-        self.id = int(payload['id'])
-        self.version = payload['version']
-        self.type = payload['type']
-        self.token = payload['token']
-        self.guild = self.client.get_guild(int(payload['guild_id']))
-        self.channel_id = int(payload['channel_id'])
-        self._channel = None
-        self.member = discord.Member(
-            data=payload['member'],
-            guild=self.guild,
-            state=self.client.user._state
-        )
-        self.data = InteractionData(payload.get('data', {}))
-    @property
-    def channel(self):
-        if self._channel is None:
-            self._channel = self.guild.get_channel(self.channel_id)
-        return self._channel
-    @property
-    def author(self):
-        return self.member
-
-    async def reply(self, content: str=None, embed: discord.Embed=None, hide_user_input=False):
-        # Which callback type is it
-        if content is None and embed is None:
-            if hide_user_input:
-                _type = 1
-            else:
-                _type = 5
-        elif hide_user_input:
-            _type = 3
+def check(predicate):
+    '''
+    A function that converts `predicate(interaction)` functions
+    into slash-command decorators
+    '''
+    def decorator(func):
+        if isinstance(func, SlashCommandResponse):
+            func.checks.append(predicate)
         else:
-            _type = 4
-        # Post
-        data = {}
-        if content is not None:
-            data['content'] = str(content)
-        if embed is not None:
-            data['embeds'] = [embed.to_dict()]
-        json = {
-            "type": _type,
-            "data": data
-        }
-        await self.client.http.request(
-            Route(
-                'POST', '/interactions/{interaction_id}/{token}/callback',
-                interaction_id=self.id, token=self.token
-            ),
-            json=json
-        )
+            if not hasattr(func, '__slash_checks__'):
+                func.__slash_checks__ = []
+            func.__slash_checks__.append(predicate)
+        return func
+    return decorator
 
 
-#-----------------------------------+
-#     Slash-command registrator     |
-#          OOP Interface            |
-#-----------------------------------+
-class OptionChoice:
-    def __init__(self, name: str, value: Union[str, int]):
-        '''
-        `name` - choice name (`str`)
-
-        `value` - choice value (`str` | `int`)
-        '''
-        self.name = name
-        self.value = value
+def is_guild_owner():
+    def predicate(interaction):
+        if interaction.member.id == interaction.guild.owner_id:
+            return True
+        raise NotGuildOwner("You don't own this guild")
+    return check(predicate)
 
 
-class Option:
-    def __init__(self, name: str, description: str, type: int, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
-        '''
-        `name` - option name
+def has_guild_permissions(**perms):
+    def predicate(inter):
+        if inter.member.id == inter.guild.owner_id:
+            return True
+        has = inter.member.guild_permissions
+        if has.administrator:
+            return True
+        if all(getattr(has, kw, True) for kw in perms):
+            return True
+        raise MissingGuildPermissions([kw for kw in perms if getattr(has, kw, None) is not None])
+    return check(predicate)
 
-        `description` - option description
 
-        `type` - the option type (see table below)
+def has_permissions(**perms):
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
+    if invalid:
+        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+    def predicate(inter):
+        ch = inter.channel
+        permissions = ch.permissions_for(inter.member)
+        missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
+        if not missing:
+            return True
+        raise MissingPermissions(missing)
+    return check(predicate)
 
-        `choices` - list of option choices (type <`OptionChoice`>)
-        
-        # Option Types
-        ```json
-        +-------------------+-------+
-        | NAME              | VALUE |
-        +-------------------+-------+
-        | SUB_COMMAND       | 1     |
-        | SUB_COMMAND_GROUP | 2     |
-        | STRING            | 3     |
-        | INTEGER           | 4     |
-        | BOOLEAN           | 5     |
-        | USER              | 6     |
-        | CHANNEL           | 7     |
-        | ROLE              | 8     |
-        +-------------------+-------+
-        ```
-        # About option order
-        Option of type `2` can only contain options of type `1`
 
-        Option of type `1` can only contain options of type `3` or higher
+def cooldown(rate, per, type=BucketType.default):
+    '''
+    A decorator that adds a cooldown to a `SlashCommand`
 
-        Options of type `3` and higher can't contain any sub options
+    A cooldown allows a command to only be used a specific amount
+    of times in a specific time frame. These cooldowns can be based
+    either on a per-guild, per-channel, per-user, per-role or global basis.
+    Denoted by the third argument of `type` which must be of enum
+    type `BucketType`.
 
-        Do not specify `required=True` in case you're defining a type-1 or type-2 option
-        '''
-        self.name = name
-        self.description = description
-        self.type = type
-        if required:
-            self.required = True
-        if choices is not None:
-            self.choices = choices
-        if options is not None:
-            if self.type == 1:
-                for opt in options:
-                    if opt.type < 3:
-                        raise BadOption('Unexpected sub_command in a sub_command')
-            elif self.type == 2:
-                for opt in options:
-                    if opt.type != 1:
-                        raise BadOption('Expected sub_command in this sub_command_group')
-            self.options = options
-    @classmethod
-    def from_dict(cls, payload: dict):
-        if 'options' in payload:
-            payload['options'] = [Option.from_dict(p) for p in payload['options']]
-        if 'choices' in payload:
-            payload['choices'] = [OptionChoice(**p) for p in payload['choices']]
-        return Option(**payload)
+    If a cooldown is triggered, then `.CommandOnCooldown` is triggered in
+    `on_slash_command_error` and the local error handler.
 
-    def add_choice(self, choice: OptionChoice):
-        if 'choices' not in self.__dict__:
-            self.choices = [choice]
-        else:
-            self.choices.append(choice)
+    A command can only have a single cooldown.
+
+    ## Parameters
     
-    def add_option(self, option):
-        if 'options' not in self.__dict__:
-            self.options = [option]
+    `rate`: `int` - The number of times a command can be used before triggering a cooldown.
+
+    `per`: `float`- The amount of seconds to wait for a cooldown when it's been triggered.
+
+    `type`: `BucketType` - The type of cooldown to have.
+    '''
+    def decorator(func):
+        if isinstance(func, SlashCommandResponse):
+            func._buckets = CooldownMapping(Cooldown(rate, per, type))
         else:
-            if self.type == 1:
-                if option.type < 3:
-                    raise BadOption('Sub_command (or group) can only be folded in a sub_command_group')
-            elif self.type == 2:
-                if option.type != 1:
-                    raise BadOption('Expected sub_command in this sub_command_group')
-            self.options.append(option)
-
-    def to_dict(self):
-        payload = {
-            'name': self.name,
-            'description': self.description,
-            'type': self.type
-        }
-        dct = self.__dict__
-        if 'required' in dct:
-            payload['required'] = True
-        if 'choices' in dct:
-            payload['choices'] = [c.__dict__ for c in self.choices]
-        if 'options' in dct:
-            payload['options'] = [o.to_dict() for o in self.options]
-        return payload
-
-
-class SlashCommand:
-    def __init__(self, name: str, description: str, options: list=[], *, id: int=None, application_id: int=None):
-        '''
-        # Slash-command constructor
-
-        `name` - slash-command name
-
-        `description` - slash-command description
-
-        `options` - slash-command options
-
-        ## Example of registering a slash-command
-        ```
-        sc = SlashCommand(
-            name='user-info',
-            description='Shows user profile',
-            options=[
-                Option('user', 'Enter a user to inspect', type=6)
-            ]
-        )
-        await slash_client.register_global_slash_command(sc)
-        # slash_client is a <SlashClient> instance
-        # Also check out <Option> and <OptionChoice>
-        ```
-        '''
-        self.id = id
-        self.application_id = application_id
-        self.name = name
-        self.description = description
-        self.options = options
-    @classmethod
-    def from_dict(cls, payload: dict):
-        if 'options' in payload:
-            payload['options'] = [Option.from_dict(p) for p in payload['options']]
-        return SlashCommand(**payload)
-
-    def add_option(self, option: Option):
-        self.options.append(option)
-
-    def to_dict(self):
-        return {
-            'name': self.name,
-            'description': self.description,
-            'options': [o.to_dict() for o in self.options]
-        }
+            func.__slash_cooldown__ = Cooldown(rate, per, type)
+        return func
+    return decorator
 
 
 #-----------------------------------+
 #      Slash-commands client        |
 #-----------------------------------+
-class SlashCommandResponse:
-    def __init__(self, client, func, name):
-        cogname = class_name(func)
-        if cogname is not None:
-            self.cog = PseudoCog(client)
-        else:
-            self.cog = None
-        if hasattr(func, '__slash_checks__'):
-            self.checks = func.__slash_checks__
-        else:
-            self.checks = []
-        self.name = name
-        self.func = func
-        self._buckets = None
-    
-    async def __call__(self, interaction):
-        if self.cog is not None:
-            return await self.func(self.cog, interaction)
-        else:
-            return await self.func(interaction)
-
-
 class SlashClient:
     def __init__(self, client):
         '''
@@ -334,14 +257,17 @@ class SlashClient:
             # Expensive stuff here
         ```
         '''
-        self.client = client
+        HANDLER.client = client
+        self.client = HANDLER.client
         self.events = {}
-        self.commands = {}
         self.registered_global_commands = {}
         self.registered_guild_commands = {}
         self.is_ready = False
         self.client.loop.create_task(self._do_ignition())
-    
+    @property
+    def commands(self):
+        return HANDLER.commands
+
     def event(self, func):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
@@ -375,58 +301,6 @@ class SlashClient:
             return new_func
         return decorator
     
-    def check(self, predicate):
-        def decorator(func):
-            if isinstance(func, SlashCommandResponse):
-                func.checks.append(predicate)
-            else:
-                if not hasattr(func, '__slash_checks__'):
-                    func.__slash_checks__ = []
-                func.__slash_checks__.append(predicate)
-            return func
-        return decorator
-    
-    def is_guild_owner(self):
-        def predicate(interaction):
-            if interaction.member.id == interaction.guild.owner_id:
-                return True
-            raise NotGuildOwner("You don't own this guild")
-        return self.check(predicate)
-    
-    def has_guild_permissions(self, **perms):
-        def predicate(inter):
-            if inter.member.id == inter.guild.owner_id:
-                return True
-            has = inter.member.guild_permissions
-            if has.administrator:
-                return True
-            if all(getattr(has, kw, True) for kw in perms):
-                return True
-            raise MissingGuildPermissions([kw for kw in perms if getattr(has, kw, None) is not None])
-        return self.check(predicate)
-    
-    def has_permissions(self, **perms):
-        invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
-        if invalid:
-            raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
-        def predicate(inter):
-            ch = inter.channel
-            permissions = ch.permissions_for(inter.member)
-            missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
-            if not missing:
-                return True
-            raise MissingPermissions(missing)
-        return self.check(predicate)
-    # FIXME
-    def cooldown(self, rate, per, type=BucketType.default):
-        def decorator(func):
-            if isinstance(func, SlashCommandResponse):
-                func._buckets = CooldownMapping(Cooldown(rate, per, type))
-            else:
-                func.__slash_cooldown__ = Cooldown(rate, per, type)
-            return func
-        return decorator
-
     # Working with slash-commands
     async def fetch_global_commands(self):
         data = await self.client.http.request(Route('GET', '/applications/{app_id}/commands', app_id=self.client.user.id))
@@ -455,7 +329,7 @@ class SlashClient:
 
     async def register_global_slash_command(self, slash_command: SlashCommand):
         if not isinstance(slash_command, SlashCommand):
-            raise NotSlashCommand('Expected <SlashCommand> instance')
+            raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
             Route('POST', '/applications/{app_id}/commands', app_id=self.client.user.id),
             json=slash_command.to_dict()
@@ -463,7 +337,7 @@ class SlashClient:
     
     async def register_guild_slash_command(self, guild_id: int, slash_command: SlashCommand):
         if not isinstance(slash_command, SlashCommand):
-            raise NotSlashCommand('Expected <SlashCommand> instance')
+            raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
             Route(
                 'POST', '/applications/{app_id}/guilds/{guild_id}/commands',
@@ -474,7 +348,7 @@ class SlashClient:
     
     async def edit_global_slash_command(self, command_id: int, slash_command: SlashCommand):
         if not isinstance(slash_command, SlashCommand):
-            raise NotSlashCommand('Expected <SlashCommand> instance')
+            raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
             Route(
                 'PATCH', '/applications/{app_id}/commands/{cmd_id}',
@@ -485,7 +359,7 @@ class SlashClient:
     
     async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand):
         if not isinstance(slash_command, SlashCommand):
-            raise NotSlashCommand('Expected <SlashCommand> instance')
+            raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
             Route(
                 'PATCH', '/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}',
@@ -563,4 +437,9 @@ class SlashClient:
                 await self._activate_event('slash_command_error', inter, err)
                 return
             # Invoke the command
-            await SCR(inter)
+            try:
+                await SCR.invoke(inter)
+            except Exception as err:
+                if 'slash_command_error' not in self.events:
+                    raise err
+                await self._activate_event('slash_command_error', inter, err)
