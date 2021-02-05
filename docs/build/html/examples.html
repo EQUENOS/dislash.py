@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Examples &#8212; dislash.py 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Slash-command constructor" href="interactions.html" />
+    <link rel="prev" title="Welcome to dislash.py documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="registering-a-slash-command">
+<h2>Registering a slash-command<a class="headerlink" href="#registering-a-slash-command" title="Permalink to this headline">¶</a></h2>
+<div class="topic">
+<p class="topic-title">Why this is important?</p>
+<p>See <a class="reference internal" href="interactions.html#slash-command-constructor"><span class="std std-ref">Slash-command constructor</span></a> for more info.</p>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">discord</span>
+<span class="kn">from</span> <span class="nn">discord.ext</span> <span class="kn">import</span> <span class="n">commands</span>
+<span class="kn">from</span> <span class="nn">dislash</span> <span class="kn">import</span> <span class="n">slash_commands</span>
+<span class="c1"># Import slash-command constructor</span>
+<span class="kn">from</span> <span class="nn">dislash.interactions</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1"># Init a client instance using discord.py</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">commands</span><span class="o">.</span><span class="n">Bot</span><span class="p">(</span><span class="n">command_prefix</span><span class="o">=</span><span class="s2">&quot;!&quot;</span><span class="p">)</span>
+<span class="c1"># Init a &lt;SlashClient&gt; instance</span>
+<span class="n">slash_client</span> <span class="o">=</span> <span class="n">slash_commands</span><span class="o">.</span><span class="n">SlashClient</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
+
+<span class="nd">@client</span><span class="o">.</span><span class="n">event</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">on_connect</span><span class="p">():</span>
+    <span class="c1"># Let&#39;s register a /random command in Discord API</span>
+    <span class="n">sc</span> <span class="o">=</span> <span class="n">SlashCommand</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;random&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Returns a random number from the given range&quot;</span><span class="p">,</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">Option</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;start&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Enter a number&quot;</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>   <span class="c1"># Type-4 means INTEGER</span>
+                <span class="c1"># Read more about types in docs</span>
+                <span class="n">required</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">),</span>
+            <span class="n">Option</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;end&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Enter a number&quot;</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                <span class="n">required</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="c1"># Post this command via API</span>
+    <span class="k">await</span> <span class="n">slash_client</span><span class="o">.</span><span class="n">register_global_slash_command</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+    <span class="c1"># Discord API uploads global commands for more than 1 hour</span>
+    <span class="c1"># That&#39;s why I highly recommend .register_guild_slash_command for testing:</span>
+    <span class="k">await</span> <span class="n">slash_client</span><span class="o">.</span><span class="n">register_guild_slash_command</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">sc</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="interactions.html#slash-command-constructor"><span class="std std-ref">Slash-command constructor</span></a> section about registering more complicated commands.</p>
+</div>
+</div>
+<div class="section" id="responding-to-a-slash-command">
+<h2>Responding to a slash-command<a class="headerlink" href="#responding-to-a-slash-command" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">discord</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">randint</span>
+<span class="kn">from</span> <span class="nn">discord.ext</span> <span class="kn">import</span> <span class="n">commands</span>
+<span class="kn">from</span> <span class="nn">dislash</span> <span class="kn">import</span> <span class="n">slash_commands</span>
+
+<span class="c1"># Init a client instance using discord.py</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">commands</span><span class="o">.</span><span class="n">Bot</span><span class="p">(</span><span class="n">command_prefix</span><span class="o">=</span><span class="s2">&quot;!&quot;</span><span class="p">)</span>
+<span class="c1"># Init a &lt;SlashClient&gt; instance</span>
+<span class="c1"># in order to start tracking slash-command interactions</span>
+<span class="n">slash_client</span> <span class="o">=</span> <span class="n">slash_commands</span><span class="o">.</span><span class="n">SlashClient</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
+
+
+<span class="c1"># Let&#39;s make a function that responds to /random</span>
+<span class="nd">@slash_client</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">random</span><span class="p">(</span><span class="n">interaction</span><span class="p">):</span>
+    <span class="c1"># interaction is instance of `interactions.Interaction`</span>
+    <span class="c1"># Read more about it in docs</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">interaction</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get_option</span><span class="p">(</span><span class="s1">&#39;start&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">interaction</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get_option</span><span class="p">(</span><span class="s1">&#39;end&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="o">&lt;</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span>
+    <span class="k">await</span> <span class="n">interaction</span><span class="o">.</span><span class="n">reply</span><span class="p">(</span><span class="n">randint</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">dislash.py</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#registering-a-slash-command">Registering a slash-command</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#responding-to-a-slash-command">Responding to a slash-command</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="interactions.html">Slash-command constructor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interactions.html#slash-command-response">Slash-command response</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to dislash.py documentation!</a></li>
+      <li>Next: <a href="interactions.html" title="next chapter">Slash-command constructor</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, EQUENOS.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/examples.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

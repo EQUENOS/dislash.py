@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slash-command constructor &#8212; dislash.py 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Examples" href="examples.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="slash-command-constructor">
+<span id="id1"></span><h1>Slash-command constructor<a class="headerlink" href="#slash-command-constructor" title="Permalink to this headline">¶</a></h1>
+<p>This tool allows to build slash-commands for further registration.
+Registering a new command is <strong>required</strong> due to the way Discord parses slash-commands.</p>
+<div class="line-block">
+<div class="line">1. User inputs data</div>
+<div class="line">2. Discord converts this data into command args</div>
+<div class="line">3. Discord API sends converted data to your app</div>
+</div>
+<p>The second step is never completed if your command isn’t registered.
+There’re 2 types of slash-commands: global and local (per guild).</p>
+<div class="topic">
+<p class="topic-title">Note</p>
+<div class="line-block">
+<div class="line"><strong>Global</strong> command registration takes more than <strong>1 hour</strong>.</div>
+<div class="line"><strong>Guild</strong> command registration is <strong>instant</strong>.</div>
+</div>
+</div>
+<div class="section" id="slashcommand">
+<h2>SlashCommand<a class="headerlink" href="#slashcommand" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">interactions</span><span class="o">.</span><span class="n">SlashCommand</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">options</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Option</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A base class for building slash-commands.</p>
+<div class="section" id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>name</strong> (<code class="docutils literal notranslate"><span class="pre">str</span></code>) - the name of command</p></li>
+<li><p><strong>description</strong> (<code class="docutils literal notranslate"><span class="pre">str</span></code>) - the description of command</p></li>
+<li><p><strong>options</strong> (<code class="docutils literal notranslate"><span class="pre">List[Option]</span></code>) - list of command arguments (or subcommands in some cases)</p></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>name</strong></p></li>
+<li><p><strong>description</strong></p></li>
+<li><p><strong>options</strong></p></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">add_option</span><span class="p">(</span><span class="n">option</span><span class="p">:</span> <span class="n">Option</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line">Adds an option to the list of options.</div>
+</div>
+</div>
+</div>
+<div class="section" id="option">
+<h2>Option<a class="headerlink" href="#option" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">interactions</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Type</span><span class="p">,</span>
+    <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">options</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Option</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">choices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">OptionChoice</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line">This class represents a command option.</div>
+</div>
+<div class="section" id="id2">
+<h3>Parameters<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>name</strong></p></li>
+<li><p><strong>description</strong></p></li>
+<li><p><strong>type</strong></p></li>
+<li><p><strong>required</strong></p></li>
+<li><p><strong>options</strong></p></li>
+<li><p><strong>choices</strong></p></li>
+</ul>
+</div></blockquote>
+<div class="line-block">
+<div class="line">There’re 3 possible use-cases for options:</div>
+<div class="line">1. Each option is an <strong>argument</strong></div>
+<div class="line">2. Each option is a <strong>sub-command</strong></div>
+<div class="line">3. Each option represents a <strong>group of sub-commands</strong></div>
+</div>
+<div class="line-block">
+<div class="line">In order to identify the use-case, there’s such argument as <code class="docutils literal notranslate"><span class="pre">type</span></code></div>
+<div class="line">For example, here’s a command with 2 integer arguments:</div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="slash-command-response">
+<h1>Slash-command response<a class="headerlink" href="#slash-command-response" title="Permalink to this headline">¶</a></h1>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">dislash.py</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Slash-command constructor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#slashcommand">SlashCommand</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#option">Option</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#slash-command-response">Slash-command response</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="examples.html" title="previous chapter">Examples</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, EQUENOS.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/interactions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
