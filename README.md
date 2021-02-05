@@ -1,5 +1,9 @@
 # dislash.py
 It's a small extending library for [discord.py](https://github.com/Rapptz/discord.py), that allows to register slash-commands and respond to relevant interactions with them.
+
+# Documentation
+> https://dislashpy.readthedocs.io/en/latest/
+
 # Installation
 Run any of these commands in terminal to install the lib:
 ```
