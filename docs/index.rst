@@ -10,7 +10,7 @@ Welcome to dislash.py's documentation!
    :maxdepth: 2
    
    examples
-   interactions
+   slash-register
 
 
 
