@@ -96,7 +96,42 @@ class Interaction:
 #     Slash-command registrator     |
 #          OOP Interface            |
 #-----------------------------------+
+class Type:
+    '''
+    Attributes
+    ----------
+
+    SUB_COMMAND
+    SUB_COMMAND_GROUP
+    STRING
+    INTEGER
+    BOOLEAN
+    USER
+    CHANNEL
+    ROLE
+    '''
+    SUB_COMMAND       = 1
+    SUB_COMMAND_GROUP = 2
+    STRING            = 3
+    INTEGER           = 4
+    BOOLEAN           = 5
+    USER              = 6
+    CHANNEL           = 7
+    ROLE              = 8
+
+
 class OptionChoice:
+    '''
+    Parameters
+    ----------
+
+    name : str
+        the name of the option-choice (visible to users)
+    
+    value : str or int
+        the value of the option-choice
+    '''
+
     def __init__(self, name: str, value: Union[str, int]):
         '''
         `name` - choice name (`str`)
@@ -108,40 +143,24 @@ class OptionChoice:
 
 
 class Option:
+    '''
+    Parameters
+    ----------
+
+    name : str
+        option's name
+
+    description : str
+        option's description
+
+    type : Type
+        the option type, e.g. ``Type.USER``, see :ref:`option_type`
+
+    choices : list
+        list of option choices, type :ref:`option_choice`
+    '''
+
     def __init__(self, name: str, description: str, type: int, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
-        '''
-        `name` - option name
-
-        `description` - option description
-
-        `type` - the option type (see table below)
-
-        `choices` - list of option choices (type <`OptionChoice`>)
-        
-        # Option Types
-        ```json
-        +-------------------+-------+
-        | NAME              | VALUE |
-        +-------------------+-------+
-        | SUB_COMMAND       | 1     |
-        | SUB_COMMAND_GROUP | 2     |
-        | STRING            | 3     |
-        | INTEGER           | 4     |
-        | BOOLEAN           | 5     |
-        | USER              | 6     |
-        | CHANNEL           | 7     |
-        | ROLE              | 8     |
-        +-------------------+-------+
-        ```
-        # About option order
-        Option of type `2` can only contain options of type `1`
-
-        Option of type `1` can only contain options of type `3` or higher
-
-        Options of type `3` and higher can't contain any sub options
-
-        Do not specify `required=True` in case you're defining a type-1 or type-2 option
-        '''
         self.name = name
         self.description = description
         self.type = type
@@ -202,6 +221,21 @@ class Option:
 
 
 class SlashCommand:
+    '''A base class for building slash-commands.
+
+    Parameters
+    ----------
+
+    name : str
+        The command name
+    
+    description : str
+        The command description (it'll be displayed by discord)
+    
+    options : List[Option]
+        The options of the command. See :ref:`option`
+    '''
+
     def __init__(self, name: str, description: str, options: list=[], **kwargs):
         '''
         # Slash-command constructor
