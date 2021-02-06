@@ -147,7 +147,7 @@ Response
         # Converting color
         if color is not None:
             try:
-                color = await commands.ColorConverter().convert(ctx, color.value)
+                color = await commands.ColorConverter().convert(inter, color.value)
             except:
                 color = None
         if color is None:
