@@ -6,6 +6,7 @@ Welcome to dislash.py's documentation!
 .. toctree::
    :maxdepth: 2
    
+   quickstart
    slash-register
    slash-response
    slash-client
