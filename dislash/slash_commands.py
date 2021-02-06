@@ -119,6 +119,10 @@ class MissingPermissions(SlashCommandError):
         self.perms = perms
 
 
+class NotOwner(SlashCommandError):
+    pass
+
+
 #-----------------------------------+
 #            Decorators             |
 #-----------------------------------+
@@ -152,8 +156,25 @@ def command(*args, **kwargs):
 
 def check(predicate):
     '''
-    A function that converts `predicate(interaction)` functions
+    A function that converts ``predicate(interaction)`` functions
     into slash-command decorators
+
+    Example
+
+    ::
+
+        def is_guild_owner():
+            def predicate(inter):
+                return inter.author.id == inter.guild.owner_id
+            return check(predicate)
+        
+        @is_guild_owner()
+        @slash.command()
+        async def hello(inter):
+            await inter.reply("Hello, Owner.")
+        
+    
+    .. note:: **/hello** must be registered first, see :ref:`slash-command_constructor`
     '''
     def decorator(func):
         if isinstance(func, SlashCommandResponse):
@@ -167,6 +188,9 @@ def check(predicate):
 
 
 def is_guild_owner():
+    '''
+    A decorator. Checks if the author is the guild's owner.
+    '''
     def predicate(interaction):
         if interaction.member.id == interaction.guild.owner_id:
             return True
@@ -174,7 +198,21 @@ def is_guild_owner():
     return check(predicate)
 
 
+def is_owner():
+    '''
+    A decorator. Checks if the author is the bot's owner.
+    '''
+    def predicate(interaction):
+        if interaction.member.id in interaction.client.owner_ids:
+            return True
+        raise NotOwner("You do not own this bot.")
+    return check(predicate)
+
+
 def has_guild_permissions(**perms):
+    '''
+    A decorator. Checks if the author has specific guild permissions.
+    '''
     def predicate(inter):
         if inter.member.id == inter.guild.owner_id:
             return True
@@ -188,6 +226,9 @@ def has_guild_permissions(**perms):
 
 
 def has_permissions(**perms):
+    '''
+    A decorator. Checks if the author has specific permissions in the channel.
+    '''
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
@@ -203,26 +244,30 @@ def has_permissions(**perms):
 
 def cooldown(rate, per, type=BucketType.default):
     '''
-    A decorator that adds a cooldown to a `SlashCommand`
+    A decorator that adds a cooldown to a slash-command. Similar to **discord.py** cooldown decorator.
 
     A cooldown allows a command to only be used a specific amount
     of times in a specific time frame. These cooldowns can be based
     either on a per-guild, per-channel, per-user, per-role or global basis.
-    Denoted by the third argument of `type` which must be of enum
-    type `BucketType`.
+    Denoted by the third argument of ``type`` which must be of enum
+    type ``BucketType``.
 
-    If a cooldown is triggered, then `.CommandOnCooldown` is triggered in
-    `on_slash_command_error` and the local error handler.
+    If a cooldown is triggered, then ``CommandOnCooldown`` is triggered in
+    ``on_slash_command_error`` in the local error handler.
 
     A command can only have a single cooldown.
 
-    ## Parameters
+    Parameters
+    ----------
     
-    `rate`: `int` - The number of times a command can be used before triggering a cooldown.
+    rate : int
+        The number of times a command can be used before triggering a cooldown.
 
-    `per`: `float`- The amount of seconds to wait for a cooldown when it's been triggered.
+    per : float
+        The amount of seconds to wait for a cooldown when it's been triggered.
 
-    `type`: `BucketType` - The type of cooldown to have.
+    type : BucketType
+        The type of cooldown to have.
     '''
     def decorator(func):
         if isinstance(func, SlashCommandResponse):
@@ -237,31 +282,31 @@ def cooldown(rate, per, type=BucketType.default):
 #      Slash-commands client        |
 #-----------------------------------+
 class SlashClient:
+    '''
+    The main purpose of this class is to track ``INTERACTION_CREATE`` event.
+
+    Parameters
+    ----------
+
+    client : commands.Client or commands.Bot
+
+    Attributes
+    ----------
+
+    client : commands.Client
+
+    registered_global_commands : dict
+        All registered global commands are cached here
+    
+    is_ready : bool
+        Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
+    '''
     def __init__(self, client):
-        '''
-        # Extension that allows to work with slash-commands
-        ## Example
-        ```
-        # Importing libs
-        import discord
-        from discord.ext import commands
-        from dislash.slash_commands import *
-
-        # Init both <commands.Bot> and <SlashClient> instances
-        client = commands.Bot(command_prefix='!', intents=discord.Intents.default())
-        slash_client = SlashClient(client)
-
-        # Define a simple slash-command response function
-        @slash_client.command(name='user-info')
-        async def user_info(inter: Interaction):
-            # Expensive stuff here
-        ```
-        '''
         HANDLER.client = client
         self.client = HANDLER.client
         self.events = {}
-        self.registered_global_commands = {}
-        self.registered_guild_commands = {}
+        self.registered_global_commands = []
+        # self.registered_guild_commands = {}
         self.is_ready = False
         self.client.loop.create_task(self._do_ignition())
     @property
@@ -269,6 +314,17 @@ class SlashClient:
         return HANDLER.commands
 
     def event(self, func):
+        '''
+        Decorator
+        ::
+        
+            @slash.event
+            async def on_ready():
+                print("SlashClient is ready")
+        
+        | All possible events:
+        | ``on_ready``, ``on_slash_command_error``
+        '''
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = func.__name__
@@ -282,15 +338,11 @@ class SlashClient:
         '''
         A decorator that registers a function below as response for specified slash-command
 
-        `name` - name of the slash-command you want to response to
-        (equals to function name by default)
+        Parameters
+        ----------
 
-        ## Example 
-        ```
-        @slash_client.command(name='user-info')
-        async def user_info(interaction):
-            # Your code
-        ```
+        name : str
+            name of the slash-command you want to response to (equals to function name by default)
         '''
         def decorator(func):
             if not asyncio.iscoroutinefunction(func):
@@ -303,10 +355,29 @@ class SlashClient:
     
     # Working with slash-commands
     async def fetch_global_commands(self):
+        '''Requests a list of global registered commands from the API
+
+        Returns
+        -------
+
+        global_commands : List[SlashCommand]
+        '''
         data = await self.client.http.request(Route('GET', '/applications/{app_id}/commands', app_id=self.client.user.id))
         return [SlashCommand.from_dict(dat) for dat in data]
 
     async def fetch_guild_commands(self, guild_id: int):
+        '''Requests a list of registered commands for a specific guild
+
+        Parameters
+        ----------
+
+        guild_id : int
+
+        Returns
+        -------
+
+        guild_commands : List[SlashCommand]
+        '''
         data = await self.client.http.request(
             Route('GET', '/applications/{app_id}/guilds/{guild_id}/commands',
             app_id=self.client.user.id, guild_id=guild_id)
@@ -314,6 +385,18 @@ class SlashClient:
         return [SlashCommand.from_dict(dat) for dat in data]
     
     async def fetch_global_command(self, command_id: int):
+        '''Requests a registered global slash-command
+
+        Parameters
+        ----------
+
+        command_id : int
+
+        Returns
+        -------
+
+        global_command : SlashCommand
+        '''
         data = await self.client.http.request(
             Route('GET', '/applications/{app_id}/commands/{cmd_id}',
             app_id=self.client.user.id, cmd_id=command_id)
@@ -321,6 +404,20 @@ class SlashClient:
         return SlashCommand.from_dict(data)
 
     async def fetch_guild_command(self, guild_id: int, command_id: int):
+        '''Requests a registered guild command
+
+        Parameters
+        ----------
+
+        guild_id : int
+
+        command_id : int
+
+        Returns
+        -------
+
+        guild_command : SlashCommand
+        '''
         data = await self.client.http.request(
             Route('GET', '/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}',
             app_id=self.client.user.id, guild_id=guild_id, cmd_id=command_id)
@@ -328,6 +425,15 @@ class SlashClient:
         return SlashCommand.from_dict(data)
 
     async def register_global_slash_command(self, slash_command: SlashCommand):
+        '''Registers a global slash-command
+
+        .. seealso:: :ref:`raw_slash_command`
+        
+        Parameters
+        ----------
+
+        slash_command : SlashCommand
+        '''
         if not isinstance(slash_command, SlashCommand):
             raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
@@ -336,6 +442,17 @@ class SlashClient:
         )
     
     async def register_guild_slash_command(self, guild_id: int, slash_command: SlashCommand):
+        '''Registers a local slash-command
+        
+        .. seealso:: :ref:`raw_slash_command`
+        
+        Parameters
+        ----------
+
+        guild_id : int
+
+        slash_command : SlashCommand
+        '''
         if not isinstance(slash_command, SlashCommand):
             raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
@@ -347,6 +464,16 @@ class SlashClient:
         )
     
     async def edit_global_slash_command(self, command_id: int, slash_command: SlashCommand):
+        '''Edits a global command
+
+        Parameters
+        ----------
+
+        command_id : int
+
+        slash_command : SlashCommand
+            replacement of the old data
+        '''
         if not isinstance(slash_command, SlashCommand):
             raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
@@ -358,6 +485,18 @@ class SlashClient:
         )
     
     async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand):
+        '''Edits a local command
+
+        Parameters
+        ----------
+
+        guild_id : int
+
+        command_id : int
+
+        slash_command : SlashCommand
+            replacement of the old data
+        '''
         if not isinstance(slash_command, SlashCommand):
             raise ValueError('Expected <SlashCommand> instance')
         await self.client.http.request(
@@ -369,6 +508,13 @@ class SlashClient:
         )
     
     async def delete_global_slash_command(self, command_id: int):
+        '''Deletes a global command
+
+        Parameters
+        ----------
+
+        command_id : int
+        '''
         await self.client.http.request(
             Route(
                 'DELETE', '/applications/{app_id}/commands/{cmd_id}',
@@ -377,6 +523,15 @@ class SlashClient:
         )
     
     async def delete_guild_slash_command(self, guild_id: int, command_id: int):
+        '''Deletes a local command
+
+        Parameters
+        ----------
+
+        guild_id : int
+
+        command_id : int
+        '''
         await self.client.http.request(
             Route(
                 'DELETE', '/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}',

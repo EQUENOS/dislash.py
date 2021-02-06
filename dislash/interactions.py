@@ -9,25 +9,75 @@ discord_epoch = 1420070400000
 #       Interaction wrappers        |
 #-----------------------------------+
 class InteractionDataOption:
+    '''
+    Represents user's input for a specific option
+
+    Attributes
+    ----------
+
+    name : str
+        The name of the option
+    
+    value : Any
+        The value of the option
+    
+    options : list
+        The list of sub options
+    '''
     def __init__(self, data: dict):
         self.name = data['name']
         self.value = data.get('value')
         self.options = [InteractionDataOption(o) for o in data.get('options', [])]
     
     def get_option(self, name: str):
+        '''
+        Parameters
+        ----------
+
+        name : str
+            The name of the sub-option you want to get
+        
+        Returns
+        -------
+
+        option : InteractionDataOption or ``None``
+        '''
         for o in self.options:
             if o.name == name:
                 return o
-        return InteractionDataOption({'name': name, 'value': None})
 
 
 class InteractionData:
+    '''
+    Attributes
+    ----------
+
+    id : int
+    
+    name : str
+        The name of activated slash-command
+    
+    options : list
+        The list of options of the slash-command
+    '''
     def __init__(self, data: dict):
         self.id = int(data['id'])
         self.name = data['name']
         self.options = [InteractionDataOption(o) for o in data.get('options', [])]
     
     def get_option(self, name: str):
+        '''
+        Parameters
+        ----------
+
+        name : str
+            The name of the option you want to get
+        
+        Returns
+        -------
+
+        option : InteractionDataOption or ``None``
+        '''
         for o in self.options:
             if o.name == name:
                 return o
@@ -35,6 +85,37 @@ class InteractionData:
 
 
 class Interaction:
+    '''
+    Every interaction with slash-commands is represented by instances of this class
+
+    Attributes
+    ----------
+
+    id : int
+    
+    version : int
+    
+    type : int
+    
+    token : str
+        Interaction token
+    
+    guild : discord.Guild
+        The guild where interaction was created
+    
+    channel : discord.TextChannel
+        The channel where interaction was created
+    
+    author : discord.Member
+        The member that used the slash-command
+    
+    data : InteractionData
+        The arguments that were passed.
+    
+    created_at : datetime.datetime
+        Then interaction was created
+    
+    '''
     def __init__(self, client, payload: dict):
         self.client = client
         self.id = int(payload['id'])
@@ -63,6 +144,21 @@ class Interaction:
         return datetime.datetime.fromtimestamp(((self.id >> 22) + discord_epoch) / 1000)
 
     async def reply(self, content: str=None, embed: discord.Embed=None, hide_user_input=False):
+        '''
+        Replies to the interaction.
+
+        Parameters
+        ----------
+
+        content : str
+            Content of the message that you're going so send
+        
+        embed : discord.Embed
+            An embed that'll be attached to the message
+        
+        hide_user_input : bool
+            If set to ``True``, user's input won't be displayed
+        '''
         # Which callback type is it
         if content is None and embed is None:
             if hide_user_input:
@@ -90,6 +186,8 @@ class Interaction:
             ),
             json=json
         )
+    
+    send = reply
 
 
 #-----------------------------------+
@@ -187,12 +285,30 @@ class Option:
         return Option(**payload)
 
     def add_choice(self, choice: OptionChoice):
+        '''
+        Adds an OptionChoice to the list of current choices
+
+        Parameters
+        ----------
+
+        choice : OptionChoice
+            the choice you're going to add
+        '''
         if 'choices' not in self.__dict__:
             self.choices = [choice]
         else:
             self.choices.append(choice)
     
     def add_option(self, option):
+        '''
+        Adds an option to the current list of options
+
+        Parameters
+        ----------
+
+        option : Option
+            the option you're going to add
+        '''
         if 'options' not in self.__dict__:
             self.options = [option]
         else:
@@ -272,6 +388,15 @@ class SlashCommand:
         return SlashCommand(**payload)
 
     def add_option(self, option: Option):
+        '''
+        Adds an option to the current list of options
+
+        Parameters
+        ----------
+
+        option : Option
+            the option you're going to add
+        '''
         self.options.append(option)
 
     def to_dict(self):
