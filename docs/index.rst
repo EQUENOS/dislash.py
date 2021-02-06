@@ -1,7 +1,4 @@
-.. dislash.py documentation master file, created by
-   sphinx-quickstart on Fri Feb  5 16:29:49 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. sphinx-build -b html -d build/doctrees . build/html
 
 Welcome to dislash.py's documentation!
 ======================================
@@ -9,14 +6,14 @@ Welcome to dislash.py's documentation!
 .. toctree::
    :maxdepth: 2
    
-   examples
    slash-register
+   slash-response
+   slash-client
+   examples
 
 
 
-Indices and tables
-==================
+Other links
+===========
 
-* :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

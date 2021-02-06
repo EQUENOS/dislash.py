@@ -4,9 +4,10 @@ Examples
 Registering a slash-command
 ---------------------------
 
-.. topic:: Why this is important?
+.. seealso::
 
-    See :ref:`slash-command_constructor` for more info.
+    :ref:`slash-command_constructor` and why is it important
+
 
 .. code-block:: python
 
@@ -31,14 +32,13 @@ Registering a slash-command
                 Option(
                     name="start",
                     description="Enter a number",
-                    type=4,   # Type-4 means INTEGER
-                    # Read more about types in docs
+                    type=Type.INTEGER,
                     required=True
                 ),
                 Option(
                     name="end",
                     description="Enter a number",
-                    type=4,
+                    type=Type.INTEGER,
                     required=True
                 )
             ]
@@ -49,7 +49,7 @@ Registering a slash-command
         # That's why I highly recommend .register_guild_slash_command for testing:
         await slash_client.register_guild_slash_command(guild_id, sc)
 
-.. seealso:: :ref:`slash-command_constructor` section about registering more complicated commands.
+
 
 Responding to a slash-command
 -----------------------------

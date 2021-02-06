@@ -29,6 +29,8 @@ SlashCommand
 
 .. autoclass:: SlashCommand
 
+    .. automethod:: add_option
+
 Now let's register world's simpliest slash-command in our test server:
 
 .. code-block:: python
@@ -60,6 +62,9 @@ Option
 ------
 
 .. autoclass:: Option
+
+    .. automethod:: add_option
+    .. automethod:: add_choice
 
 | This class represents a command option.
 
@@ -152,12 +157,15 @@ OptionChoice
         name="blep",
         description="Sends a picture of an animal",
         options=[
-            Option("animal", "Choose the animal", required=True,
-            choices=[
-                OptionChoice("Cat", "cat"),
-                OptionChoice("Dog", "dog"),
-                OptionChoice("Penguin", "penguin")
-            ])
+            Option(
+                "animal", "Choose the animal",
+                type=Type.STRING, required=True,
+                choices=[
+                    OptionChoice("Cat", "cat"),
+                    OptionChoice("Dog", "dog"),
+                    OptionChoice("Penguin", "penguin")
+                ]
+            )
         ]
     )
 
