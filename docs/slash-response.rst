@@ -8,11 +8,16 @@ Responding to a slash-command
 Interaction
 -----------
 
+| Obtainable via **async** functions decorated with ``@slash_client.command()`` or ``@slash_commands.command()``
+| See :ref:`slash_client`
+
 .. autoclass:: Interaction
 
     .. automethod:: reply
 
+    .. automethod:: edit
 
+    .. automethod:: delete
 
 
 .. _interaction_data:
