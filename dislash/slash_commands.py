@@ -1,5 +1,6 @@
 import discord
 from discord.http import Route
+from discord.ext.commands import AutoShardedBot
 from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 import asyncio
 from .interactions import Interaction, SlashCommand
@@ -542,9 +543,14 @@ class SlashClient:
     # Internal use only
     async def _do_ignition(self):
         '''# Don't use it'''
-        while self.client.user is None:
-            await asyncio.sleep(1)
-        self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
+        if isinstance(self.client, AutoShardedBot):
+            for _ in range(self.client.shard_count):
+                await self.client.wait_for('shard_connect', timeout=60)
+            for shard_data in self.client._AutoShardedClient__shards.values():
+                shard_data.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
+        else:
+            await self.client.wait_for('connect')
+            self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.is_ready = True
         self.client.loop.create_task(self._activate_event('ready'))
         self.registered_global_commands = await self.fetch_global_commands()

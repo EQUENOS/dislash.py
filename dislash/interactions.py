@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import discord
 from typing import List, Union
@@ -117,6 +118,7 @@ class Interaction:
     
     '''
     def __init__(self, client, payload: dict):
+        self.prefix = "/" # Just in case
         self.client = client
         self.id = int(payload['id'])
         self.version = payload['version']
@@ -131,6 +133,7 @@ class Interaction:
             state=self.client.user._state
         )
         self.data = InteractionData(payload.get('data', {}))
+        self.editable = False
     @property
     def channel(self):
         if self._channel is None:
@@ -143,7 +146,7 @@ class Interaction:
     def created_at(self):
         return datetime.datetime.fromtimestamp(((self.id >> 22) + discord_epoch) / 1000)
 
-    async def reply(self, content: str=None, embed: discord.Embed=None, hide_user_input=False):
+    async def reply(self, content: str=None, embed: discord.Embed=None, hide_user_input=False, delete_after: float=None):
         '''
         Replies to the interaction.
 
@@ -158,6 +161,9 @@ class Interaction:
         
         hide_user_input : bool
             If set to ``True``, user's input won't be displayed
+        
+        delete_after : float
+            If specified, your reply will be deleted after ``delete_after`` seconds
         '''
         # Which callback type is it
         if content is None and embed is None:
@@ -175,7 +181,7 @@ class Interaction:
             data['content'] = str(content)
         if embed is not None:
             data['embeds'] = [embed.to_dict()]
-        json = {
+        _json = {
             "type": _type,
             "data": data
         }
@@ -184,9 +190,56 @@ class Interaction:
                 'POST', '/interactions/{interaction_id}/{token}/callback',
                 interaction_id=self.id, token=self.token
             ),
-            json=json
+            json=_json
+        )
+        self.editable = True
+        if delete_after is not None:
+            await asyncio.sleep(delete_after)
+            await self.delete()
+    
+    async def edit(self, content: str=None, embed: discord.Embed=None):
+        '''
+        Edits your reply to the interaction.
+
+        Parameters
+        ----------
+
+        content : str
+            Content of the message that you're going so edit
+        
+        embed : discord.Embed
+            An embed that'll be attached to the message
+        '''
+        if not self.editable:
+            raise TypeError("There's nothing to edit. Send a reply first.")
+        # patch
+        data = {}
+        if content is not None:
+            data['content'] = str(content)
+        if embed is not None:
+            data['embeds'] = [embed.to_dict()]
+        await self.client.http.request(
+            Route(
+                'PATCH', '/webhooks/{app_id}/{token}/messages/@original',
+                app_id=self.client.user.id, token=self.token
+            ),
+            json=data
         )
     
+    async def delete(self):
+        '''
+        Deletes your reply to the interaction.
+        '''
+        if not self.editable:
+            raise TypeError("There's nothing to delete. Send a reply first.")
+        # patch
+        await self.client.http.request(
+            Route(
+                'DELETE', '/webhooks/{app_id}/{token}/messages/@original',
+                app_id=self.client.user.id, token=self.token
+            )
+        )
+
     send = reply
 
 
