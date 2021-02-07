@@ -21,6 +21,17 @@ If these commands don't work, just clone the repo: https://github.com/EQUENOS/di
 
 
 
+Authorising
+-----------
+
+| Before we start, make sure your bot has ``application.commands`` scope.
+| In order to grant it, authorise (or reauthorise) your bot with this tick pressed:
+
+.. image:: https://cdn.discordapp.com/attachments/808032994668576829/808061105855397899/scopes.png
+
+
+
+
 Making our first command
 ------------------------
 
