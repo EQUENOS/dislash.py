@@ -10,10 +10,11 @@ Run any of these commands in terminal to install the lib:
 pip install dislash.py
 ```
 ```
-python3 -m pip install discord.py
+python3 -m pip install dislash.py
 ```
 # Examples
 Note, that this library does require **[discord.py](https://github.com/Rapptz/discord.py)** installed.
+
 ## Registering a slash-command
 ```python
 import discord
@@ -41,14 +42,13 @@ async def on_connect():
                 name="start",
                 description="Enter a number",
                 required=True,
-                type=4   # Type-4 means INTEGER
-                # Read more about types in docs
+                type=Type.INTEGER
             ),
             Option(
                 name="end",
                 description="Enter a number",
                 required=True,
-                type=4
+                type=Type.INTEGER
             )
         ]
     )
@@ -83,7 +83,8 @@ slash_client = slash_commands.SlashClient(client)
 @slash_client.command()
 async def random(interaction):
     # interaction is instance of `interactions.Interaction`
-    # Read more about it in docs
+    # It's pretty much the same as "ctx" from discord.py
+    # You can read more about it in docs
     a = interaction.data.get_option('start').value
     b = interaction.data.get_option('end').value
     if b < a: a, b = b, a

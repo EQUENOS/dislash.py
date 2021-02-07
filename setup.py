@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 import pathlib
 
 here = pathlib.Path(__file__).parent.resolve()
@@ -10,8 +10,9 @@ with open('requirements.txt') as f:
 
 setup(
     name='dislash.py',
-    version='0.0.1',
+    version='0.0.4',
     description='A python wrapper for discord slash-commands',
+    
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/EQUENOS/dislash.py',
@@ -22,6 +23,7 @@ setup(
     python_requires='>=3.6, <4',
     install_requires=['discord.py'],
     project_urls={
+        'Documentation': 'https://dislashpy.readthedocs.io/en/latest',
         'Bug Reports': 'https://github.com/EQUENOS/dislash.py/issues',
         'Source': 'https://github.com/EQUENOS/dislash.py',
     },
