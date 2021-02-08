@@ -10,7 +10,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='dislash.py',
-    version='0.0.4',
+    version='0.1.0',
     description='A python wrapper for discord slash-commands',
     
     long_description=long_description,
@@ -21,7 +21,7 @@ setup(
     keywords='discord, discord-api, slash-commands',
     packages=['dislash'],
     python_requires='>=3.6, <4',
-    install_requires=['discord.py'],
+    install_requires=requirements,
     project_urls={
         'Documentation': 'https://dislashpy.readthedocs.io/en/latest',
         'Bug Reports': 'https://github.com/EQUENOS/dislash.py/issues',

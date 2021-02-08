@@ -1,6 +1,6 @@
 import discord
 from discord.http import Route
-from discord.ext.commands import AutoShardedBot
+from discord.shard import AutoShardedClient
 from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 import asyncio
 from .interactions import Interaction, SlashCommand
@@ -477,6 +477,11 @@ class SlashClient:
         '''
         if not isinstance(slash_command, SlashCommand):
             raise ValueError('Expected <SlashCommand> instance')
+        slash_command.id = command_id
+        for i, cmd in enumerate(self.registered_global_commands):
+            if cmd.id == command_id:
+                self.registered_global_commands[i] = slash_command
+                break
         await self.client.http.request(
             Route(
                 'PATCH', '/applications/{app_id}/commands/{cmd_id}',
@@ -516,6 +521,10 @@ class SlashClient:
 
         command_id : int
         '''
+        for i, cmd in enumerate(self.registered_global_commands):
+            if cmd.id == command_id:
+                self.registered_global_commands.pop(i)
+                break
         await self.client.http.request(
             Route(
                 'DELETE', '/applications/{app_id}/commands/{cmd_id}',
@@ -540,10 +549,116 @@ class SlashClient:
             )
         )
 
+    # Slower methods
+    async def fetch_global_command_named(self, name: str):
+        '''
+        Fetches a global command that matches the specified name
+
+        Parameters
+        ----------
+
+        name : str
+            the name of the command to fetch
+        '''
+        for c in self.registered_global_commands:
+            if c.name == name:
+                return c
+        cmds = await self.fetch_global_commands()
+        for c in cmds:
+            if c.name == name:
+                self.registered_global_commands.append(c)
+                return c
+
+    async def fetch_guild_command_named(self, guild_id: int, name: str):
+        '''
+        Fetches a guild command that matches the specified name
+
+        Parameters
+        ----------
+
+        guild_id : int
+            ID of the guild where the command is registered
+
+        name : str
+            the name of the command to fetch
+        '''
+        cmds = await self.fetch_guild_commands(guild_id)
+        for cmd in cmds:
+            if cmd.name == name:
+                return cmd
+
+    async def edit_global_command_named(self, name: str, slash_command: SlashCommand):
+        '''
+        Edits a global command matching the specified name.
+
+        Parameters
+        ----------
+
+        name : str
+            the name of the command to edit
+        
+        slash_command : SlashCommand
+            replacement of the old data
+        '''
+        cmd = await self.fetch_global_command_named(name)
+        if cmd is not None:
+            await self.edit_global_command(cmd.id, slash_command)
+
+    async def edit_guild_command_named(self, guild_id: int, name: str, slash_command: SlashCommand):
+        '''
+        Edits a local command matching the specified name.
+
+        Parameters
+        ----------
+
+        guild_id : int
+            ID of the guild where the command is registered
+
+        name : str
+            the name of the command to edit
+        
+        slash_command : SlashCommand
+            replacement of the old data
+        '''
+        cmd = await self.fetch_guild_command_named(guild_id, name)
+        if cmd is not None:
+            await self.edit_guild_command(guild_id, cmd.id, slash_command)
+
+    async def delete_global_command_named(self, name: str):
+        '''
+        Deletes a global command matching the specified name.
+
+        Parameters
+        ----------
+
+        name : str
+            the name of the command to delete
+        '''
+        cmd = await self.fetch_global_command_named(name)
+        if cmd is not None:
+            await self.delete_global_command(cmd.id)
+
+    async def delete_guild_command_named(self, guild_id: int, name: str):
+        '''
+        Deletes a local command matching the specified name.
+
+        Parameters
+        ----------
+
+        guild_id : int
+            ID of the guild where the command is registered
+
+        name : str
+            the name of the command to edit
+        '''
+        cmd = await self.fetch_guild_command_named(guild_id, name)
+        if cmd is not None:
+            await self.delete_guild_command(guild_id, cmd.id)
+
     # Internal use only
     async def _do_ignition(self):
         '''# Don't use it'''
-        if isinstance(self.client, AutoShardedBot):
+        if isinstance(self.client, AutoShardedClient):
             for _ in range(self.client.shard_count):
                 await self.client.wait_for('shard_connect', timeout=60)
             for shard_data in self.client._AutoShardedClient__shards.values():
@@ -604,3 +719,16 @@ class SlashClient:
                 if 'slash_command_error' not in self.events:
                     raise err
                 await self._activate_event('slash_command_error', inter, err)
+    
+    # Aliases
+    register_global_command = register_global_slash_command
+    
+    register_guild_command = register_guild_slash_command
+
+    edit_global_command = edit_global_slash_command
+
+    edit_guild_command = edit_guild_slash_command
+
+    delete_global_command = delete_global_slash_command
+
+    delete_guild_command = delete_guild_slash_command
