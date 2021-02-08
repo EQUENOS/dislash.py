@@ -3,6 +3,13 @@
 Welcome to dislash.py's documentation!
 ======================================
 
+* :ref:`search`
+
+* `Our Discord <https://discord.gg/gJDbCw8aQy>`_
+
+Sections
+========
+
 .. toctree::
    :maxdepth: 2
    
@@ -11,10 +18,3 @@ Welcome to dislash.py's documentation!
    slash-response
    slash-client
    examples
-
-
-
-Other links
-===========
-
-* :ref:`search`
