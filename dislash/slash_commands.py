@@ -5,6 +5,7 @@ from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 import asyncio
 from .interactions import Interaction, SlashCommand
 import datetime
+import inspect
 
 
 #-----------------------------------+
@@ -13,6 +14,14 @@ import datetime
 def class_name(func):
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
+
+
+def get_class(func):
+    if inspect.isfunction(func):
+        cn = class_name(func)
+        if cn is not None:
+            mod = inspect.getmodule(func)
+            return getattr(mod, class_name(func), None)
 
 
 class PseudoCog:
@@ -43,12 +52,8 @@ class HANDLER:
 
 
 class SlashCommandResponse:
-    def __init__(self, client, func, name):
-        cogname = class_name(func)
-        if cogname is not None:
-            self.cog = PseudoCog(client)
-        else:
-            self.cog = None
+    def __init__(self, func, name):
+        self.cog = None
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
         else:
@@ -80,6 +85,11 @@ class SlashCommandResponse:
             retry_after = bucket.update_rate_limit(current)
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
+
+    def _refresh_cog(self, client):
+        cog = get_class(self.func)
+        if cog is not None:
+            self.cog = cog(client)
 
 
 #-----------------------------------+
@@ -149,7 +159,7 @@ def command(*args, **kwargs):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = kwargs.get('name', func.__name__)
         # is_global = kwargs.get('global')
-        new_func = SlashCommandResponse(HANDLER.client, func, name)
+        new_func = SlashCommandResponse(func, name)
         HANDLER.commands[name] = new_func
         return new_func
     return decorator
@@ -314,6 +324,10 @@ class SlashClient:
     def commands(self):
         return HANDLER.commands
 
+    def _refresh_cogs(self):
+        for cmd in HANDLER.commands.values():
+            cmd._refresh_cog(self.client)
+
     def event(self, func):
         '''
         Decorator
@@ -331,7 +345,7 @@ class SlashClient:
         name = func.__name__
         if name.startswith('on_'):
             name = name[3:]
-            if name in ['slash_command_error', 'ready']:
+            if name in ['slash_command', 'slash_command_error', 'ready']:
                 self.events[name] = func
         return func
 
@@ -349,7 +363,7 @@ class SlashClient:
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             name = kwargs.get('name', func.__name__)
-            new_func = SlashCommandResponse(self.client, func, name)
+            new_func = SlashCommandResponse(func, name)
             self.commands[name] = new_func
             return new_func
         return decorator
@@ -659,12 +673,14 @@ class SlashClient:
     async def _do_ignition(self):
         '''# Don't use it'''
         if isinstance(self.client, AutoShardedClient):
-            for _ in range(self.client.shard_count):
-                await self.client.wait_for('shard_connect', timeout=60)
-            for shard_data in self.client._AutoShardedClient__shards.values():
-                shard_data.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
+            for i in range(self.client.shard_count):
+                shard_id = await self.client.wait_for('shard_connect', timeout=60)
+                if i < 1:
+                    self._refresh_cogs()
+                self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         else:
             await self.client.wait_for('connect')
+            self._refresh_cogs()
             self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.is_ready = True
         self.client.loop.create_task(self._activate_event('ready'))
@@ -692,16 +708,18 @@ class SlashClient:
         '''
         # Don't use it
         '''
-        name = payload['data']['name']
-        SCR = self.commands.get(name)
+        inter = Interaction(self.client, payload)
+        # Activate event
+        self.client.loop.create_task(self._activate_event('slash_command', inter))
+        # Invoke command
+        SCR = self.commands.get(inter.data.name)
         if SCR is not None:
-            inter = Interaction(self.client, payload)
             # Run checks
             err = None
             for _check in SCR.checks:
                 try:
                     if not _check(inter):
-                        err = SlashCommandError(f'Command <{name}> failed')
+                        err = SlashCommandError(f'Command <{inter.data.name}> failed')
                         break
                 except Exception as e:
                     err = e

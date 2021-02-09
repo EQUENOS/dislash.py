@@ -28,6 +28,8 @@ class InteractionDataOption:
     def __init__(self, data: dict):
         self.name = data['name']
         self.value = data.get('value')
+        if isinstance(self.value, str) and len(self.value) == 18 and self.value.isdigit():
+            self.value = int(self.value)
         self.options = [InteractionDataOption(o) for o in data.get('options', [])]
     
     def get_option(self, name: str):
@@ -195,7 +197,10 @@ class Interaction:
         self.editable = True
         if delete_after is not None:
             await asyncio.sleep(delete_after)
-            await self.delete()
+            try:
+                await self.delete()
+            except:
+                pass
     
     async def edit(self, content: str=None, embed: discord.Embed=None):
         '''
@@ -239,6 +244,7 @@ class Interaction:
                 app_id=self.client.user.id, token=self.token
             )
         )
+        self.editable = False
 
     send = reply
 
