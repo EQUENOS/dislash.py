@@ -399,7 +399,46 @@ class SlashClient:
             return new_func
         return decorator
     
-    # Working with slash-commands
+    # Getters
+    def get_global_command(self, command_id: int):
+        """
+        Get a cached global command
+
+        Parameters
+        ----------
+
+        command_id : int
+            the ID of the command
+        
+        Returns
+        -------
+
+        slash_command : SlashCommand | None
+        """
+        for cmd in self.registered_global_commands:
+            if cmd.id == command_id:
+                return cmd
+    
+    def get_global_command_named(self, name: str):
+        """
+        Get a cached global command matching the specified name
+
+        Parameters
+        ----------
+
+        name : str
+            the name of the command
+        
+        Returns
+        -------
+
+        slash_command : SlashCommand | None
+        """
+        for cmd in self.registered_global_commands:
+            if cmd.name == name:
+                return cmd
+
+    # Straight references to API
     async def fetch_global_commands(self):
         '''Requests a list of global registered commands from the API
 
@@ -482,10 +521,13 @@ class SlashClient:
         '''
         if not isinstance(slash_command, SlashCommand):
             raise ValueError('Expected <SlashCommand> instance')
-        await self.client.http.request(
+        r = await self.client.http.request(
             Route('POST', '/applications/{app_id}/commands', app_id=self.client.user.id),
             json=slash_command.to_dict()
         )
+        sc = SlashCommand.from_dict(r)
+        self.registered_global_commands.append(sc)
+        return sc
     
     async def register_guild_slash_command(self, guild_id: int, slash_command: SlashCommand):
         '''Registers a local slash-command
@@ -527,13 +569,20 @@ class SlashClient:
             if cmd.id == command_id:
                 self.registered_global_commands[i] = slash_command
                 break
-        await self.client.http.request(
+        r = await self.client.http.request(
             Route(
                 'PATCH', '/applications/{app_id}/commands/{cmd_id}',
                 app_id=self.client.user.id, cmd_id=command_id
             ),
             json=slash_command.to_dict()
         )
+        # Update cache
+        sc = SlashCommand.from_dict(r)
+        for i, cmd in enumerate(self.registered_global_commands):
+            if cmd.id == command_id:
+                self.registered_global_commands[i] = sc
+                break
+        return sc
     
     async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand):
         '''Edits a local command
@@ -576,6 +625,11 @@ class SlashClient:
                 app_id=self.client.user.id, cmd_id=command_id
             )
         )
+        # Update cache
+        for i, cmd in enumerate(self.registered_global_commands):
+            if cmd.id == command_id:
+                self.registered_global_commands.pop(i)
+                break
     
     async def delete_guild_slash_command(self, guild_id: int, command_id: int):
         '''Deletes a local command
@@ -594,7 +648,7 @@ class SlashClient:
             )
         )
 
-    # Slower methods
+    # Even slower API methods
     async def fetch_global_command_named(self, name: str):
         '''
         Fetches a global command that matches the specified name
@@ -705,8 +759,8 @@ class SlashClient:
         if cmd is not None:
             await self.delete_guild_command(guild_id, cmd.id)
 
-    # Internal use only
-    # Meage automated super-smart AI powered destructor-2000
+    # Internal things
+    # Mega automated super-smart AI powered destructor-2000
     async def _auto_register_or_patch(self):
         for cmd in HANDLER.commands.values():
             if cmd.registerable is not None:
