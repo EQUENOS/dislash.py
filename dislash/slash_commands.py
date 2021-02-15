@@ -24,14 +24,6 @@ def get_class(func):
             return getattr(mod, class_name(func), None)
 
 
-class PseudoCog:
-    def __init__(self, client):
-        '''
-        A shitty solution for slash-commands in cogs
-        '''
-        self.client = client
-
-
 class HANDLER:
     '''
     # Internal use only
@@ -52,8 +44,8 @@ class HANDLER:
 
 
 class SlashCommandResponse:
-    def __init__(self, func, name):
-        self.cog = None
+    def __init__(self, client, func, name):
+        self.client = client
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
         else:
@@ -68,8 +60,9 @@ class SlashCommandResponse:
         self.func = func
     
     async def __call__(self, interaction):
-        if self.cog is not None:
-            return await self.func(self.cog, interaction)
+        cog = get_class(self.func)
+        if cog is not None:
+            return await self.func(cog(self.client), interaction)
         else:
             return await self.func(interaction)
     
@@ -85,11 +78,6 @@ class SlashCommandResponse:
             retry_after = bucket.update_rate_limit(current)
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
-
-    def _refresh_cog(self, client):
-        cog = get_class(self.func)
-        if cog is not None:
-            self.cog = cog(client)
 
 
 #-----------------------------------+
@@ -158,8 +146,7 @@ def command(*args, **kwargs):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = kwargs.get('name', func.__name__)
-        # is_global = kwargs.get('global')
-        new_func = SlashCommandResponse(func, name)
+        new_func = SlashCommandResponse(HANDLER.client, func, name)
         HANDLER.commands[name] = new_func
         return new_func
     return decorator
@@ -214,7 +201,11 @@ def is_owner():
     A decorator. Checks if the author is the bot's owner.
     '''
     def predicate(interaction):
-        if interaction.member.id in interaction.client.owner_ids:
+        if interaction.client.owner_id is None:
+            if interaction.member.id in interaction.client.owner_ids:
+                return True
+            raise NotOwner("You do not own this bot.")
+        if interaction.member.id == interaction.client.owner_id:
             return True
         raise NotOwner("You do not own this bot.")
     return check(predicate)
@@ -324,10 +315,6 @@ class SlashClient:
     def commands(self):
         return HANDLER.commands
 
-    def _refresh_cogs(self):
-        for cmd in HANDLER.commands.values():
-            cmd._refresh_cog(self.client)
-
     def event(self, func):
         '''
         Decorator
@@ -363,7 +350,7 @@ class SlashClient:
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             name = kwargs.get('name', func.__name__)
-            new_func = SlashCommandResponse(func, name)
+            new_func = SlashCommandResponse(self.client, func, name)
             self.commands[name] = new_func
             return new_func
         return decorator
@@ -673,14 +660,13 @@ class SlashClient:
     async def _do_ignition(self):
         '''# Don't use it'''
         if isinstance(self.client, AutoShardedClient):
-            for i in range(self.client.shard_count):
+            shard_id = await self.client.wait_for('shard_connect', timeout=60)
+            self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
+            for _ in range(self.client.shard_count - 1):
                 shard_id = await self.client.wait_for('shard_connect', timeout=60)
-                if i < 1:
-                    self._refresh_cogs()
                 self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         else:
             await self.client.wait_for('connect')
-            self._refresh_cogs()
             self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.is_ready = True
         self.client.loop.create_task(self._activate_event('ready'))
@@ -698,9 +684,9 @@ class SlashClient:
         '''
         func = self.events.get(event_name)
         if func is not None:
-            cogname = class_name(func)
-            if cogname is not None:
-                await func(PseudoCog(self.client), *args, **kwargs)
+            cog = get_class(func)
+            if cog is not None:
+                await func(cog(self.client), *args, **kwargs)
             else:
                 await func(*args, **kwargs)
 

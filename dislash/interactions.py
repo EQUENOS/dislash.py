@@ -6,6 +6,8 @@ from discord.http import Route
 
 
 discord_epoch = 1420070400000
+
+
 #-----------------------------------+
 #       Interaction wrappers        |
 #-----------------------------------+
@@ -84,7 +86,6 @@ class InteractionData:
         for o in self.options:
             if o.name == name:
                 return o
-        return InteractionDataOption({'name': name, 'value': None})
 
 
 class Interaction:
@@ -166,6 +167,12 @@ class Interaction:
         
         delete_after : float
             If specified, your reply will be deleted after ``delete_after`` seconds
+
+        Returns
+        -------
+
+        message : :class:`discord.Message`
+            The response message that has been sent
         '''
         # Which callback type is it
         if content is None and embed is None:
@@ -196,11 +203,8 @@ class Interaction:
         )
         self.editable = True
         if delete_after is not None:
-            await asyncio.sleep(delete_after)
-            try:
-                await self.delete()
-            except:
-                pass
+            self.client.loop.create_task(self.delete_after(delete_after))
+        return await self.edit()
     
     async def edit(self, content: str=None, embed: discord.Embed=None):
         '''
@@ -214,6 +218,12 @@ class Interaction:
         
         embed : discord.Embed
             An embed that'll be attached to the message
+        
+        Returns
+        -------
+
+        message : :class:`discord.Message`
+            The message that was edited
         '''
         if not self.editable:
             raise TypeError("There's nothing to edit. Send a reply first.")
@@ -223,17 +233,22 @@ class Interaction:
             data['content'] = str(content)
         if embed is not None:
             data['embeds'] = [embed.to_dict()]
-        await self.client.http.request(
+        r = await self.client.http.request(
             Route(
                 'PATCH', '/webhooks/{app_id}/{token}/messages/@original',
                 app_id=self.client.user.id, token=self.token
             ),
             json=data
         )
+        return discord.Message(
+            state=self.client.user._state,
+            channel=self.channel,
+            data=r
+        )
     
     async def delete(self):
         '''
-        Deletes your reply to the interaction.
+        Deletes your interaction response.
         '''
         if not self.editable:
             raise TypeError("There's nothing to delete. Send a reply first.")
@@ -245,6 +260,13 @@ class Interaction:
             )
         )
         self.editable = False
+    
+    async def delete_after(self, delay: float):
+        await asyncio.sleep(delay)
+        try:
+            await self.delete()
+        except:
+            pass
 
     send = reply
 
@@ -290,13 +312,14 @@ class OptionChoice:
     '''
 
     def __init__(self, name: str, value: Union[str, int]):
-        '''
-        `name` - choice name (`str`)
-
-        `value` - choice value (`str` | `int`)
-        '''
         self.name = name
         self.value = value
+
+    def __eq__(self, other):
+        return (
+            self.name == other.name and
+            self.value == other.value
+        )
 
 
 class Option:
@@ -335,6 +358,17 @@ class Option:
                     if opt.type != 1:
                         raise ValueError('Expected sub_command in this sub_command_group')
             self.options = options
+    
+    def __eq__(self, other):
+        return (
+            self.name == other.name and
+            self.description == other.description and
+            self.type == other.type and
+            getattr(self, 'required', False) == getattr(other, 'required', False) and
+            getattr(self, 'choices', []) == getattr(other, 'choices', []) and
+            getattr(self, 'options', []) == getattr(other, 'options', [])
+        )
+    
     @classmethod
     def from_dict(cls, payload: dict):
         if 'options' in payload:
@@ -412,34 +446,19 @@ class SlashCommand:
     '''
 
     def __init__(self, name: str, description: str, options: list=[], **kwargs):
-        '''
-        # Slash-command constructor
-
-        `name` - slash-command name
-
-        `description` - slash-command description
-
-        `options` - slash-command options
-
-        ## Example of registering a slash-command
-        ```
-        sc = SlashCommand(
-            name='user-info',
-            description='Shows user profile',
-            options=[
-                Option('user', 'Enter a user to inspect', type=6)
-            ]
-        )
-        await slash_client.register_global_slash_command(sc)
-        # slash_client is a <SlashClient> instance
-        # Also check out <Option> and <OptionChoice>
-        ```
-        '''
         self.id = kwargs.get('id')
         self.application_id = kwargs.get('application_id')
         self.name = name
         self.description = description
         self.options = options
+    
+    def __eq__(self, other):
+        return (
+            self.name == other.name and
+            self.description == other.description and
+            self.options == other.options
+        )
+
     @classmethod
     def from_dict(cls, payload: dict):
         if 'options' in payload:
