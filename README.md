@@ -127,7 +127,7 @@ async def random(interaction):
     if b < a: a, b = b, a
     await interaction.reply(randint(a, b))
 
-lient.run("BOT_TOKEN")
+client.run("BOT_TOKEN")
 ```
 
 
