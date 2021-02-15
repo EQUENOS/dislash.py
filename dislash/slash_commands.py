@@ -44,7 +44,7 @@ class HANDLER:
 
 
 class SlashCommandResponse:
-    def __init__(self, client, func, name):
+    def __init__(self, client, func, name: str, description: str=None, options: list=None, guild_ids: list=None):
         self.client = client
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
@@ -58,6 +58,13 @@ class SlashCommandResponse:
             self._buckets = CooldownMapping(cooldown)
         self.name = name
         self.func = func
+        self.guild_ids = guild_ids
+        if description is not None:
+            self.registerable = SlashCommand(name, description, options)
+        elif options is not None:
+            raise SyntaxError('<options> require <description> specified')
+        else:
+            self.registerable = None
     
     async def __call__(self, interaction):
         cog = get_class(self.func)
@@ -127,26 +134,40 @@ class NotOwner(SlashCommandError):
 #-----------------------------------+
 def command(*args, **kwargs):
     '''
-    A decorator that registers a function below as response for specified slash-command
+    A decorator that registers a function below as response for specified slash-command.
 
-    `name` - name of the slash-command you want to respond to
-    (equals to function name by default)
+    Parameters are similar to SlashCommand arguments.
 
-    (defaults to `None`, in this case function responds to
-    both global and local commands with the same names)
+    If ``description`` is specified, the decorator will be interpreted as SlashCommand and
+    will be registered (or edited) automatically with the given set of arguments.
 
-    ## Example 
-    ```
-    @slash_commands.command(name='user-info')
-    async def user_info(interaction):
-        # Your code
-    ```
+    Parameters
+    ----------
+
+    name : str
+        (optional) name of the slash-command you want to respond to (equals to function name by default)
+    
+    description : str
+        (optional) if specified, the client will automatically register a command with this description
+    
+    options : List[Option]
+        (optional) if specified, the client will
+        automatically register a command with this list of options. Requires ``description``
+    
+    guild_ids : List[int]
+        (optional) if specified, the client will register a command in these guilds.
+        Otherwise this command will be registered globally. Requires ``description``
     '''
     def decorator(func):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = kwargs.get('name', func.__name__)
-        new_func = SlashCommandResponse(HANDLER.client, func, name)
+        new_func = SlashCommandResponse(
+            HANDLER.client, func, name,
+            kwargs.get('description'),
+            kwargs.get('options'),
+            kwargs.get('guild_ids')
+        )
         HANDLER.commands[name] = new_func
         return new_func
     return decorator
@@ -290,12 +311,12 @@ class SlashClient:
     Parameters
     ----------
 
-    client : commands.Client or commands.Bot
+    client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
 
     Attributes
     ----------
 
-    client : commands.Client
+    client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
 
     registered_global_commands : dict
         All registered global commands are cached here
@@ -308,9 +329,11 @@ class SlashClient:
         self.client = HANDLER.client
         self.events = {}
         self.registered_global_commands = []
-        # self.registered_guild_commands = {}
+        self.registered_guild_commands = {}
+        self.active_shard_count = 0
         self.is_ready = False
-        self.client.loop.create_task(self._do_ignition())
+        self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
+        self.client.add_listener(self._on_connect, 'on_connect')
     @property
     def commands(self):
         return HANDLER.commands
@@ -338,19 +361,40 @@ class SlashClient:
 
     def command(self, *args, **kwargs):
         '''
-        A decorator that registers a function below as response for specified slash-command
+        A decorator that registers a function below as response for specified slash-command.
+
+        Parameters are similar to SlashCommand arguments.
+
+        If ``description`` is specified, the decorator will be interpreted as SlashCommand and
+        will be registered (or edited) automatically with the given set of arguments.
 
         Parameters
         ----------
 
         name : str
-            name of the slash-command you want to response to (equals to function name by default)
+            (optional) name of the slash-command you want to respond to (equals to function name by default)
+        
+        description : str
+            (optional) if specified, the client will automatically register a command with this description
+        
+        options : List[Option]
+            (optional) if specified, the client will
+            automatically register a command with this list of options. Requires ``description``
+        
+        guild_ids : List[int]
+            (optional) if specified, the client will register a command in these guilds.
+            Otherwise this command will be registered globally. Requires ``description``
         '''
         def decorator(func):
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             name = kwargs.get('name', func.__name__)
-            new_func = SlashCommandResponse(self.client, func, name)
+            new_func = SlashCommandResponse(
+                self.client, func, name,
+                kwargs.get('description'),
+                kwargs.get('options'),
+                kwargs.get('guild_ids')
+            )
             self.commands[name] = new_func
             return new_func
         return decorator
@@ -583,7 +627,12 @@ class SlashClient:
         name : str
             the name of the command to fetch
         '''
+        if guild_id in self.registered_guild_commands:
+            for cmd in self.registered_guild_commands[guild_id]:
+                if cmd.name == name:
+                    return cmd
         cmds = await self.fetch_guild_commands(guild_id)
+        self.registered_guild_commands[guild_id] = cmds
         for cmd in cmds:
             if cmd.name == name:
                 return cmd
@@ -657,20 +706,47 @@ class SlashClient:
             await self.delete_guild_command(guild_id, cmd.id)
 
     # Internal use only
-    async def _do_ignition(self):
-        '''# Don't use it'''
-        if isinstance(self.client, AutoShardedClient):
-            shard_id = await self.client.wait_for('shard_connect', timeout=60)
-            self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
-            for _ in range(self.client.shard_count - 1):
-                shard_id = await self.client.wait_for('shard_connect', timeout=60)
-                self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
-        else:
-            await self.client.wait_for('connect')
+    # Meage automated super-smart AI powered destructor-2000
+    async def _auto_register_or_patch(self):
+        for cmd in HANDLER.commands.values():
+            if cmd.registerable is not None:
+                # Local registration
+                if cmd.guild_ids is not None:
+                    # Iterate through guilds
+                    for ID in cmd.guild_ids:
+                        # Check if the command is registered
+                        old_cmd = await self.fetch_guild_command_named(ID, cmd.name)
+                        if old_cmd is None:
+                            await self.register_guild_slash_command(ID, cmd.registerable)
+                        elif not (old_cmd == cmd.registerable):
+                            delattr(cmd.registerable, 'name')
+                            await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable)
+                # Global registration
+                else:
+                    old_cmd = await self.fetch_global_command_named(cmd.name)
+                    if old_cmd is None:
+                        await self.register_global_slash_command(cmd.registerable)
+                    elif not (old_cmd == cmd.registerable):
+                        delattr(cmd.registerable, 'name')
+                        await self.edit_global_slash_command(old_cmd.id, cmd.registerable)
+
+    # Adding relevant listeners
+    async def _on_shard_connect(self, shard_id):
+        self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
+        self.active_shard_count += 1
+        if self.active_shard_count >= self.client.shard_count:
+            self.registered_global_commands = await self.fetch_global_commands()
+            await self._auto_register_or_patch()
+            self.is_ready = True
+            await self._activate_event('ready')
+    
+    async def _on_connect(self):
+        if not isinstance(self.client, AutoShardedClient):
             self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
-        self.is_ready = True
-        self.client.loop.create_task(self._activate_event('ready'))
-        self.registered_global_commands = await self.fetch_global_commands()
+            self.registered_global_commands = await self.fetch_global_commands()
+            await self._auto_register_or_patch()
+            self.is_ready = True
+            await self._activate_event('ready')
     
     def _do_invokation(self, payload):
         '''

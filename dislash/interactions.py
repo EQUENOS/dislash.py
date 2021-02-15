@@ -445,12 +445,12 @@ class SlashCommand:
         The options of the command. See :ref:`option`
     '''
 
-    def __init__(self, name: str, description: str, options: list=[], **kwargs):
+    def __init__(self, name: str, description: str, options: list=None, **kwargs):
         self.id = kwargs.get('id')
         self.application_id = kwargs.get('application_id')
         self.name = name
         self.description = description
-        self.options = options
+        self.options = options if options is not None else []
     
     def __eq__(self, other):
         return (
@@ -478,9 +478,10 @@ class SlashCommand:
         self.options.append(option)
 
     def to_dict(self):
-        return {
-            'name': self.name,
+        res = {
             'description': self.description,
             'options': [o.to_dict() for o in self.options]
         }
-
+        if hasattr(self, 'name'):
+            res['name'] = self.name
+        return res
