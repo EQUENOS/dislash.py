@@ -14,6 +14,8 @@ SlashClient
 
     .. automethod:: command
 
+    .. automethod:: get_global_command
+
     .. automethod:: fetch_global_commands
 
     .. automethod:: fetch_guild_commands
