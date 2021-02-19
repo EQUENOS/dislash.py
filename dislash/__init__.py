@@ -1,1 +1,1 @@
-# It's a small extension for discord.py that supports slash commands
+__version__ = "0.2.1"

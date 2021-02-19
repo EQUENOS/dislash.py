@@ -2,10 +2,9 @@ import asyncio
 import datetime
 import discord
 from typing import List, Union
+from discord.errors import InvalidArgument
 from discord.http import Route
-
-
-discord_epoch = 1420070400000
+from discord.utils import DISCORD_EPOCH
 
 
 #-----------------------------------+
@@ -17,13 +16,10 @@ class InteractionDataOption:
 
     Attributes
     ----------
-
     name : str
         The name of the option
-    
     value : Any
         The value of the option
-    
     options : list
         The list of sub options
     '''
@@ -56,12 +52,9 @@ class InteractionData:
     '''
     Attributes
     ----------
-
     id : int
-    
     name : str
         The name of activated slash-command
-    
     options : list
         The list of options of the slash-command
     '''
@@ -94,31 +87,21 @@ class Interaction:
 
     Attributes
     ----------
-
     id : int
-    
     version : int
-    
     type : int
-    
     token : str
         Interaction token
-    
     guild : discord.Guild
         The guild where interaction was created
-    
     channel : discord.TextChannel
         The channel where interaction was created
-    
     author : discord.Member
         The member that used the slash-command
-    
     data : InteractionData
-        The arguments that were passed.
-    
+        The arguments that were passed
     created_at : datetime.datetime
         Then interaction was created
-    
     '''
     def __init__(self, client, payload: dict):
         self.prefix = "/" # Just in case
@@ -147,36 +130,45 @@ class Interaction:
         return self.member
     @property
     def created_at(self):
-        return datetime.datetime.fromtimestamp(((self.id >> 22) + discord_epoch) / 1000)
+        return datetime.datetime.fromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
 
-    async def reply(self, content: str=None, embed: discord.Embed=None,
-                    hide_user_input: bool=False, ephemeral: bool=False, delete_after: float=None):
+    async def reply(self, content=None, *,  embed=None, embeds=None,
+                                            tts=False, hide_user_input=False,
+                                            ephemeral=False, delete_after=None,
+                                            allowed_mentions=None):
         '''
         Replies to the interaction.
 
         Parameters
         ----------
-
         content : str
             content of the message that you're going so send
-        
         embed : discord.Embed
             an embed that'll be attached to the message
-        
+        embeds : List[discord.Embed]
+            a list of up to 10 embeds to attach
         hide_user_input : bool
             if set to ``True``, user's input won't be displayed
-        
         ephemeral : bool
             if set to ``True``, your response will only be visible to the command author
-        
+        tts : bool
+            wether the msaage is text-to-speech or not
         delete_after : float
             if specified, your reply will be deleted after ``delete_after`` seconds
+        allowed_mentions : discord.AllowedMentions
+            controls the mentions being processed in this message. All mentions are allowed by default.
+
+        Raises
+        ------
+        ~discord.HTTPException
+            sending the response failed
+        ~discord.InvalidArgument
+            Both ``embed`` and ``embeds`` are specified
 
         Returns
         -------
-
-        message : :class:`discord.Message`
-            The response message that has been sent
+        message : :class:`discord.Message` | ``None``
+            The response message that has been sent or ``None`` if the message is ephemeral
         '''
         # Which callback type is it
         if content is None and embed is None:
@@ -190,12 +182,40 @@ class Interaction:
             _type = 4
         # Post
         data = {}
+
         if content is not None:
             data['content'] = str(content)
+        # Embed or embeds
+        if embed is not None and embeds is not None:
+            raise InvalidArgument("Can't pass both embed and embeds")
+        
         if embed is not None:
+            if not isinstance(embed, discord.Embed):
+                raise InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
+        
+        elif embeds is not None:
+            if len(embeds) > 10:
+                raise InvalidArgument('embds parameter must be a list of up to 10 elements')
+            elif not all(isinstance(embed, discord.Embed) for embed in embeds):
+                raise InvalidArgument('embeds parameter must be a list of discord.Embed')
+            data['embeds'] = [embed.to_dict() for embed in embeds]
+        # Allowed mentions
+        state = self.client.user._state
+        if allowed_mentions is not None:
+            if state.allowed_mentions is not None:
+                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+            else:
+                allowed_mentions = allowed_mentions.to_dict()
+        else:
+            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
+        data['allowed_mentions'] = allowed_mentions
+        # Message design
         if ephemeral:
             data["flags"] = 64
+        if tts:
+            data["tts"] = True
+        # HTTP-request
         _json = {
             "type": _type,
             "data": data
@@ -207,28 +227,26 @@ class Interaction:
             ),
             json=_json
         )
-        if delete_after is not None:
-            self.client.loop.create_task(self.delete_after(delete_after))
+        # Ephemeral messages aren't stored and can't be deleted or edited
         if not ephemeral:
             self.editable = True
+            if delete_after is not None:
+                self.client.loop.create_task(self.delete_after(delete_after))
             return await self.edit()
     
-    async def edit(self, content: str=None, embed: discord.Embed=None):
+    async def edit(self, content=None, embed=None):
         '''
         Edits your reply to the interaction.
 
         Parameters
         ----------
-
         content : str
             Content of the message that you're going so edit
-        
         embed : discord.Embed
             An embed that'll be attached to the message
         
         Returns
         -------
-
         message : :class:`discord.Message`
             The message that was edited
         '''
@@ -286,15 +304,14 @@ class Type:
     '''
     Attributes
     ----------
-
-    SUB_COMMAND
-    SUB_COMMAND_GROUP
-    STRING
-    INTEGER
-    BOOLEAN
-    USER
-    CHANNEL
-    ROLE
+    SUB_COMMAND=1
+    SUB_COMMAND_GROUP=2
+    STRING=3
+    INTEGER=4
+    BOOLEAN=5
+    USER=6
+    CHANNEL=7
+    ROLE=8
     '''
     SUB_COMMAND       = 1
     SUB_COMMAND_GROUP = 2
@@ -310,10 +327,8 @@ class OptionChoice:
     '''
     Parameters
     ----------
-
     name : str
         the name of the option-choice (visible to users)
-    
     value : str or int
         the value of the option-choice
     '''
@@ -333,16 +348,12 @@ class Option:
     '''
     Parameters
     ----------
-
     name : str
         option's name
-
     description : str
         option's description
-
     type : Type
         the option type, e.g. ``Type.USER``, see :ref:`option_type`
-
     choices : list
         list of option choices, type :ref:`option_choice`
     '''
@@ -441,13 +452,10 @@ class SlashCommand:
 
     Parameters
     ----------
-
     name : str
         The command name
-    
     description : str
         The command description (it'll be displayed by discord)
-    
     options : List[Option]
         The options of the command. See :ref:`option`
     '''

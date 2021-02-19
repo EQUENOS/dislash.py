@@ -26,18 +26,8 @@ def get_class(func):
 
 class HANDLER:
     '''
-    # Internal use only
-    ## A global SLashCommand handler
-    This is done in order to give an ability to
-    decorate functions across multiple files
-    ```
-    from dislash import slash_commands
-
-    @slash_commands.command()
-    async def hello(interaction):
-        await interaction.reply('Hi')
-    ```
-    ### Note that you should init `SlashClient` to track `interaction_create` events
+    Internal use only
+    -----------------
     '''
     client = None
     commands = {}
