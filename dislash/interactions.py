@@ -149,7 +149,8 @@ class Interaction:
     def created_at(self):
         return datetime.datetime.fromtimestamp(((self.id >> 22) + discord_epoch) / 1000)
 
-    async def reply(self, content: str=None, embed: discord.Embed=None, hide_user_input=False, delete_after: float=None):
+    async def reply(self, content: str=None, embed: discord.Embed=None,
+                    hide_user_input: bool=False, ephemeral: bool=False, delete_after: float=None):
         '''
         Replies to the interaction.
 
@@ -157,16 +158,19 @@ class Interaction:
         ----------
 
         content : str
-            Content of the message that you're going so send
+            content of the message that you're going so send
         
         embed : discord.Embed
-            An embed that'll be attached to the message
+            an embed that'll be attached to the message
         
         hide_user_input : bool
-            If set to ``True``, user's input won't be displayed
+            if set to ``True``, user's input won't be displayed
+        
+        ephemeral : bool
+            if set to ``True``, your response will only be visible to the command author
         
         delete_after : float
-            If specified, your reply will be deleted after ``delete_after`` seconds
+            if specified, your reply will be deleted after ``delete_after`` seconds
 
         Returns
         -------
@@ -190,6 +194,8 @@ class Interaction:
             data['content'] = str(content)
         if embed is not None:
             data['embeds'] = [embed.to_dict()]
+        if ephemeral:
+            data["flags"] = 64
         _json = {
             "type": _type,
             "data": data
@@ -201,10 +207,11 @@ class Interaction:
             ),
             json=_json
         )
-        self.editable = True
         if delete_after is not None:
             self.client.loop.create_task(self.delete_after(delete_after))
-        return await self.edit()
+        if not ephemeral:
+            self.editable = True
+            return await self.edit()
     
     async def edit(self, content: str=None, embed: discord.Embed=None):
         '''
