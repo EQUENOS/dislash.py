@@ -52,8 +52,8 @@ First of all, we have to register our command in Discord. Otherwise, it'll never
     slash = SlashClient(client)
     test_guild_id = 123   # Insert ID of your guild here
 
-    @client.event
-    async def on_connect():
+    @slash.event
+    async def on_ready():
         sc = SlashCommand(
             name="hello",
             description="Sends Hello! to the chat"
@@ -117,8 +117,8 @@ Registration
     slash = SlashClient(client)
     test_guild_id = 123   # Insert ID of your guild here
 
-    @client.event
-    async def on_connect():
+    @slash.event
+    async def on_ready():
         sc = SlashCommand(
             name="embed",
             description="Builds a custom embed",
@@ -151,14 +151,13 @@ Response
     @slash.command()
     async def embed(inter):
         # Let's get arguments
-        title = inter.data.get_option('title')
-        desc = inter.data.get_option('description')
-        color = inter.data.get_option('color')
-        # All of these might be None, because they are optional args
+        title = inter.data.get('title')
+        desc = inter.data.get('description')
+        color = inter.data.get('color')
         # Converting color
         if color is not None:
             try:
-                color = await commands.ColorConverter().convert(inter, color.value)
+                color = await commands.ColorConverter().convert(inter, color)
             except:
                 color = None
         if color is None:
@@ -166,9 +165,9 @@ Response
         # Generating an embed
         emb = discord.Embed(color=color)
         if title is not None:
-            emb.title = title.value
+            emb.title = title
         if desc is not None:
-            emb.description = desc.value
+            emb.description = desc
         # Sending the output
         await inter.reply(embed=emb, hide_user_input=True)
     
