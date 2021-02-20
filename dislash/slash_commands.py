@@ -338,7 +338,7 @@ class SlashClient:
                 print("SlashClient is ready")
         
         | All possible events:
-        | ``on_ready``, ``on_slash_command_error``
+        | ``on_ready``, ``on_slash_command``, ``on_slash_command_error``
         '''
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
