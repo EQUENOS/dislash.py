@@ -10,6 +10,37 @@ from discord.utils import DISCORD_EPOCH
 #-----------------------------------+
 #       Interaction wrappers        |
 #-----------------------------------+
+
+class Resolved:
+    def __init__(self, *, payload, guild, state):
+        members = payload.get("members", {})
+        self.members = {}
+        self.users = {}
+        for ID, data in payload.get("users", {}).items():
+            if ID in members:
+                self.members[ID] = discord.Member(
+                    data={**members[ID], "user": data},
+                    guild=guild,
+                    state=state
+                )
+            else:
+                self.users[ID] = discord.User(
+                    state=state,
+                    data=data
+                )
+        self.roles = {
+            ID: discord.Role(guild=guild, state=state, data=data)
+            for ID, data in payload.get("roles", {}).items()
+        }
+        channels = payload.get('channels', {})
+        self.channels = {}
+        for ID, c in channels.items():
+            c['position'] = 0
+            factory, ch_type = discord._channel_factory(c['type'])
+            if factory:
+                self.channels[ID] = factory(guild=guild, data=c, state=state)
+
+
 class InteractionDataOption:
     '''
     Represents user's input for a specific option
@@ -20,32 +51,71 @@ class InteractionDataOption:
         The name of the option
     value : Any
         The value of the option
-    options : list
-        The list of sub options
+    options : dict
+        | Represents options of a sub-slash-command.
+        | {``name``: :class:`InteractionDataOption`, ...}
     '''
-    def __init__(self, data: dict):
+    def __init__(self, *, data, resolved: Resolved):
         self.name = data['name']
+        # Convert input
+        self.type = data['type']
         self.value = data.get('value')
-        if isinstance(self.value, str) and len(self.value) == 18 and self.value.isdigit():
+        if self.type == 6:
+            if self.value in resolved.members:
+                self.value = resolved.members[self.value]
+            elif self.value in resolved.users:
+                self.value = resolved.users[self.value]
+        elif self.type == 7:
+            if self.value in resolved.channels:
+                self.value = resolved.channels[self.value]
+        elif self.type == 8:
+            if self.value in resolved.roles:
+                self.value = resolved.roles[self.value]
+        if self.type > 5 and isinstance(self.value, str):
             self.value = int(self.value)
-        self.options = [InteractionDataOption(o) for o in data.get('options', [])]
+        # Converting sub options
+        self.options = {
+            o['name']: InteractionDataOption(data=o, resolved=resolved)
+            for o in data.get('options', [])
+        }
     
     def get_option(self, name: str):
         '''
+        Get the raw :class:`InteractionDataOption` matching the specified name
+
         Parameters
         ----------
-
         name : str
-            The name of the sub-option you want to get
+            The name of the option you want to get
         
         Returns
         -------
-
-        option : InteractionDataOption or ``None``
+        option : InteractionDataOption | ``None``
         '''
-        for o in self.options:
-            if o.name == name:
-                return o
+        return self.options.get(name)
+    
+    def get(self, name: str, default=None):
+        '''
+        Get the value of an option with the specified name
+
+        Parameters
+        ----------
+        name : str
+            the name of the option you want to get
+        default : any
+            what to return in case nothing was found
+        
+        Returns
+        -------
+        option_value : any
+            The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
+        option: InteractionDataOption | ``default``
+            Otherwise
+        '''
+        for n, o in self.options.items():
+            if n == name:
+                return o.value if o.type > 2 else o
+        return default
 
 
 class InteractionData:
@@ -55,30 +125,60 @@ class InteractionData:
     id : int
     name : str
         The name of activated slash-command
-    options : list
-        The list of options of the slash-command
+    options : dict
+        | Represents options of the slash-command.
+        | {``name``: :class:`InteractionDataOption`, ...}
     '''
-    def __init__(self, data: dict):
+    def __init__(self, *, data, guild, state):
+        resolved = Resolved(
+            payload=data.get('resolved', {}),
+            guild=guild,
+            state=state
+        )
         self.id = int(data['id'])
         self.name = data['name']
-        self.options = [InteractionDataOption(o) for o in data.get('options', [])]
+        self.options = {
+            o['name']: InteractionDataOption(data=o, resolved=resolved)
+            for o in data.get('options', [])
+        }
     
     def get_option(self, name: str):
         '''
+        Get the raw :class:`InteractionDataOption` matching the specified name
+
         Parameters
         ----------
-
         name : str
             The name of the option you want to get
         
         Returns
         -------
-
-        option : InteractionDataOption or ``None``
+        option : InteractionDataOption | ``None``
         '''
-        for o in self.options:
-            if o.name == name:
-                return o
+        return self.options.get(name)
+    
+    def get(self, name: str, default=None):
+        '''
+        Get the value of an option with the specified name
+
+        Parameters
+        ----------
+        name : str
+            the name of the option you want to get
+        default : any
+            what to return in case nothing was found
+        
+        Returns
+        -------
+        option_value : any
+            The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
+        option: InteractionDataOption | ``default``
+            Otherwise
+        '''
+        for n, o in self.options.items():
+            if n == name:
+                return o.value if o.type > 2 else o
+        return default
 
 
 class Interaction:
@@ -96,38 +196,53 @@ class Interaction:
         The guild where interaction was created
     channel : discord.TextChannel
         The channel where interaction was created
-    author : discord.Member
-        The member that used the slash-command
+    author : :class:`discord.Member` | :class:`discord.User`
+        The member/user that used the slash-command.
     data : InteractionData
         The arguments that were passed
     created_at : datetime.datetime
         Then interaction was created
     '''
     def __init__(self, client, payload: dict):
+        state = client.user._state
         self.prefix = "/" # Just in case
         self.client = client
         self.id = int(payload['id'])
         self.version = payload['version']
         self.type = payload['type']
         self.token = payload['token']
-        self.guild = self.client.get_guild(int(payload['guild_id']))
+        if 'guild_id' in payload:
+            self.guild = self.client.get_guild(int(payload['guild_id']))
+            self.author = discord.Member(
+                data=payload['member'],
+                guild=self.guild,
+                state=state
+            )
+        else:
+            self.guild = None
+            self.author = discord.User(
+                state=state,
+                data=payload['user']
+            )
         self.channel_id = int(payload['channel_id'])
         self._channel = None
-        self.member = discord.Member(
-            data=payload['member'],
+        self.data = InteractionData(
+            data=payload.get('data', {}),
             guild=self.guild,
-            state=self.client.user._state
+            state=state
         )
-        self.data = InteractionData(payload.get('data', {}))
         self.editable = False
     @property
     def channel(self):
         if self._channel is None:
-            self._channel = self.guild.get_channel(self.channel_id)
+            self._channel = self.client.get_channel(self.channel_id)
         return self._channel
     @property
-    def author(self):
-        return self.member
+    def member(self):
+        return self.author if self.guild is not None else None
+    @property
+    def user(self):
+        return self.author
     @property
     def created_at(self):
         return datetime.datetime.fromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
@@ -152,11 +267,11 @@ class Interaction:
         ephemeral : bool
             if set to ``True``, your response will only be visible to the command author
         tts : bool
-            wether the msaage is text-to-speech or not
+            whether the message is text-to-speech or not
         delete_after : float
             if specified, your reply will be deleted after ``delete_after`` seconds
         allowed_mentions : discord.AllowedMentions
-            controls the mentions being processed in this message. All mentions are allowed by default.
+            controls the mentions being processed in this message.
 
         Raises
         ------
@@ -234,7 +349,7 @@ class Interaction:
                 self.client.loop.create_task(self.delete_after(delete_after))
             return await self.edit()
     
-    async def edit(self, content=None, embed=None):
+    async def edit(self, content=None, *, embed=None, embeds=None, allowed_mentions=None):
         '''
         Edits your reply to the interaction.
 
@@ -244,6 +359,10 @@ class Interaction:
             Content of the message that you're going so edit
         embed : discord.Embed
             An embed that'll be attached to the message
+        embeds : List[discord.Embed]
+            a list of up to 10 embeds to reattach
+        allowed_mentions : discord.AllowedMentions
+            controls the mentions being processed in this message.
         
         Returns
         -------
@@ -252,12 +371,34 @@ class Interaction:
         '''
         if not self.editable:
             raise TypeError("There's nothing to edit. Send a reply first.")
-        # patch
+        # Form JSON params
         data = {}
         if content is not None:
             data['content'] = str(content)
+        # Embed or embeds
+        if embed is not None and embeds is not None:
+            raise InvalidArgument("Can't pass both embed and embeds")
+        
         if embed is not None:
+            if not isinstance(embed, discord.Embed):
+                raise InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
+        
+        elif embeds is not None:
+            if len(embeds) > 10:
+                raise InvalidArgument('embds parameter must be a list of up to 10 elements')
+            elif not all(isinstance(embed, discord.Embed) for embed in embeds):
+                raise InvalidArgument('embeds parameter must be a list of discord.Embed')
+            data['embeds'] = [embed.to_dict() for embed in embeds]
+        # Allowed mentions
+        state = self.client.user._state
+        if allowed_mentions is not None:
+            if state.allowed_mentions is not None:
+                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+            else:
+                allowed_mentions = allowed_mentions.to_dict()
+            data['allowed_mentions'] = allowed_mentions
+        # HTTP-response
         r = await self.client.http.request(
             Route(
                 'PATCH', '/webhooks/{app_id}/{token}/messages/@original',
@@ -266,7 +407,7 @@ class Interaction:
             json=data
         )
         return discord.Message(
-            state=self.client.user._state,
+            state=state,
             channel=self.channel,
             data=r
         )
@@ -304,14 +445,14 @@ class Type:
     '''
     Attributes
     ----------
-    SUB_COMMAND=1
-    SUB_COMMAND_GROUP=2
-    STRING=3
-    INTEGER=4
-    BOOLEAN=5
-    USER=6
-    CHANNEL=7
-    ROLE=8
+    SUB_COMMAND = 1
+    SUB_COMMAND_GROUP = 2
+    STRING = 3
+    INTEGER = 4
+    BOOLEAN = 5
+    USER = 6
+    CHANNEL = 7
+    ROLE = 8
     '''
     SUB_COMMAND       = 1
     SUB_COMMAND_GROUP = 2
