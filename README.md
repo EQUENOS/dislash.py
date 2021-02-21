@@ -1,8 +1,5 @@
-<p align="left">
-  <img src="https://cdn.discordapp.com/attachments/808032994668576829/813130401215283240/dislash_emb.png" width="128" title="dislash.py">
-</p>
-
-# dislash.py
+<img src="https://cdn.discordapp.com/attachments/808032994668576829/813135069661102110/dislash_emb_crop.png" align="left" width="50" title="dislash.py">
+<h1>dislash.py</h1>
 
 [![Discord](https://discord.com/api/guilds/808030843078836254/embed.png)](https://discord.gg/gJDbCw8aQy)
 [![PyPi](https://img.shields.io/pypi/v/dislash.py.svg)](https://pypi.org/project/dislash.py)
