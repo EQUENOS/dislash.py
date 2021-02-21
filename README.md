@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="https://cdn.discordapp.com/attachments/808032994668576829/813130401215283240/dislash_emb.png" width="128" title="dislash.py">
+</p>
+
 # dislash.py
 
 [![Discord](https://discord.com/api/guilds/808030843078836254/embed.png)](https://discord.gg/gJDbCw8aQy)
