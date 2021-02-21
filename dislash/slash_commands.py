@@ -55,11 +55,14 @@ class SlashCommandResponse:
             raise SyntaxError('<options> require <description> specified')
         else:
             self.registerable = None
+        # Cog indication
+        self.__cog_checked = False
+        self._cog_name = None
+        self.__cog = None
     
     async def __call__(self, interaction):
-        cog = get_class(self.func)
-        if cog is not None:
-            return await self.func(cog(self.client), interaction)
+        if self.__cog is not None:
+            return await self.func(self.__cog, interaction)
         else:
             return await self.func(interaction)
     
@@ -75,6 +78,15 @@ class SlashCommandResponse:
             retry_after = bucket.update_rate_limit(current)
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
+
+    def _inject_cog(self, name):
+        if self.__cog_checked:
+            return
+        self.__cog_checked = True
+        cog = get_class(self.func)
+        if cog is not None:
+            self._cog_name = name
+            self.__cog = cog(self.client)
 
 
 #-----------------------------------+
@@ -133,17 +145,13 @@ def command(*args, **kwargs):
 
     Parameters
     ----------
-
     name : str
         (optional) name of the slash-command you want to respond to (equals to function name by default)
-    
     description : str
         (optional) if specified, the client will automatically register a command with this description
-    
     options : List[Option]
         (optional) if specified, the client will
         automatically register a command with this list of options. Requires ``description``
-    
     guild_ids : List[int]
         (optional) if specified, the client will register a command in these guilds.
         Otherwise this command will be registered globally. Requires ``description``
@@ -324,6 +332,19 @@ class SlashClient:
         self.is_ready = False
         self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
         self.client.add_listener(self._on_connect, 'on_connect')
+        # Tracking loading of cogs
+        _add_cog = self.client.add_cog
+        def add_cog_2(name):
+            self._inject_cogs(name)
+            _add_cog(name)
+        self.client.add_cog = add_cog_2
+        # Tracking unloading of cogs
+        _rem_cog = self.client.remove_cog
+        def rem_cog_2(name):
+            self._eject_cogs(name)
+            _rem_cog(name)
+        self.client.remove_cog = rem_cog_2
+
     @property
     def commands(self):
         return HANDLER.commands
@@ -750,6 +771,19 @@ class SlashClient:
             await self.delete_guild_command(guild_id, cmd.id)
 
     # Internal things
+    def _inject_cogs(self, name):
+        for cmd in self.commands.values():
+            cmd._inject_cog(name)
+    
+    def _eject_cogs(self, name):
+        HANDLER.commands = {kw: cmd for kw, cmd in HANDLER.commands.items() if cmd._cog_name != name}
+
+    def _do_invokation(self, payload):
+        '''
+        # Don't use it
+        '''
+        self.client.loop.create_task(self._invoke_slash_command(payload))
+
     # Mega automated super-smart AI powered destructor-2000
     async def _auto_register_or_patch(self):
         for cmd in HANDLER.commands.values():
@@ -792,12 +826,6 @@ class SlashClient:
             self.is_ready = True
             await self._activate_event('ready')
     
-    def _do_invokation(self, payload):
-        '''
-        # Don't use it
-        '''
-        self.client.loop.create_task(self._invoke_slash_command(payload))
-
     async def _activate_event(self, event_name, *args, **kwargs):
         '''
         # Don't use it
