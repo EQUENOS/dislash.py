@@ -2,11 +2,11 @@ import discord
 from discord.http import Route
 from discord.shard import AutoShardedClient
 from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
-import asyncio
+from discord.ext.commands.errors import CommandError
 from .interactions import Interaction, SlashCommand
 import datetime
-import inspect
-
+import asyncio
+import inspect, functools
 
 #-----------------------------------+
 #              Utils                |
@@ -88,13 +88,35 @@ class SlashCommandResponse:
             self._cog_name = name
             self.__cog = cog(self.client)
 
+    async def _run_checks(self, ctx):
+        for _check in self.checks:
+            if not await _check(ctx):
+                raise CheckFailure(f"command <{self.name}> has failed")
 
 #-----------------------------------+
 #            Exceptions             |
 #-----------------------------------+
-class SlashCommandError(discord.DiscordException):
+SlashCommandError = CommandError
+
+class CheckFailure(SlashCommandError):
     pass
 
+class CheckAnyFailure(CheckFailure):
+    def __init__(self, checks, errors):
+        self.checks = checks
+        self.errors = errors
+        super().__init__('You do not have permission to run this command.')
+
+class PrivateMessageOnly(CheckFailure):
+    def __init__(self, message=None):
+        super().__init__(message or 'This command can only be used in private messages.')
+
+class NoPrivateMessage(CheckFailure):
+    def __init__(self, message=None):
+        super().__init__(message or 'This command cannot be used in private messages.')
+
+class NotOwner(CheckFailure):
+    pass
 
 class CommandOnCooldown(SlashCommandError):
     """Exception raised when the slash-command being invoked is on cooldown.
@@ -112,28 +134,84 @@ class CommandOnCooldown(SlashCommandError):
         self.retry_after = retry_after
         super().__init__('You are on cooldown. Try again in {:.2f}s'.format(retry_after))
 
-
 class NotGuildOwner(SlashCommandError):
     pass
 
+class MissingRole(CheckFailure):
+    def __init__(self, missing_role):
+        self.missing_role = missing_role
+        message = 'Role {0!r} is required to run this command.'.format(missing_role)
+        super().__init__(message)
 
-class MissingGuildPermissions(SlashCommandError):
-    def __init__(self, perms):
-        self.perms = perms
+class BotMissingRole(CheckFailure):
+    def __init__(self, missing_role):
+        self.missing_role = missing_role
+        message = 'Bot requires the role {0!r} to run this command'.format(missing_role)
+        super().__init__(message)
 
+class MissingAnyRole(CheckFailure):
+    def __init__(self, missing_roles):
+        self.missing_roles = missing_roles
 
-class MissingPermissions(SlashCommandError):
-    def __init__(self, perms):
-        self.perms = perms
+        missing = ["'{}'".format(role) for role in missing_roles]
 
+        if len(missing) > 2:
+            fmt = '{}, or {}'.format(", ".join(missing[:-1]), missing[-1])
+        else:
+            fmt = ' or '.join(missing)
 
-class NotOwner(SlashCommandError):
-    pass
+        message = "You are missing at least one of the required roles: {}".format(fmt)
+        super().__init__(message)
 
+class BotMissingAnyRole(CheckFailure):
+    def __init__(self, missing_roles):
+        self.missing_roles = missing_roles
+
+        missing = ["'{}'".format(role) for role in missing_roles]
+
+        if len(missing) > 2:
+            fmt = '{}, or {}'.format(", ".join(missing[:-1]), missing[-1])
+        else:
+            fmt = ' or '.join(missing)
+
+        message = "Bot is missing at least one of the required roles: {}".format(fmt)
+        super().__init__(message)
+
+class NSFWChannelRequired(CheckFailure):
+    def __init__(self, channel):
+        self.channel = channel
+        super().__init__("Channel '{}' needs to be NSFW for this command to work.".format(channel))
+
+class MissingPermissions(CheckFailure):
+    def __init__(self, missing_perms, *args):
+        self.missing_perms = missing_perms
+
+        missing = [perm.replace('_', ' ').replace('guild', 'server').title() for perm in missing_perms]
+
+        if len(missing) > 2:
+            fmt = '{}, and {}'.format(", ".join(missing[:-1]), missing[-1])
+        else:
+            fmt = ' and '.join(missing)
+        message = 'You are missing {} permission(s) to run this command.'.format(fmt)
+        super().__init__(message, *args)
+
+class BotMissingPermissions(CheckFailure):
+    def __init__(self, missing_perms, *args):
+        self.missing_perms = missing_perms
+
+        missing = [perm.replace('_', ' ').replace('guild', 'server').title() for perm in missing_perms]
+
+        if len(missing) > 2:
+            fmt = '{}, and {}'.format(", ".join(missing[:-1]), missing[-1])
+        else:
+            fmt = ' and '.join(missing)
+        message = 'Bot requires {} permission(s) to run this command.'.format(fmt)
+        super().__init__(message, *args)
 
 #-----------------------------------+
 #            Decorators             |
 #-----------------------------------+
+
 def command(*args, **kwargs):
     '''
     A decorator that registers a function below as response for specified slash-command.
@@ -170,7 +248,6 @@ def command(*args, **kwargs):
         return new_func
     return decorator
 
-
 def check(predicate):
     '''
     A function that converts ``predicate(interaction)`` functions
@@ -186,82 +263,242 @@ def check(predicate):
             return check(predicate)
         
         @is_guild_owner()
-        @slash.command()
+        @slash.command(description="Says Hello if you own the guild")
         async def hello(inter):
-            await inter.reply("Hello, Owner.")
-        
+            await inter.reply("Hello, Mr.Owner!")
     
-    .. note:: **/hello** must be registered first, see :ref:`slash-command_constructor`
+    .. note::
+        
+        | In this example registration of slash-command is automatic.
+        | See :ref:`slash-command_constructor` to learn more about manual registration
+    
     '''
+    if inspect.iscoroutinefunction(predicate):
+        wrapper = predicate
+    else:
+        async def wrapper(ctx):
+            return predicate(ctx)
     def decorator(func):
         if isinstance(func, SlashCommandResponse):
-            func.checks.append(predicate)
+            func.checks.append(wrapper)
         else:
             if not hasattr(func, '__slash_checks__'):
                 func.__slash_checks__ = []
-            func.__slash_checks__.append(predicate)
+            func.__slash_checks__.append(wrapper)
         return func
+    decorator.predicate = wrapper
     return decorator
 
+def check_any(*checks):
+    """Similar to ``commands.check_any``"""
 
-def is_guild_owner():
-    '''
-    A decorator. Checks if the author is the guild's owner.
-    '''
-    def predicate(interaction):
-        if interaction.member.id == interaction.guild.owner_id:
-            return True
-        raise NotGuildOwner("You don't own this guild")
+    unwrapped = []
+    for wrapped in checks:
+        try:
+            pred = wrapped.predicate
+        except AttributeError:
+            raise TypeError('%r must be wrapped by commands.check decorator' % wrapped) from None
+        else:
+            unwrapped.append(pred)
+
+    async def predicate(ctx):
+        errors = []
+        for func in unwrapped:
+            try:
+                value = await func(ctx)
+            except CheckFailure as e:
+                errors.append(e)
+            else:
+                if value:
+                    return True
+        # if we're here, all checks failed
+        raise CheckAnyFailure(unwrapped, errors)
+
     return check(predicate)
 
+def has_role(item):
+    """Similar to ``commands.has_role``"""
 
-def is_owner():
-    '''
-    A decorator. Checks if the author is the bot's owner.
-    '''
-    def predicate(interaction):
-        if interaction.client.owner_id is None:
-            if interaction.member.id in interaction.client.owner_ids:
-                return True
-            raise NotOwner("You do not own this bot.")
-        if interaction.member.id == interaction.client.owner_id:
-            return True
-        raise NotOwner("You do not own this bot.")
+    def predicate(ctx):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+            raise NoPrivateMessage()
+
+        if isinstance(item, int):
+            role = discord.utils.get(ctx.author.roles, id=item)
+        else:
+            role = discord.utils.get(ctx.author.roles, name=item)
+        if role is None:
+            raise MissingRole(item)
+        return True
+
     return check(predicate)
 
+def has_any_role(*items):
+    """Similar to ``commands.has_any_role``"""
+    def predicate(ctx):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+            raise NoPrivateMessage()
 
-def has_guild_permissions(**perms):
-    '''
-    A decorator. Checks if the author has specific guild permissions.
-    '''
-    def predicate(inter):
-        if inter.member.id == inter.guild.owner_id:
+        getter = functools.partial(discord.utils.get, ctx.author.roles)
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
             return True
-        has = inter.member.guild_permissions
-        if has.administrator:
-            return True
-        if all(getattr(has, kw, True) for kw in perms):
-            return True
-        raise MissingGuildPermissions([kw for kw in perms if getattr(has, kw, None) is not None])
+        raise MissingAnyRole(items)
+
     return check(predicate)
 
+def bot_has_role(item):
+    """Similar to ``commands.bot_has_role``"""
+
+    def predicate(ctx):
+        ch = ctx.channel
+        if not isinstance(ch, discord.abc.GuildChannel):
+            raise NoPrivateMessage()
+
+        me = ch.guild.me
+        if isinstance(item, int):
+            role = discord.utils.get(me.roles, id=item)
+        else:
+            role = discord.utils.get(me.roles, name=item)
+        if role is None:
+            raise BotMissingRole(item)
+        return True
+    return check(predicate)
+
+def bot_has_any_role(*items):
+    """Similar to ``commands.bot_has_any_role``"""
+    def predicate(ctx):
+        ch = ctx.channel
+        if not isinstance(ch, discord.abc.GuildChannel):
+            raise NoPrivateMessage()
+
+        me = ch.guild.me
+        getter = functools.partial(discord.utils.get, me.roles)
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+            return True
+        raise BotMissingAnyRole(items)
+    return check(predicate)
 
 def has_permissions(**perms):
-    '''
-    A decorator. Checks if the author has specific permissions in the channel.
-    '''
+    """Similar to ``commands.has_permissions``"""
+
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
-    def predicate(inter):
-        ch = inter.channel
-        permissions = ch.permissions_for(inter.member)
+
+    def predicate(ctx):
+        ch = ctx.channel
+        permissions = ch.permissions_for(ctx.author)
+
         missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
+
         if not missing:
             return True
+
         raise MissingPermissions(missing)
+
     return check(predicate)
 
+def bot_has_permissions(**perms):
+    """Similar to ``commands.bot_has_permissions``"""
+
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
+    if invalid:
+        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+
+    def predicate(ctx):
+        guild = ctx.guild
+        me = guild.me if guild is not None else ctx.bot.user
+        permissions = ctx.channel.permissions_for(me)
+
+        missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
+
+        if not missing:
+            return True
+
+        raise BotMissingPermissions(missing)
+
+    return check(predicate)
+
+def has_guild_permissions(**perms):
+    """Similar to ``commands.has_guild_permissions``"""
+
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
+    if invalid:
+        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+
+    def predicate(ctx):
+        if not ctx.guild:
+            raise NoPrivateMessage
+
+        permissions = ctx.author.guild_permissions
+        missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
+
+        if not missing:
+            return True
+
+        raise MissingPermissions(missing)
+
+    return check(predicate)
+
+def bot_has_guild_permissions(**perms):
+    """Similar to ``commands.bot_has_guild_permissions``"""
+
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
+    if invalid:
+        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+
+    def predicate(ctx):
+        if not ctx.guild:
+            raise NoPrivateMessage
+
+        permissions = ctx.me.guild_permissions
+        missing = [perm for perm, value in perms.items() if getattr(permissions, perm) != value]
+
+        if not missing:
+            return True
+
+        raise BotMissingPermissions(missing)
+
+    return check(predicate)
+
+def dm_only():
+    """Similar to ``commands.dm_only``"""
+
+    def predicate(ctx):
+        if ctx.guild is not None:
+            raise PrivateMessageOnly()
+        return True
+
+    return check(predicate)
+
+def guild_only():
+    """Similar to ``commands.guild_only``"""
+
+    def predicate(ctx):
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        return True
+
+    return check(predicate)
+
+def is_owner():
+    """Similar to ``commands.is_owner``"""
+
+    async def predicate(ctx):
+        if not await ctx.client.is_owner(ctx.author):
+            raise NotOwner('You do not own this bot.')
+        return True
+
+    return check(predicate)
+
+def is_nsfw():
+    """Similar to ``commands.is_nsfw``"""
+    def pred(ctx):
+        ch = ctx.channel
+        if ctx.guild is None or (isinstance(ch, discord.TextChannel) and ch.is_nsfw()):
+            return True
+        raise NSFWChannelRequired(ch)
+    return check(pred)
 
 def cooldown(rate, per, type=BucketType.default):
     '''
@@ -280,13 +517,10 @@ def cooldown(rate, per, type=BucketType.default):
 
     Parameters
     ----------
-    
     rate : int
         The number of times a command can be used before triggering a cooldown.
-
     per : float
         The amount of seconds to wait for a cooldown when it's been triggered.
-
     type : BucketType
         The type of cooldown to have.
     '''
@@ -298,7 +532,6 @@ def cooldown(rate, per, type=BucketType.default):
         return func
     return decorator
 
-
 #-----------------------------------+
 #      Slash-commands client        |
 #-----------------------------------+
@@ -308,17 +541,13 @@ class SlashClient:
 
     Parameters
     ----------
-
     client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
 
     Attributes
     ----------
-
     client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
-
     registered_global_commands : dict
         All registered global commands are cached here
-    
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     '''
@@ -359,14 +588,18 @@ class SlashClient:
                 print("SlashClient is ready")
         
         | All possible events:
-        | ``on_ready``, ``on_slash_command``, ``on_slash_command_error``
+        | ``on_ready``, ``on_auto_register``,
+        | ``on_slash_command``, ``on_slash_command_error``
         '''
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = func.__name__
         if name.startswith('on_'):
             name = name[3:]
-            if name in ['slash_command', 'slash_command_error', 'ready']:
+            if name in [
+                'slash_command', 'slash_command_error',
+                'ready', 'auto_register'
+                ]:
                 self.events[name] = func
         return func
 
@@ -786,6 +1019,8 @@ class SlashClient:
 
     # Mega automated super-smart AI powered destructor-2000
     async def _auto_register_or_patch(self):
+        total_posts = 0
+        total_patches = 0
         for cmd in HANDLER.commands.values():
             if cmd.registerable is not None:
                 # Local registration
@@ -796,17 +1031,24 @@ class SlashClient:
                         old_cmd = await self.fetch_guild_command_named(ID, cmd.name)
                         if old_cmd is None:
                             await self.register_guild_slash_command(ID, cmd.registerable)
+                            total_posts += 1
                         elif not (old_cmd == cmd.registerable):
                             delattr(cmd.registerable, 'name')
                             await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable)
+                            total_patches += 1
                 # Global registration
                 else:
                     old_cmd = await self.fetch_global_command_named(cmd.name)
                     if old_cmd is None:
                         await self.register_global_slash_command(cmd.registerable)
+                        total_posts += 1
                     elif not (old_cmd == cmd.registerable):
                         delattr(cmd.registerable, 'name')
                         await self.edit_global_slash_command(old_cmd.id, cmd.registerable)
+                        total_patches += 1
+        self.client.loop.create_task(
+            self._activate_event('auto_register', total_posts, total_patches)
+        )
 
     # Adding relevant listeners
     async def _on_shard_connect(self, shard_id):
@@ -850,14 +1092,10 @@ class SlashClient:
         if SCR is not None:
             # Run checks
             err = None
-            for _check in SCR.checks:
-                try:
-                    if not _check(inter):
-                        err = SlashCommandError(f'Command <{inter.data.name}> failed')
-                        break
-                except Exception as e:
-                    err = e
-                    break
+            try:
+                await SCR._run_checks(inter)
+            except Exception as e:
+                err = e
             # Activate error handler in case checks failed
             if err is not None:
                 if 'slash_command_error' not in self.events:
