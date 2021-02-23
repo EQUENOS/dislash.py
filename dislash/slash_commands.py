@@ -3,6 +3,7 @@ from discord.http import Route
 from discord.shard import AutoShardedClient
 from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 from discord.ext.commands.errors import CommandError
+from discord.errors import Forbidden
 from .interactions import Interaction, SlashCommand
 import datetime
 import asyncio
@@ -1021,31 +1022,47 @@ class SlashClient:
     async def _auto_register_or_patch(self):
         total_posts = 0
         total_patches = 0
-        for cmd in HANDLER.commands.values():
+        bad_guilds = []
+        for name, cmd in HANDLER.commands.items():
             if cmd.registerable is not None:
                 # Local registration
                 if cmd.guild_ids is not None:
                     # Iterate through guilds
                     for ID in cmd.guild_ids:
+                        if ID in bad_guilds:
+                            continue
                         # Check if the command is registered
-                        old_cmd = await self.fetch_guild_command_named(ID, cmd.name)
+                        try:
+                            old_cmd = await self.fetch_guild_command_named(ID, cmd.name)
+                            if old_cmd is None:
+                                await self.register_guild_slash_command(ID, cmd.registerable)
+                                total_posts += 1
+                            elif not (old_cmd == cmd.registerable):
+                                delattr(cmd.registerable, 'name')
+                                await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable)
+                                total_patches += 1
+                        except Exception as e:
+                            if isinstance(e, Forbidden):
+                                bad_guilds.append(ID)
+                            else:
+                                print(f"[WARNING] Failed to build <{name}> in <{ID}>: {e}")
+                # Global registration
+                else:
+                    try:
+                        old_cmd = await self.fetch_global_command_named(cmd.name)
                         if old_cmd is None:
-                            await self.register_guild_slash_command(ID, cmd.registerable)
+                            await self.register_global_slash_command(cmd.registerable)
                             total_posts += 1
                         elif not (old_cmd == cmd.registerable):
                             delattr(cmd.registerable, 'name')
-                            await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable)
+                            await self.edit_global_slash_command(old_cmd.id, cmd.registerable)
                             total_patches += 1
-                # Global registration
-                else:
-                    old_cmd = await self.fetch_global_command_named(cmd.name)
-                    if old_cmd is None:
-                        await self.register_global_slash_command(cmd.registerable)
-                        total_posts += 1
-                    elif not (old_cmd == cmd.registerable):
-                        delattr(cmd.registerable, 'name')
-                        await self.edit_global_slash_command(old_cmd.id, cmd.registerable)
-                        total_patches += 1
+                    except Exception as e:
+                        print(f"[WARNING] Failed to globally build {name}: {e}")
+        
+        if len(bad_guilds) > 0:
+            print(f"[WARNING] Missing access: '" + "', '".join(str(ID) for ID in bad_guilds) + "'")
+        
         self.client.loop.create_task(
             self._activate_event('auto_register', total_posts, total_patches)
         )
