@@ -288,7 +288,7 @@ class Interaction:
         # Which callback type is it
         if content is None and embed is None:
             if hide_user_input:
-                _type = 1
+                _type = 2
             else:
                 _type = 5
         elif hide_user_input:
