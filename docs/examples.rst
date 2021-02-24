@@ -29,8 +29,8 @@ Auto registration
 
 
 
-Registering a slash-command
----------------------------
+Manual registration
+-------------------
 
 .. seealso::
 
@@ -76,6 +76,8 @@ Registering a slash-command
 
 Responding to a slash-command
 -----------------------------
+
+It's assumed that you've already registered **/random** command.
 
 .. code-block:: python
 

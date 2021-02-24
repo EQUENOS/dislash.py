@@ -58,12 +58,30 @@ Checks
 
 .. autofunction:: check
 
+.. autofunction:: check_any
+
+.. autofunction:: cooldown
+
+.. autofunction:: has_role
+
+.. autofunction:: has_any_role
+
 .. autofunction:: has_permissions
 
 .. autofunction:: has_guild_permissions
 
-.. autofunction:: is_guild_owner
+.. autofunction:: dm_only
+
+.. autofunction:: guild_only
 
 .. autofunction:: is_owner
 
-.. autofunction:: cooldown
+.. autofunction:: is_nsfw
+
+.. autofunction:: bot_has_role
+
+.. autofunction:: bot_has_any_role
+
+.. autofunction:: bot_has_permissions
+
+.. autofunction:: bot_has_guild_permissions
