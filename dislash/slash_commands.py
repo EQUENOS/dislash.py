@@ -796,30 +796,24 @@ class SlashClient:
             json=slash_command.to_dict()
         )
     
-    async def edit_global_slash_command(self, command_id: int, slash_command: SlashCommand):
+    async def edit_global_slash_command(self, command_id: int, slash_command: SlashCommand, **kwargs):
         '''Edits a global command
 
         Parameters
         ----------
-
         command_id : int
-
         slash_command : SlashCommand
             replacement of the old data
         '''
         if not isinstance(slash_command, SlashCommand):
-            raise ValueError('Expected <SlashCommand> instance')
-        slash_command.id = command_id
-        for i, cmd in enumerate(self.registered_global_commands):
-            if cmd.id == command_id:
-                self.registered_global_commands[i] = slash_command
-                break
+            raise discord.InvalidArgument('parameter slash_command must be SlashCommand')
+        ignore_name = kwargs.get("ignore_name", False)
         r = await self.client.http.request(
             Route(
                 'PATCH', '/applications/{app_id}/commands/{cmd_id}',
                 app_id=self.client.user.id, cmd_id=command_id
             ),
-            json=slash_command.to_dict()
+            json=slash_command.to_dict(hide_name=ignore_name)
         )
         # Update cache
         sc = SlashCommand.from_dict(r)
@@ -829,28 +823,27 @@ class SlashClient:
                 break
         return sc
     
-    async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand):
+    async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand, **kwargs):
         '''Edits a local command
 
         Parameters
         ----------
-
         guild_id : int
-
         command_id : int
-
         slash_command : SlashCommand
             replacement of the old data
         '''
         if not isinstance(slash_command, SlashCommand):
-            raise ValueError('Expected <SlashCommand> instance')
-        await self.client.http.request(
+            raise discord.InvalidArgument('parameter slash_command must be SlashCommand')
+        ignore_name = kwargs.get("ignore_name", False)
+        r = await self.client.http.request(
             Route(
                 'PATCH', '/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}',
                 app_id=self.client.user.id, guild_id=guild_id, cmd_id=command_id
             ),
-            json=slash_command.to_dict()
+            json=slash_command.to_dict(hide_name=ignore_name)
         )
+        return SlashCommand.from_dict(r)
     
     async def delete_global_slash_command(self, command_id: int):
         '''Deletes a global command
@@ -1038,8 +1031,7 @@ class SlashClient:
                                 await self.register_guild_slash_command(ID, cmd.registerable)
                                 total_posts += 1
                             elif not (old_cmd == cmd.registerable):
-                                delattr(cmd.registerable, 'name')
-                                await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable)
+                                await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable, ignore_name=True)
                                 total_patches += 1
                         except Exception as e:
                             if isinstance(e, Forbidden):
@@ -1054,8 +1046,7 @@ class SlashClient:
                             await self.register_global_slash_command(cmd.registerable)
                             total_posts += 1
                         elif not (old_cmd == cmd.registerable):
-                            delattr(cmd.registerable, 'name')
-                            await self.edit_global_slash_command(old_cmd.id, cmd.registerable)
+                            await self.edit_global_slash_command(old_cmd.id, cmd.registerable, ignore_name=True)
                             total_patches += 1
                     except Exception as e:
                         print(f"[WARNING] Failed to globally build {name}: {e}")

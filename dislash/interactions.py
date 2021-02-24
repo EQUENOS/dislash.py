@@ -58,7 +58,7 @@ class InteractionDataOption:
     def __init__(self, *, data, resolved: Resolved):
         self.name = data['name']
         # Convert input
-        self.type = data['type']
+        self.type = data.get('type', 3)
         self.value = data.get('value')
         if self.type == 6:
             if self.value in resolved.members:
@@ -633,11 +633,11 @@ class SlashCommand:
         '''
         self.options.append(option)
 
-    def to_dict(self):
+    def to_dict(self, *, hide_name=False):
         res = {
             'description': self.description,
             'options': [o.to_dict() for o in self.options]
         }
-        if hasattr(self, 'name'):
+        if not hide_name:
             res['name'] = self.name
         return res
