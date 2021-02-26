@@ -52,7 +52,7 @@ test_guilds = [12345, 98765]
     name="hello", # Defaults to function name
     description="Says hello",
     guild_ids=test_guilds # If not specified, the command is registered globally
-    # Global registration takes more than 1 hour
+    # Global registration takes up to 1 hour
 )
 async def hello(inter):
     await inter.reply("Hello!")
