@@ -31,7 +31,7 @@ SlashCommand
 
     .. automethod:: add_option
 
-Now let's register world's simpliest slash-command in our test server:
+Now let's register a simple slash-command on our test server:
 
 .. code-block:: python
 
@@ -53,7 +53,13 @@ Now let's register world's simpliest slash-command in our test server:
     
     client.run("BOT_TOKEN")
 
-.. warning:: Do not register the same command multiple times
+.. warning:: It's enough to register a slash command once.
+
+.. note::
+
+    | Registering a command isn't enough to make it work.
+    | Even though it's displayed on your test server, it just eats the input and nothing happens.
+    | You have to define a respose, see :ref:`interaction` and :ref:`examples`
 
 
 .. _option:

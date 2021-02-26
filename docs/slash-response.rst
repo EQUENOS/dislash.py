@@ -10,9 +10,15 @@ Interaction
 
 | Obtainable via **async** functions decorated with ``@slash_client.command()`` or ``@slash_commands.command()``,
 | As well as via ``on_slash_command`` event.
-| See :ref:`slash_client`
+| See :ref:`slash_client` and :ref:`examples`
 
 .. autoclass:: Interaction
+
+    .. automethod:: get
+
+    .. automethod:: get_option
+
+    .. automethod:: option_at
 
     .. automethod:: reply
 
@@ -32,6 +38,8 @@ Interaction Data
 
     .. automethod:: get_option
 
+    .. automethod:: option_at
+
 
 
 .. _interaction_data_option:
@@ -44,3 +52,5 @@ Interaction Data Option
     .. automethod:: get
 
     .. automethod:: get_option
+
+..    .. automethod:: option_at

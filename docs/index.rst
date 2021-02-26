@@ -14,7 +14,8 @@ Sections
    :maxdepth: 2
    
    quickstart
+   slash-client
    slash-register
    slash-response
-   slash-client
+   cogs
    examples
