@@ -30,4 +30,6 @@ It's as simple as that:
 
 * ``self`` is a required first argument 
 
-* ``self.bot`` instead of ``bot``
+* :class:`self.bot` instead of :class:`bot`
+
+* :class:`SlashClient` is accessible via :class:`self.bot.slash`
