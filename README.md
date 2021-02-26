@@ -10,8 +10,6 @@ An extending library for [discord.py](https://github.com/Rapptz/discord.py) that
 
 📄 Slash commands is a new discord API feature that allows to build user-friendly commands. Once "`/`" is pressed on keyboard, the entire list of slash-commands pops up. The list includes hints and short descriptions which make exploring your bot much easier.
 
-📄 This library is a python wrapper that makes the process of creating slash-commands much easier.
-
 # Installation
 
 Run any of these commands in terminal:
