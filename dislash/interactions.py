@@ -57,9 +57,18 @@ class InteractionDataOption:
     '''
     def __init__(self, *, data, resolved: Resolved):
         self.name = data['name']
-        # Convert input
-        self.type = data.get('type', 3)
         self.value = data.get('value')
+        # Some devices may return old-formatted Interactions
+        # We have to figure out the best matching type in this case
+        if "type" in data:
+            self.type = data["type"]
+        elif isinstance(self.value, bool):
+            self.type = 5
+        elif isinstance(self.value, int):
+            self.type = 4
+        else:
+            self.type = 3
+        # Type 6 and higher requires resolved data
         if self.type == 6:
             if self.value in resolved.members:
                 self.value = resolved.members[self.value]
@@ -117,6 +126,10 @@ class InteractionDataOption:
                 return o.value if o.type > 2 else o
         return default
 
+    def option_at(self, index: int):
+        """Similar to :class:`InteractionData.option_at`"""
+        return list(self.options.values())[index] if 0 <= index < len(self.options) else None
+
 
 class InteractionData:
     '''
@@ -153,7 +166,7 @@ class InteractionData:
         
         Returns
         -------
-        option : InteractionDataOption | ``None``
+        option : :class:`InteractionDataOption` | ``None``
         '''
         return self.options.get(name)
     
@@ -172,7 +185,7 @@ class InteractionData:
         -------
         option_value : any
             The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
-        option: InteractionDataOption | ``default``
+        option: :class:`InteractionDataOption` | ``default``
             Otherwise
         '''
         for n, o in self.options.items():
@@ -191,7 +204,7 @@ class InteractionData:
         
         Returns
         -------
-        option : InteractionDataOption | None
+        option : :class:`InteractionDataOption` | ``None``
             the option located at the specified index
         """
         return list(self.options.values())[index] if 0 <= index < len(self.options) else None
@@ -210,13 +223,13 @@ class Interaction:
         Interaction token
     guild : discord.Guild
         The guild where interaction was created
-    channel : discord.TextChannel
+    channel : :class:`discord.TextChannel`
         The channel where interaction was created
     author : :class:`discord.Member` | :class:`discord.User`
         The member/user that used the slash-command.
-    data : InteractionData
+    data : :class:`InteractionData`
         The arguments that were passed
-    created_at : datetime.datetime
+    created_at : :class:`datetime.datetime`
         Then interaction was created
     '''
     def __init__(self, client, payload: dict):

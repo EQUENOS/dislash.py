@@ -539,7 +539,7 @@ def cooldown(rate, per, type=BucketType.default):
 #-----------------------------------+
 class SlashClient:
     '''
-    The main purpose of this class is to track ``INTERACTION_CREATE`` event.
+    The main purpose of this class is to track ``INTERACTION_CREATE`` API event.
 
     Parameters
     ----------
@@ -563,6 +563,8 @@ class SlashClient:
         self.is_ready = False
         self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
         self.client.add_listener(self._on_connect, 'on_connect')
+        # Link the slash ext to client
+        self.client.slash = self
         # Tracking loading of cogs
         _add_cog = self.client.add_cog
         def add_cog_2(name):
