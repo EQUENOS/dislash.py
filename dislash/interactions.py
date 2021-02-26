@@ -180,6 +180,22 @@ class InteractionData:
                 return o.value if o.type > 2 else o
         return default
 
+    def option_at(self, index: int):
+        """
+        Get an option by it's index
+
+        Parameters
+        ----------
+        index : int
+            the index of the option you want to get
+        
+        Returns
+        -------
+        option : InteractionDataOption | None
+            the option located at the specified index
+        """
+        return list(self.options.values())[index] if 0 <= index < len(self.options) else None
+
 
 class Interaction:
     '''
@@ -246,6 +262,18 @@ class Interaction:
     @property
     def created_at(self):
         return datetime.datetime.fromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
+
+    def get(self, name: str, default=None):
+        """Equivalent to :class:`InteractionData.get`"""
+        return self.data.get(name, default)
+    
+    def get_option(self, name: str):
+        """Equivalent to :class:`InteractionData.get_option`"""
+        return self.data.get_option(name)
+
+    def option_at(self, index: int):
+        """Equivalent to :class:`InteractionData.option_at`"""
+        return self.data.option_at(index)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
                                             tts=False, hide_user_input=False,

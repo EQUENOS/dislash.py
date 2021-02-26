@@ -56,6 +56,7 @@ class SlashCommandResponse:
             raise SyntaxError('<options> require <description> specified')
         else:
             self.registerable = None
+        self._auto_merged = False
         # Cog indication
         self.__cog_checked = False
         self._cog_name = None
@@ -1001,6 +1002,8 @@ class SlashClient:
     def _inject_cogs(self, name):
         for cmd in self.commands.values():
             cmd._inject_cog(name)
+        if self.is_ready:
+            self.client.loop.create_task(self._auto_register_or_patch())
     
     def _eject_cogs(self, name):
         HANDLER.commands = {kw: cmd for kw, cmd in HANDLER.commands.items() if cmd._cog_name != name}
@@ -1017,7 +1020,8 @@ class SlashClient:
         total_patches = 0
         bad_guilds = []
         for name, cmd in HANDLER.commands.items():
-            if cmd.registerable is not None:
+            if cmd.registerable is not None and not cmd._auto_merged:
+                cmd._auto_merged = True
                 # Local registration
                 if cmd.guild_ids is not None:
                     # Iterate through guilds
@@ -1054,9 +1058,10 @@ class SlashClient:
         if len(bad_guilds) > 0:
             print(f"[WARNING] Missing access: '" + "', '".join(str(ID) for ID in bad_guilds) + "'")
         
-        self.client.loop.create_task(
-            self._activate_event('auto_register', total_posts, total_patches)
-        )
+        if total_patches > 0 or total_posts > 0:
+            self.client.loop.create_task(
+                self._activate_event('auto_register', total_posts, total_patches)
+            )
 
     # Adding relevant listeners
     async def _on_shard_connect(self, shard_id):
