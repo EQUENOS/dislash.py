@@ -1,15 +1,16 @@
 <img src="https://cdn.discordapp.com/attachments/808032994668576829/813135069661102110/dislash_emb_crop.png" align="left" width="50" title="dislash.py">
 <h1>dislash.py</h1>
 
+
 [![Discord](https://discord.com/api/guilds/808030843078836254/embed.png)](https://discord.gg/gJDbCw8aQy)
 [![PyPi](https://img.shields.io/pypi/v/dislash.py.svg)](https://pypi.org/project/dislash.py)
 [![Python](https://img.shields.io/pypi/pyversions/dislash.py.svg)](https://pypi.python.org/pypi/dislash.py)
 
 An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome slash-commands.
 
-⭐ Star us on GitHub - we do really need your feedback and help!
+📄 Slash commands is a new discord API feature that allows to build user-friendly commands. Once "`/`" is pressed on keyboard, the entire list of slash-commands pops up. The list includes hints and short descriptions which make exploring your bot much easier.
 
-
+📄 This library is a python wrapper that makes the process of creating slash-commands much easier.
 
 # Installation
 
@@ -123,8 +124,8 @@ async def random(interaction):
     # interaction is instance of `interactions.Interaction`
     # It's pretty much the same as "ctx" from discord.py
     # except <message> attribute is replaced by <data>
-    a = interaction.data.get_option('start').value
-    b = interaction.data.get_option('end').value
+    a = interaction.get('start')
+    b = interaction.get('end')
     if b < a: a, b = b, a
     await interaction.reply(randint(a, b))
 
@@ -134,8 +135,6 @@ client.run("BOT_TOKEN")
 
 
 # Links
-> **[Documentation](https://dislashpy.readthedocs.io/en/latest)**
-
-> **[PyPi](https://pypi.org/project/dislash.py)**
-
-> **[Our Discord](https://discord.gg/gJDbCw8aQy)**
+- **[Documentation](https://dislashpy.readthedocs.io/en/latest)**
+- **[PyPi](https://pypi.org/project/dislash.py)**
+- **[Our Discord](https://discord.gg/gJDbCw8aQy)**
