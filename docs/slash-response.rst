@@ -54,3 +54,12 @@ Interaction Data Option
     .. automethod:: get_option
 
     .. automethod:: option_at
+
+
+
+.. _response_type:
+
+Response Type
+-------------
+
+.. autoclass:: ResponseType
