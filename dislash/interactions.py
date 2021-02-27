@@ -11,6 +11,25 @@ from discord.utils import DISCORD_EPOCH
 #       Interaction wrappers        |
 #-----------------------------------+
 
+class ResponseType:
+    """
+    All possible response type values. Used in :class:`Interaction.reply`
+
+    Attributes
+    ----------
+    Pong = 1
+    Acknowledge = 2
+    ChannelMessage = 3
+    ChannelMessageWithSource = 4
+    AcknowledgeWithSource = 5
+    """
+    Pong                     = 1
+    Acknowledge              = 2
+    ChannelMessage           = 3
+    ChannelMessageWithSource = 4
+    AcknowledgeWithSource    = 5
+
+
 class Resolved:
     def __init__(self, *, payload, guild, state):
         members = payload.get("members", {})
@@ -291,7 +310,7 @@ class Interaction:
     async def reply(self, content=None, *,  embed=None, embeds=None,
                                             tts=False, hide_user_input=False,
                                             ephemeral=False, delete_after=None,
-                                            allowed_mentions=None):
+                                            allowed_mentions=None, type=None):
         '''
         Replies to the interaction.
 
@@ -313,6 +332,9 @@ class Interaction:
             if specified, your reply will be deleted after ``delete_after`` seconds
         allowed_mentions : discord.AllowedMentions
             controls the mentions being processed in this message.
+        type : :class:`int` | :class:`ResponseType`
+            sets the response type. If it's not specified, this method sets
+            it according to ``hide_user_input``, ``content`` and ``embed`` params.
 
         Raises
         ------
@@ -326,19 +348,20 @@ class Interaction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         '''
+        is_empty_message = content is None and embed is None
         # Which callback type is it
-        if content is None and embed is None:
-            if hide_user_input:
-                _type = 2
+        if type is None:
+            if is_empty_message:
+                if hide_user_input:
+                    type = 2
+                else:
+                    type = 5
+            elif hide_user_input:
+                type = 3
             else:
-                _type = 5
-        elif hide_user_input:
-            _type = 3
-        else:
-            _type = 4
-        # Post
+                type = 4
+        # JSON data formation
         data = {}
-
         if content is not None:
             data['content'] = str(content)
         # Embed or embeds
@@ -357,25 +380,26 @@ class Interaction:
                 raise InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
         # Allowed mentions
-        state = self.client.user._state
-        if allowed_mentions is not None:
-            if state.allowed_mentions is not None:
-                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+        if not is_empty_message:
+            state = self.client.user._state
+            if allowed_mentions is not None:
+                if state.allowed_mentions is not None:
+                    allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+                else:
+                    allowed_mentions = allowed_mentions.to_dict()
             else:
-                allowed_mentions = allowed_mentions.to_dict()
-        else:
-            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
-        data['allowed_mentions'] = allowed_mentions
+                allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
+            data['allowed_mentions'] = allowed_mentions
         # Message design
         if ephemeral:
             data["flags"] = 64
         if tts:
             data["tts"] = True
+        # Final JSON formation
+        _json = {"type": type}
+        if len(data) > 0:
+            _json["data"] = data
         # HTTP-request
-        _json = {
-            "type": _type,
-            "data": data
-        }
         await self.client.http.request(
             Route(
                 'POST', '/interactions/{interaction_id}/{token}/callback',
@@ -384,11 +408,13 @@ class Interaction:
             json=_json
         )
         # Ephemeral messages aren't stored and can't be deleted or edited
-        if not ephemeral:
-            self.editable = True
-            if delete_after is not None:
-                self.client.loop.create_task(self.delete_after(delete_after))
-            return await self.edit()
+        # Same for empty type-1 & type-5 messages
+        if ephemeral or (content is None and embed is None):
+            return None
+        self.editable = True
+        if delete_after is not None:
+            self.client.loop.create_task(self.delete_after(delete_after))
+        return await self.edit()
     
     async def edit(self, content=None, *, embed=None, embeds=None, allowed_mentions=None):
         '''
