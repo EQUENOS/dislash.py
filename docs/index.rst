@@ -4,8 +4,9 @@ Welcome to dislash.py's documentation!
 ======================================
 
 * :ref:`search`
-
-* `Our Discord <https://discord.gg/gJDbCw8aQy>`_
+* `PyPi <https://pypi.org/project/dislash.py>`_
+* `GitHub <https://github.com/EQUENOS/dislash.py>`_
+* `Discord <https://discord.gg/gJDbCw8aQy>`_
 
 Sections
 ========
