@@ -36,6 +36,10 @@ SlashClient
 
     .. automethod:: delete_guild_slash_command
 
+    .. automethod:: delete_global_commands
+
+    .. automethod:: delete_guild_commands
+
     .. automethod:: fetch_global_command_named
 
     .. automethod:: fetch_guild_command_named
