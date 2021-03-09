@@ -58,8 +58,7 @@ class SlashCommandResponse:
             self.registerable = None
         self._auto_merged = False
         # Cog indication
-        self.__cog_checked = False
-        self._cog_name = None
+        self._cog_name = class_name(func)
         self.__cog = None
     
     async def __call__(self, interaction):
@@ -81,14 +80,8 @@ class SlashCommandResponse:
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
 
-    def _inject_cog(self, name):
-        if self.__cog_checked:
-            return
-        self.__cog_checked = True
-        cog = get_class(self.func)
-        if cog is not None:
-            self._cog_name = name
-            self.__cog = cog(self.client)
+    def _inject_cog(self, cog):
+        self.__cog = cog
 
     async def _run_checks(self, ctx):
         for _check in self.checks:
@@ -567,9 +560,9 @@ class SlashClient:
         self.client.slash = self
         # Tracking loading of cogs
         _add_cog = self.client.add_cog
-        def add_cog_2(name):
-            self._inject_cogs(name)
-            _add_cog(name)
+        def add_cog_2(cog):
+            self._inject_cogs(cog)
+            _add_cog(cog)
         self.client.add_cog = add_cog_2
         # Tracking unloading of cogs
         _rem_cog = self.client.remove_cog
@@ -889,6 +882,41 @@ class SlashClient:
             )
         )
 
+    async def delete_global_commands(self, ignore_errors=False):
+        """
+        Deletes all global commands.
+
+        Parameters
+        ----------
+        ignore_errors : bool
+            if set to ``True``, the method doesn't get interrupted by unexpected errors
+        """
+        for cmd in self.registered_global_commands:
+            try:
+                await self.delete_global_command(cmd.id)
+            except Exception as e:
+                if not ignore_errors:
+                    raise e
+
+    async def delete_guild_commands(self, guild_id: int, ignore_errors=False):
+        """
+        Deletes all local commands in the specified guild.
+
+        Parameters
+        ----------
+        guild_id : int
+            the ID of the guild where you're going to delete the commands
+        ignore_errors : bool
+            if set to ``True``, the method doesn't get interrupted by unexpected errors
+        """
+        cmds = await self.fetch_guild_commands(guild_id)
+        for cmd in cmds:
+            try:
+                await self.delete_guild_command(guild_id, cmd.id)
+            except Exception as e:
+                if not ignore_errors:
+                    raise e
+
     # Even slower API methods
     async def fetch_global_command_named(self, name: str):
         '''
@@ -1001,9 +1029,10 @@ class SlashClient:
             await self.delete_guild_command(guild_id, cmd.id)
 
     # Internal things
-    def _inject_cogs(self, name):
+    def _inject_cogs(self, cog):
         for cmd in self.commands.values():
-            cmd._inject_cog(name)
+            if cmd._cog_name == cog.__cog_name__:
+                cmd._inject_cog(cog)
         if self.is_ready:
             self.client.loop.create_task(self._auto_register_or_patch())
     
