@@ -7,6 +7,18 @@ from discord.http import Route
 from discord.utils import DISCORD_EPOCH
 
 
+__all__ = (
+    'ResponseType',
+    'InteractionDataOption',
+    'InteractionData',
+    'Interaction',
+    'Type',
+    'OptionChoice',
+    'Option',
+    'SlashCommand'
+)
+
+
 #-----------------------------------+
 #       Interaction wrappers        |
 #-----------------------------------+
@@ -280,7 +292,7 @@ class Interaction:
             state=state
         )
         self.editable = False
-        self.__expired = False
+        self.__sent = False
     @property
     def channel(self):
         if self._channel is None:
@@ -295,6 +307,9 @@ class Interaction:
     @property
     def created_at(self):
         return datetime.datetime.fromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
+    @property
+    def expired(self):
+        return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(minutes=15)
 
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
@@ -309,6 +324,7 @@ class Interaction:
         return self.data.option_at(index)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
+                                            file=None, files=None,
                                             tts=False, hide_user_input=False,
                                             ephemeral=False, delete_after=None,
                                             allowed_mentions=None, type=None):
@@ -336,6 +352,11 @@ class Interaction:
         type : :class:`int` | :class:`ResponseType`
             sets the response type. If it's not specified, this method sets
             it according to ``hide_user_input``, ``content`` and ``embed`` params.
+        file : :class:`discord.File`
+            if it's the first interaction reply, the file will be ignored due to API limitations.
+            Everything else is the same as in :class:`discord.TextChannel.send()` method.
+        files : List[:class:`discord.File`]
+            same as ``file`` but for multiple files.
 
         Raises
         ------
@@ -349,21 +370,20 @@ class Interaction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         '''
-        if self.__expired:
+        # Sometimes we have to use TextChannel.send() instead
+        if self.__sent or self.expired:
             return await self.channel.send(
                 content=content, embed=embed,
+                file=file, files=files,
                 tts=tts, delete_after=delete_after,
                 allowed_mentions=allowed_mentions
             )
-        # Actually interacting
+        # Otherwise perform interacting
         is_empty_message = content is None and embed is None
         # Which callback type is it
         if type is None:
             if is_empty_message:
-                if hide_user_input:
-                    type = 2
-                else:
-                    type = 5
+                type = 2 if hide_user_input else 5
             elif hide_user_input:
                 type = 3
             else:
@@ -415,15 +435,15 @@ class Interaction:
             ),
             json=_json
         )
-        self.__expired = True
+        self.__sent = True
         # Ephemeral messages aren't stored and can't be deleted or edited
-        # Same for empty type-1 & type-5 messages
-        if ephemeral or (content is None and embed is None):
+        # Same for type-1 and type-2 messages
+        if ephemeral or type in (1, 2):
             return None
         self.editable = True
         if delete_after is not None:
             self.client.loop.create_task(self.delete_after(delete_after))
-        return await self.edit()
+        return await self.edit() if type != 5 else None
     
     async def edit(self, content=None, *, embed=None, embeds=None, allowed_mentions=None):
         '''
@@ -446,7 +466,7 @@ class Interaction:
             The message that was edited
         '''
         if not self.editable:
-            raise TypeError("There's nothing to edit. Send a reply first.")
+            raise TypeError("There's nothing to edit or the message is ephemeral.")
         # Form JSON params
         data = {}
         if content is not None:
