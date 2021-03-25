@@ -280,6 +280,7 @@ class Interaction:
             state=state
         )
         self.editable = False
+        self.__expired = False
     @property
     def channel(self):
         if self._channel is None:
@@ -348,6 +349,13 @@ class Interaction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         '''
+        if self.__expired:
+            return await self.channel.send(
+                content=content, embed=embed,
+                tts=tts, delete_after=delete_after,
+                allowed_mentions=allowed_mentions
+            )
+        # Actually interacting
         is_empty_message = content is None and embed is None
         # Which callback type is it
         if type is None:
@@ -407,6 +415,7 @@ class Interaction:
             ),
             json=_json
         )
+        self.__expired = True
         # Ephemeral messages aren't stored and can't be deleted or edited
         # Same for empty type-1 & type-5 messages
         if ephemeral or (content is None and embed is None):
