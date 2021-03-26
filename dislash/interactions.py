@@ -262,6 +262,8 @@ class Interaction:
         The arguments that were passed
     created_at : :class:`datetime.datetime`
         Then interaction was created
+    expired : :class:`bool:
+        Whether the interaction token is still valid
     '''
     def __init__(self, client, payload: dict):
         state = client.user._state
@@ -291,6 +293,10 @@ class Interaction:
             guild=self.guild,
             state=state
         )
+        self._webhook = discord.Webhook(
+            {"id": self.client.user.id, "type": 1, "token": self.token},
+            adapter=discord.AsyncWebhookAdapter(self.client.http._HTTPClient__session)
+        )
         self.editable = False
         self.__sent = False
     @property
@@ -309,7 +315,10 @@ class Interaction:
         return datetime.datetime.fromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
     @property
     def expired(self):
-        return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(minutes=15)
+        if self.__sent:
+            return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(minutes=15)
+        else:
+            return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(seconds=3)
 
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
@@ -436,6 +445,10 @@ class Interaction:
             json=_json
         )
         self.__sent = True
+        # Type-5 responses are always editable
+        if type == 5:
+            self.editable = True
+            return None
         # Ephemeral messages aren't stored and can't be deleted or edited
         # Same for type-1 and type-2 messages
         if ephemeral or type in (1, 2):
@@ -443,7 +456,7 @@ class Interaction:
         self.editable = True
         if delete_after is not None:
             self.client.loop.create_task(self.delete_after(delete_after))
-        return await self.edit() if type != 5 else None
+        return await self.edit()
     
     async def edit(self, content=None, *, embed=None, embeds=None, allowed_mentions=None):
         '''
@@ -529,6 +542,21 @@ class Interaction:
             await self.delete()
         except:
             pass
+
+    async def followup(self, content=None, *,   embed=None, embeds=None,
+                                                file=None, files=None,
+                                                tts=None, allowed_mentions=None):
+        r = await self._webhook.send(
+            content=content, tts=tts,
+            file=file, files=files,
+            embed=embed, embeds=embeds,
+            allowed_mentions=allowed_mentions
+        )
+        return discord.Message(
+            state=self.client.user._state,
+            channel=self.channel,
+            data=r
+        )
 
     send = reply
 
