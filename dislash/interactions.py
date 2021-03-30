@@ -119,6 +119,10 @@ class InteractionDataOption:
             for o in data.get('options', [])
         }
     
+    def __repr__(self):
+        return '<InteractionDataOption name={0.name} value={0.value} type={0.type} options={0.options!r}>'.format(self)
+    __str__ = __repr__
+    
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -186,6 +190,10 @@ class InteractionData:
             for o in data.get('options', [])
         }
     
+    def __repr__(self):
+        return '<InteractionData id={0.id} name={0.name} options={0.options}>'.format(self)
+    __str__ = __repr__
+
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -299,6 +307,10 @@ class Interaction:
         )
         self.editable = False
         self.__sent = False
+    def __repr__(self):
+        return '<Interaction client={0.client!r} id={0.id} version={0.version}' \
+               ' type={0.type} self.token={0.token} guild={0.guild!r} author={0.author!r} channel={0.channel_id}>'.format(self)
+    __str__ = __repr__
     @property
     def channel(self):
         if self._channel is None:
@@ -607,6 +619,8 @@ class OptionChoice:
             self.name == other.name and
             self.value == other.value
         )
+    def __repr__(self):
+        return '<OptionChoice name={0.name} value={0.value}>'.format(self)
 
 
 class Option:
@@ -641,6 +655,11 @@ class Option:
                     if opt.type != 1:
                         raise ValueError('Expected sub_command in this sub_command_group')
             self.options = options
+            
+    def __repr__(self):
+        return '<Option name={0.name} description={0.description} type={0.type} ' \
+               'required={0.required} choices={0.choices} options={0.options}'.format(self)
+    __str__ = __repr__
     
     def __eq__(self, other):
         return (
