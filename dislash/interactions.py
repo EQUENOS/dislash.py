@@ -19,6 +19,11 @@ __all__ = (
 )
 
 
+def _self_name(self):
+    pair = str(self.__class__).rsplit(".", maxsplit=1)
+    return pair[0].strip("<'>") if len(pair) < 2 else pair[1][:-2]
+
+
 #-----------------------------------+
 #       Interaction wrappers        |
 #-----------------------------------+
@@ -30,13 +35,13 @@ class ResponseType:
     Attributes
     ----------
     Pong = 1
-    Acknowledge = 2
-    ChannelMessage = 3
+    Acknowledge = 2 [DEPRECATED]
+    ChannelMessage = 3 [DEPRECATED]
     ChannelMessageWithSource = 4
     AcknowledgeWithSource = 5
     """
     Pong                     = 1
-    Acknowledge              = 2
+    Acknowledge              = 1
     ChannelMessage           = 3
     ChannelMessageWithSource = 4
     AcknowledgeWithSource    = 5
@@ -70,6 +75,9 @@ class Resolved:
             factory, ch_type = discord._channel_factory(c['type'])
             if factory:
                 self.channels[ID] = factory(guild=guild, data=c, state=state)
+
+    def __repr__(self):
+        return f"<{_self_name(self)} users={self.users} members={self.members} roles={self.roles} channels={self.channels}>"
 
 
 class InteractionDataOption:
@@ -119,6 +127,9 @@ class InteractionDataOption:
             for o in data.get('options', [])
         }
     
+    def __repr__(self):
+        return f"<{_self_name(self)} name={self.name} value={self.value} options={self.options}>"
+
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -186,6 +197,9 @@ class InteractionData:
             for o in data.get('options', [])
         }
     
+    def __repr__(self):
+        return f"<{_self_name(self)} id={self.id} name={self.name} options={self.options}>"
+
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -262,7 +276,7 @@ class Interaction:
         The arguments that were passed
     created_at : :class:`datetime.datetime`
         Then interaction was created
-    expired : :class:`bool:
+    expired : :class:`bool`:
         Whether the interaction token is still valid
     '''
     def __init__(self, client, payload: dict):
@@ -293,12 +307,16 @@ class Interaction:
             guild=self.guild,
             state=state
         )
-        self._webhook = discord.Webhook(
-            {"id": self.client.user.id, "type": 1, "token": self.token},
-            adapter=discord.AsyncWebhookAdapter(self.client.http._HTTPClient__session)
-        )
         self.editable = False
-        self.__sent = False
+        self._sent = False
+        self._webhook = None
+    
+    def __repr__(self):
+        return (
+            f"<{_self_name(self)} id={self.id} version={self.version} type={self.type} "
+            f"token={self.token} guild={self.guild} channel_id={self.channel_id} "
+            f"author={self.author} data={self.data}>"
+        )
     @property
     def channel(self):
         if self._channel is None:
@@ -311,11 +329,19 @@ class Interaction:
     def user(self):
         return self.author
     @property
+    def webhook(self):
+        if self._webhook is None:
+            self._webhook = discord.Webhook(
+                {"id": self.client.user.id, "type": 1, "token": self.token},
+                adapter=discord.AsyncWebhookAdapter(self.client.http._HTTPClient__session)
+            )
+        return self._webhook
+    @property
     def created_at(self):
         return datetime.datetime.fromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
     @property
     def expired(self):
-        if self.__sent:
+        if self._sent:
             return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(minutes=15)
         else:
             return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(seconds=3)
@@ -336,7 +362,8 @@ class Interaction:
                                             file=None, files=None,
                                             tts=False, hide_user_input=False,
                                             ephemeral=False, delete_after=None,
-                                            allowed_mentions=None, type=None):
+                                            allowed_mentions=None, type=None,
+                                            fetch_response_message=True):
         '''
         Replies to the interaction.
 
@@ -348,6 +375,11 @@ class Interaction:
             an embed that'll be attached to the message
         embeds : List[discord.Embed]
             a list of up to 10 embeds to attach
+        file : :class:`discord.File`
+            if it's the first interaction reply, the file will be ignored due to API limitations.
+            Everything else is the same as in :class:`discord.TextChannel.send()` method.
+        files : List[:class:`discord.File`]
+            same as ``file`` but for multiple files.
         hide_user_input : bool
             if set to ``True``, user's input won't be displayed
         ephemeral : bool
@@ -361,11 +393,8 @@ class Interaction:
         type : :class:`int` | :class:`ResponseType`
             sets the response type. If it's not specified, this method sets
             it according to ``hide_user_input``, ``content`` and ``embed`` params.
-        file : :class:`discord.File`
-            if it's the first interaction reply, the file will be ignored due to API limitations.
-            Everything else is the same as in :class:`discord.TextChannel.send()` method.
-        files : List[:class:`discord.File`]
-            same as ``file`` but for multiple files.
+        fetch_response_message : :class:`bool`
+            whether to fetch and return the response message or not. Defaults to ``True``.
 
         Raises
         ------
@@ -379,24 +408,21 @@ class Interaction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         '''
+        is_empty_message = content is None and embed is None
+        # Which callback type is it
+        if type is None:
+            if is_empty_message:
+                type = 1 if hide_user_input else 5
+            else:
+                type = 3 if hide_user_input else 4
         # Sometimes we have to use TextChannel.send() instead
-        if self.__sent or self.expired:
+        if self._sent or self.expired or type == 3:
             return await self.channel.send(
                 content=content, embed=embed,
                 file=file, files=files,
                 tts=tts, delete_after=delete_after,
                 allowed_mentions=allowed_mentions
             )
-        # Otherwise perform interacting
-        is_empty_message = content is None and embed is None
-        # Which callback type is it
-        if type is None:
-            if is_empty_message:
-                type = 2 if hide_user_input else 5
-            elif hide_user_input:
-                type = 3
-            else:
-                type = 4
         # JSON data formation
         data = {}
         if content is not None:
@@ -424,9 +450,7 @@ class Interaction:
                     allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
                 else:
                     allowed_mentions = allowed_mentions.to_dict()
-            else:
-                allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
-            data['allowed_mentions'] = allowed_mentions
+                data['allowed_mentions'] = allowed_mentions
         # Message design
         if ephemeral:
             data["flags"] = 64
@@ -437,14 +461,14 @@ class Interaction:
         if len(data) > 0:
             _json["data"] = data
         # HTTP-request
-        await self.client.http.request(
+        r = await self.client.http.request(
             Route(
                 'POST', '/interactions/{interaction_id}/{token}/callback',
                 interaction_id=self.id, token=self.token
             ),
             json=_json
         )
-        self.__sent = True
+        self._sent = True
         # Type-5 responses are always editable
         if type == 5:
             self.editable = True
@@ -456,7 +480,8 @@ class Interaction:
         self.editable = True
         if delete_after is not None:
             self.client.loop.create_task(self.delete_after(delete_after))
-        return await self.edit()
+        if fetch_response_message:
+            return await self.edit()
     
     async def edit(self, content=None, *, embed=None, embeds=None, allowed_mentions=None):
         '''
@@ -546,7 +571,13 @@ class Interaction:
     async def followup(self, content=None, *,   embed=None, embeds=None,
                                                 file=None, files=None,
                                                 tts=None, allowed_mentions=None):
-        r = await self._webhook.send(
+        """
+        Sends a followup message, which is basically a channel message
+        referencing the original interaction response.
+
+        Parameters are similar to :class:`discord.TextChannel.send()`
+        """
+        r = await self.webhook.send(
             content=content, tts=tts,
             file=file, files=files,
             embed=embed, embeds=embeds,
@@ -559,6 +590,8 @@ class Interaction:
         )
 
     send = reply
+
+    respond = reply
 
 
 #-----------------------------------+
@@ -602,6 +635,9 @@ class OptionChoice:
         self.name = name
         self.value = value
 
+    def __repr__(self):
+        return f"<{_self_name(self)} name={self.name} value={self.value}>"
+
     def __eq__(self, other):
         return (
             self.name == other.name and
@@ -642,6 +678,9 @@ class Option:
                         raise ValueError('Expected sub_command in this sub_command_group')
             self.options = options
     
+    def __repr__(self):
+        return f"<{_self_name(self)} name={self.name} description={self.description} type={self.type} choices={self.choices}>"
+
     def __eq__(self, other):
         return (
             self.name == other.name and
@@ -732,6 +771,9 @@ class SlashCommand:
         self.description = description
         self.options = options if options is not None else []
     
+    def __repr__(self):
+        return f"<{_self_name(self)} name={self.name} description={self.description} options={self.options}>"
+
     def __eq__(self, other):
         return (
             self.name == other.name and
