@@ -4,10 +4,46 @@ from discord.ext.commands.cooldowns import Cooldown, CooldownMapping, BucketType
 from discord.ext.commands.errors import CommandError
 from discord.errors import Forbidden
 from .interactions import Interaction, SlashCommand
-import discord as _discord
-import asyncio as _asyncio
-import datetime as _datetime
+import discord as discord
+import asyncio as asyncio
+import datetime as datetime
 import inspect, functools
+
+
+__all__ = [
+    "SlashClient",
+    "SlashCommandResponse",
+    "SlashCommandError",
+    "CheckFailure",
+    "PrivateMessageOnly",
+    "NoPrivateMessage",
+    "NotOwner",
+    "CommandOnCooldown",
+    "NotGuildOwner",
+    "MissingRole",
+    "BotMissingRole",
+    "BotMissingAnyRole",
+    "NSFWChannelRequired",
+    "MissingPermissions",
+    "BotMissingPermissions",
+    "command",
+    "check",
+    "check_any",
+    "has_role",
+    "has_any_role",
+    "bot_has_role",
+    "bot_has_any_role",
+    "has_permissions",
+    "bot_has_permissions",
+    "has_guild_permissions",
+    "bot_has_guild_permissions",
+    "dm_only",
+    "guild_only",
+    "is_owner",
+    "is_nsfw",
+    "cooldown"
+]
+
 
 #-----------------------------------+
 #              Utils                |
@@ -74,7 +110,7 @@ class SlashCommandResponse:
     def _prepare_cooldowns(self, inter):
         if self._buckets.valid:
             dt = inter.created_at
-            current = dt.replace(tzinfo=_datetime.timezone.utc).timestamp()
+            current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
             bucket = self._buckets.get_bucket(inter, current)
             retry_after = bucket.update_rate_limit(current)
             if retry_after:
@@ -230,7 +266,7 @@ def command(*args, **kwargs):
         Otherwise this command will be registered globally. Requires ``description``
     '''
     def decorator(func):
-        if not _asyncio.iscoroutinefunction(func):
+        if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = kwargs.get('name', func.__name__)
         new_func = SlashCommandResponse(
@@ -315,13 +351,13 @@ def has_role(item):
     """Similar to ``commands.has_role``"""
 
     def predicate(ctx):
-        if not isinstance(ctx.channel, _discord.abc.GuildChannel):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
         if isinstance(item, int):
-            role = _discord.utils.get(ctx.author.roles, id=item)
+            role = discord.utils.get(ctx.author.roles, id=item)
         else:
-            role = _discord.utils.get(ctx.author.roles, name=item)
+            role = discord.utils.get(ctx.author.roles, name=item)
         if role is None:
             raise MissingRole(item)
         return True
@@ -331,10 +367,10 @@ def has_role(item):
 def has_any_role(*items):
     """Similar to ``commands.has_any_role``"""
     def predicate(ctx):
-        if not isinstance(ctx.channel, _discord.abc.GuildChannel):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
-        getter = functools.partial(_discord.utils.get, ctx.author.roles)
+        getter = functools.partial(discord.utils.get, ctx.author.roles)
         if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
             return True
         raise MissingAnyRole(items)
@@ -346,14 +382,14 @@ def bot_has_role(item):
 
     def predicate(ctx):
         ch = ctx.channel
-        if not isinstance(ch, _discord.abc.GuildChannel):
+        if not isinstance(ch, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
         me = ch.guild.me
         if isinstance(item, int):
-            role = _discord.utils.get(me.roles, id=item)
+            role = discord.utils.get(me.roles, id=item)
         else:
-            role = _discord.utils.get(me.roles, name=item)
+            role = discord.utils.get(me.roles, name=item)
         if role is None:
             raise BotMissingRole(item)
         return True
@@ -363,11 +399,11 @@ def bot_has_any_role(*items):
     """Similar to ``commands.bot_has_any_role``"""
     def predicate(ctx):
         ch = ctx.channel
-        if not isinstance(ch, _discord.abc.GuildChannel):
+        if not isinstance(ch, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
         me = ch.guild.me
-        getter = functools.partial(_discord.utils.get, me.roles)
+        getter = functools.partial(discord.utils.get, me.roles)
         if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
             return True
         raise BotMissingAnyRole(items)
@@ -376,7 +412,7 @@ def bot_has_any_role(*items):
 def has_permissions(**perms):
     """Similar to ``commands.has_permissions``"""
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
 
@@ -396,7 +432,7 @@ def has_permissions(**perms):
 def bot_has_permissions(**perms):
     """Similar to ``commands.bot_has_permissions``"""
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
 
@@ -417,7 +453,7 @@ def bot_has_permissions(**perms):
 def has_guild_permissions(**perms):
     """Similar to ``commands.has_guild_permissions``"""
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
 
@@ -438,7 +474,7 @@ def has_guild_permissions(**perms):
 def bot_has_guild_permissions(**perms):
     """Similar to ``commands.bot_has_guild_permissions``"""
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
 
@@ -490,14 +526,14 @@ def is_nsfw():
     """Similar to ``commands.is_nsfw``"""
     def pred(ctx):
         ch = ctx.channel
-        if ctx.guild is None or (isinstance(ch, _discord.TextChannel) and ch.is_nsfw()):
+        if ctx.guild is None or (isinstance(ch, discord.TextChannel) and ch.is_nsfw()):
             return True
         raise NSFWChannelRequired(ch)
     return check(pred)
 
 def cooldown(rate, per, type=BucketType.default):
     '''
-    A decorator that adds a cooldown to a slash-command. Similar to **_discord.py** cooldown decorator.
+    A decorator that adds a cooldown to a slash-command. Similar to **discord.py** cooldown decorator.
 
     A cooldown allows a command to only be used a specific amount
     of times in a specific time frame. These cooldowns can be based
@@ -592,7 +628,7 @@ class SlashClient:
         | ``on_ready``, ``on_auto_register``,
         | ``on_slash_command``, ``on_slash_command_error``
         '''
-        if not _asyncio.iscoroutinefunction(func):
+        if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = func.__name__
         if name.startswith('on_'):
@@ -631,7 +667,7 @@ class SlashClient:
             Otherwise this command will be registered globally. Requires ``description``
         '''
         def decorator(func):
-            if not _asyncio.iscoroutinefunction(func):
+            if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             name = kwargs.get('name', func.__name__)
             new_func = SlashCommandResponse(
@@ -806,7 +842,7 @@ class SlashClient:
             replacement of the old data
         '''
         if not isinstance(slash_command, SlashCommand):
-            raise _discord.InvalidArgument('parameter slash_command must be SlashCommand')
+            raise discord.InvalidArgument('parameter slash_command must be SlashCommand')
         ignore_name = kwargs.get("ignore_name", False)
         r = await self.client.http.request(
             Route(
@@ -834,7 +870,7 @@ class SlashClient:
             replacement of the old data
         '''
         if not isinstance(slash_command, SlashCommand):
-            raise _discord.InvalidArgument('parameter slash_command must be SlashCommand')
+            raise discord.InvalidArgument('parameter slash_command must be SlashCommand')
         ignore_name = kwargs.get("ignore_name", False)
         r = await self.client.http.request(
             Route(
@@ -1134,7 +1170,7 @@ class SlashClient:
         '''
         inter = Interaction(self.client, payload)
         # Activate event
-        self.client.loop.create_task(self._activate_event('slash_command', inter))
+        await self._activate_event('slash_command', inter)
         # Invoke command
         SCR = self.commands.get(inter.data.name)
         if SCR is not None:

@@ -7,16 +7,16 @@ from discord.http import Route
 from discord.utils import DISCORD_EPOCH
 
 
-__all__ = (
-    'ResponseType',
-    'InteractionDataOption',
-    'InteractionData',
-    'Interaction',
-    'Type',
-    'OptionChoice',
-    'Option',
-    'SlashCommand'
-)
+__all__ = [
+    "ResponseType",
+    "InteractionDataOption",
+    "InteractionData",
+    "Interaction",
+    "Type",
+    "OptionChoice",
+    "Option",
+    "SlashCommand"
+]
 
 
 def _self_name(self):
@@ -461,7 +461,7 @@ class Interaction:
         if len(data) > 0:
             _json["data"] = data
         # HTTP-request
-        r = await self.client.http.request(
+        await self.client.http.request(
             Route(
                 'POST', '/interactions/{interaction_id}/{token}/callback',
                 interaction_id=self.id, token=self.token
@@ -679,7 +679,14 @@ class Option:
             self.options = options
     
     def __repr__(self):
-        return f"<{_self_name(self)} name={self.name} description={self.description} type={self.type} choices={self.choices}>"
+        desc = f"name={self.name} description={self.description} type={self.type}"
+        req = getattr(self, "required", None)
+        if req is not None: desc = f"{desc} required={req}"
+        options = getattr(self, "options", None)
+        if options is not None: desc = f"{desc} options={options}"
+        choices = getattr(self, "choices", None)
+        if choices is not None: desc = f"{desc} choices={choices}"
+        return f"<{_self_name(self)} {desc}>"
 
     def __eq__(self, other):
         return (
@@ -709,7 +716,7 @@ class Option:
         choice : OptionChoice
             the choice you're going to add
         '''
-        if 'choices' not in self.__dict__:
+        if not hasattr(self, "choices"):
             self.choices = [choice]
         else:
             self.choices.append(choice)
@@ -741,12 +748,11 @@ class Option:
             'description': self.description,
             'type': self.type
         }
-        dct = self.__dict__
-        if 'required' in dct:
+        if hasattr(self, 'required'):
             payload['required'] = True
-        if 'choices' in dct:
+        if hasattr(self, 'choices'):
             payload['choices'] = [c.__dict__ for c in self.choices]
-        if 'options' in dct:
+        if hasattr(self, 'options'):
             payload['options'] = [o.to_dict() for o in self.options]
         return payload
 
