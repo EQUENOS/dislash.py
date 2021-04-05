@@ -25,6 +25,8 @@ Interaction
     .. automethod:: edit
 
     .. automethod:: delete
+    
+    .. automethod:: followup
 
 
 .. _interaction_data:
