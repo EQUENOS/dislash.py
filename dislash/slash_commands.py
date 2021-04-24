@@ -82,7 +82,10 @@ class SlashCommandResponse:
         except AttributeError:
             cooldown = None
         finally:
-            self._buckets = CooldownMapping(cooldown)
+            if cooldown is None:
+                self._buckets = CooldownMapping(cooldown, BucketType.default)
+            elif isinstance(cooldown, CooldownMapping):
+                self._buckets = cooldown
         self.name = name
         self.func = func
         self.guild_ids = guild_ids
