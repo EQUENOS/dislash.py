@@ -83,7 +83,16 @@ class SlashCommandResponse:
             cooldown = None
         finally:
             if cooldown is None:
-                self._buckets = CooldownMapping(cooldown, BucketType.default)
+                try:
+                    # Assuming that it's discord.py 1.7.0+
+                    self._buckets = CooldownMapping(cooldown, BucketType.default)
+                except:
+                    # discord.py <= 1.6.x
+                    try:
+                        self._buckets = CooldownMapping(cooldown)
+                    except:
+                        # Hopefully we never reach this
+                        self._buckets = None
             elif isinstance(cooldown, CooldownMapping):
                 self._buckets = cooldown
         self.name = name
