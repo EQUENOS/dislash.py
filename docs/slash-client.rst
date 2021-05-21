@@ -16,6 +16,14 @@ SlashClient
 
     .. automethod:: get_global_command
 
+    .. automethod:: get_global_command_named
+
+    .. automethod:: get_guild_command
+
+    .. automethod:: get_guild_command_named
+
+    .. automethod:: get_guild_commands
+
     .. automethod:: fetch_global_commands
 
     .. automethod:: fetch_guild_commands
@@ -36,6 +44,10 @@ SlashClient
 
     .. automethod:: delete_guild_slash_command
 
+    .. automethod:: overwrite_global_commands
+
+    .. automethod:: overwrite_guild_commands
+
     .. automethod:: delete_global_commands
 
     .. automethod:: delete_guild_commands
@@ -51,6 +63,14 @@ SlashClient
     .. automethod:: delete_global_command_named
 
     .. automethod:: delete_guild_command_named
+
+    .. automethod:: fetch_guild_command_permissions
+
+    .. automethod:: batch_fetch_guild_command_permissions
+
+    .. automethod:: edit_guild_command_permissions
+
+    .. automethod:: batch_edit_guild_command_permissions
 
 
 

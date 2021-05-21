@@ -22,7 +22,7 @@ copyright = '2021, EQUENOS'
 author = 'EQUENOS'
 
 # The full version, including alpha/beta/rc tags
-release = '0.4.7'
+release = '0.5.2'
 
 
 # -- General configuration ---------------------------------------------------
