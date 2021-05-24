@@ -80,10 +80,8 @@ class SlashCommandResponse:
                 except:
                     # Hopefully we never reach this
                     self._buckets = None
-        elif isinstance(cooldown, CooldownMapping):
-            self._buckets = cooldown
         else:
-            self._buckets = None
+            self._buckets = cooldown
         
         self.name = name
         self.func = func
