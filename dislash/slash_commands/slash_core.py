@@ -461,7 +461,7 @@ def cooldown(rate, per, type=BucketType.default):
         if isinstance(func, SlashCommandResponse):
             func._buckets = CooldownMapping(Cooldown(rate, per, type))
         else:
-            func.__slash_cooldown__ = Cooldown(rate, per, type)
+            func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))
         return func
     return decorator
 
