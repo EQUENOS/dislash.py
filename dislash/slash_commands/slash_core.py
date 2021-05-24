@@ -64,24 +64,27 @@ class SlashCommandResponse:
             self.checks = func.__slash_checks__
         else:
             self.checks = []
+        # Cooldown
         try:
             cooldown = func.__slash_cooldown__
         except AttributeError:
             cooldown = None
-        finally:
-            if cooldown is None:
+        if cooldown is None:
+            try:
+                # Assuming that it's discord.py 1.7.0+
+                self._buckets = CooldownMapping(cooldown, BucketType.default)
+            except:
+                # discord.py <= 1.6.x
                 try:
-                    # Assuming that it's discord.py 1.7.0+
-                    self._buckets = CooldownMapping(cooldown, BucketType.default)
+                    self._buckets = CooldownMapping(cooldown)
                 except:
-                    # discord.py <= 1.6.x
-                    try:
-                        self._buckets = CooldownMapping(cooldown)
-                    except:
-                        # Hopefully we never reach this
-                        self._buckets = None
-            elif isinstance(cooldown, CooldownMapping):
-                self._buckets = cooldown
+                    # Hopefully we never reach this
+                    self._buckets = None
+        elif isinstance(cooldown, CooldownMapping):
+            self._buckets = cooldown
+        else:
+            self._buckets = None
+        
         self.name = name
         self.func = func
         self.guild_ids = guild_ids
