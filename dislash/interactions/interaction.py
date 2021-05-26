@@ -4,7 +4,6 @@ import discord
 from discord.errors import InvalidArgument
 from discord.http import Route
 from discord.utils import DISCORD_EPOCH
-from ..slash_commands.slash_command import *
 
 
 __all__ = (
@@ -12,10 +11,6 @@ __all__ = (
     "InteractionDataOption",
     "InteractionData",
     "Interaction",
-    "Type",
-    "OptionChoice",
-    "Option",
-    "SlashCommand"
 )
 
 
