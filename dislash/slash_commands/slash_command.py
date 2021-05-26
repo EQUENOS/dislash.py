@@ -6,7 +6,9 @@ __all__ = (
     "Type",
     "OptionChoice",
     "Option",
-    "SlashCommand"
+    "SlashCommand",
+    "SlashCommandPermissions",
+    "RawCommandPermission"
 )
 
 
@@ -234,14 +236,19 @@ class SlashCommand:
 # Permissions
 class SlashCommandPermissions:
     """
-    A class that represents slash command permissions.
+    Represents slash command permissions.
+    Roughly equivalent to a list of :class:`RawCommandPermission`
+
     Slash command permissions are checked on the server side.
+    Only local slash commands can have this type of permissions.
+
+    Obtainable via :class:`SlashCommand.permissions`
 
     Parameters
     ----------
     raw_permissions : List[RawCommandPermission]
         a list of :class:`RawCommandPermission`.
-        But :meth:`.from_pairs` or :meth:`.from_ids`
+        However, :meth:`from_pairs` or :meth:`from_ids`
         might be more convenient.
     """
 
@@ -303,6 +310,19 @@ class SlashCommandPermissions:
 
 
 class RawCommandPermission:
+    """
+    Represents command permissions for a role or a user.
+
+    Attributes
+    ----------
+    id : :class:`int`
+        ID of a target
+    type : :class:`int`
+        1 if target is a role; 2 if target is a user
+    permission : :class:`bool`
+        allow or deny the access to the command
+    """
+
     __slots__ = ("id", "type", "permission")
 
     def __init__(self, id: int, type: int, permission: bool):
