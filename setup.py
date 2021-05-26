@@ -22,7 +22,7 @@ setup(
     author='EQUENOS',
     author_email='equenos1@gmail.com',
     keywords='python, discord, slash, commands, api, discord-api, discord-py, slash-commands',
-    packages=['dislash'],
+    packages=['dislash', 'dislash.interactions', 'dislash.slash_commands'],
     python_requires='>=3.6, <4',
     install_requires=requirements,
     project_urls={
