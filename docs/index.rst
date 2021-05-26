@@ -21,6 +21,7 @@ Sections
    slash-client
    slash-register
    slash-response
+   slash-permissions
    cogs
    examples
 
