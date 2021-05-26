@@ -29,12 +29,13 @@ class SlashClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     '''
-    def __init__(self, client):
+    def __init__(self, client, *, show_warnings: bool=False):
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.events = {}
         self._global_commands = {}
         self._guild_commands = {}
+        self._show_warnings = show_warnings
         self.active_shard_count = 0
         self.is_ready = False
         self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
@@ -163,7 +164,7 @@ class SlashClient:
 
         slash_command : SlashCommand | None
         """
-        for cmd in list(self._global_commands.values()):
+        for cmd in self._global_commands.values():
             if cmd.name == name:
                 return cmd
 
@@ -209,7 +210,7 @@ class SlashClient:
         """
         granula = self._guild_commands.get(guild_id)
         if granula is not None:
-            for cmd in list(granula.values()):
+            for cmd in granula.values():
                 if cmd.name == name:
                     return cmd
 
@@ -808,7 +809,7 @@ class SlashClient:
                         except Exception as e:
                             if isinstance(e, Forbidden):
                                 bad_guilds.append(ID)
-                            else:
+                            elif self._show_warnings:
                                 print(f"[WARNING] Failed to build <{name}> in <{ID}>: {e}")
                 # Global registration
                 else:
@@ -823,9 +824,10 @@ class SlashClient:
                             await self.edit_global_slash_command(old_cmd.id, cmd.registerable, ignore_name=True)
                             total_patches += 1
                     except Exception as e:
-                        print(f"[WARNING] Failed to globally build {name}: {e}")
+                        if self._show_warnings:
+                            print(f"[WARNING] Failed to globally build {name}: {e}")
         
-        if len(bad_guilds) > 0:
+        if len(bad_guilds) > 0 and self._show_warnings:
             print(f"[WARNING] Missing access: '" + "', '".join(str(ID) for ID in bad_guilds) + "'")
         
         if total_patches > 0 or total_posts > 0:
@@ -836,17 +838,20 @@ class SlashClient:
     # Cache guild commands
     async def _cache_guild_commands(self):
         for guild in self.client.guilds:
-            commands = await self.fetch_guild_commands(guild.id)
-            perms = await self.batch_fetch_guild_command_permissions(guild.id)
-            if len(commands) > 0:
-                # Merge commands and permissions
-                merged_commands = {}
-                for cmd in commands:
-                    if cmd.id in perms:
-                        cmd.permissions = perms[cmd.id]
-                    merged_commands[cmd.id] = cmd
-                # Put to the dict
-                self._guild_commands[guild.id] = merged_commands
+            try:
+                commands = await self.fetch_guild_commands(guild.id)
+                perms = await self.batch_fetch_guild_command_permissions(guild.id)
+                if len(commands) > 0:
+                    # Merge commands and permissions
+                    merged_commands = {}
+                    for cmd in commands:
+                        if cmd.id in perms:
+                            cmd.permissions = perms[cmd.id]
+                        merged_commands[cmd.id] = cmd
+                    # Put to the dict
+                    self._guild_commands[guild.id] = merged_commands
+            except:
+                pass
 
     # Adding relevant listeners
     async def _on_shard_connect(self, shard_id):
