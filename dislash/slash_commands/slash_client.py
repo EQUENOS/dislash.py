@@ -858,7 +858,8 @@ class SlashClient:
         self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.active_shard_count += 1
         if self.active_shard_count >= self.client.shard_count:
-            self._global_commands = await self.fetch_global_commands()
+            global_commands = await self.fetch_global_commands()
+            self._global_commands = {cmd.id: cmd for cmd in global_commands}
             await self._auto_register_or_patch()
             await self._cache_guild_commands()
             self.is_ready = True
