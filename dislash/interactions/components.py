@@ -16,6 +16,7 @@ class ButtonStyle:
 
     secondary = 2
     grey      = 2
+    gray      = 2
 
     success   = 3
     green     = 3
