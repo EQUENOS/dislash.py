@@ -23,6 +23,11 @@ class SlashClient:
     Parameters
     ----------
     client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
+        A Bot instance
+    show_warnings : :class:`bool`
+        If True, will send warnings to console
+    modify_send : :class:`bool`
+        If ``False``, ``.send`` and ``.edit`` methods will not modified. This means that you will not be able to use the message components.
 
     Attributes
     ----------
@@ -32,7 +37,7 @@ class SlashClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     '''
-    def __init__(self, client, *, show_warnings: bool=False):
+    def __init__(self, client, *, show_warnings: bool=False, modify_send: bool=True):
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.events = {}
@@ -40,6 +45,7 @@ class SlashClient:
         self._global_commands = {}
         self._guild_commands = {}
         self._show_warnings = show_warnings
+        self._modify_send = modify_send
         self.active_shard_count = 0
         self.is_ready = False
         # Add listeners
@@ -117,8 +123,9 @@ class SlashClient:
         def get_command_named(guild, name):
             return self.get_guild_command_named(guild.id, name)
 
-        Messageable.send = send_with_components
-        discord.Message.edit = edit_with_components
+        if self._modify_send:
+            Messageable.send = send_with_components
+            discord.Message.edit = edit_with_components
         Context.wait_for_button_click = ctx_wait_for_button_click
         discord.Guild.get_commands = get_commands
         discord.Guild.get_command = get_command
