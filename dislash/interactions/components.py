@@ -1,3 +1,4 @@
+import os
 import discord
 
 
@@ -61,7 +62,7 @@ class Button(Component):
                                     custom_id: str=None, url: str=None, disabled: bool=False):
         if custom_id is None:
             if url is None:
-                raise discord.InvalidArgument("url or custom_id must be specified")
+                custom_id = os.urandom(16).hex()
             if style != ButtonStyle.link:
                 raise discord.InvalidArgument("if you specify url, the style must be ButtonStyle.link")
         elif url is not None:
