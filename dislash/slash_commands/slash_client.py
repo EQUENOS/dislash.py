@@ -926,7 +926,7 @@ class SlashClient:
             self.client.loop.create_task(
                 self._activate_event('auto_register', total_posts, total_patches)
             )
-            self.client.dispatch('auto_register', total_posts, total_patches)
+            self.client.dispatch('slash_auto_register', total_posts, total_patches)
 
     # Cache commands
     async def _cache_global_commands(self):
