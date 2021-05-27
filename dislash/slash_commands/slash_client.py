@@ -926,6 +926,7 @@ class SlashClient:
             self.client.loop.create_task(
                 self._activate_event('auto_register', total_posts, total_patches)
             )
+            self.client.dispatch('slash_auto_register', total_posts, total_patches)
 
     # Cache commands
     async def _cache_global_commands(self):
@@ -1108,11 +1109,13 @@ class SlashClient:
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
             self.is_ready = True
+            self.client.dispatch('slash_ready')
             await self._activate_event('ready')
     
     async def _on_ready(self):
         if isinstance(self.client, discord.AutoShardedClient):
             self.is_ready = True
+            self.client.dispatch('slash_ready')
             await self._activate_event('ready')
 
     async def _on_guild_remove(self, guild):
@@ -1170,6 +1173,7 @@ class SlashClient:
         if _type == 2:
             inter = Interaction(self.client, payload)
             # Activate event
+            self.client.dispatch('slash_command', inter)
             await self._activate_event('slash_command', inter)
             # Invoke command
             SCR = self.commands.get(inter.data.name)
@@ -1179,9 +1183,11 @@ class SlashClient:
                 except Exception as err:
                     if 'slash_command_error' not in self.events:
                         raise err
+                    self.client.dispatch('slash_command_error', inter, err)
                     await self._activate_event('slash_command_error', inter, err)
         elif _type == 3:
             inter = ButtonInteraction(self.client, payload)
+            self.client.dispatch('button_click', inter)
             await self._activate_event('button_click', inter)
     
     # Aliases
