@@ -906,6 +906,7 @@ class SlashClient:
                                                     embed=None, file=None,
                                                     components=None,
                                                     allowed_mentions=None,
+                                                    reference=None,
                                                     **options):
         state = self.client._get_state()
         data = {**options}
@@ -914,6 +915,11 @@ class SlashClient:
             data["content"] = str(content)
         if embed is not None:
             data["embed"] = embed.to_dict()
+        if reference is not None:
+            data["message_reference"] = {
+                "message_id": reference.id,
+                "channel_id": reference.channel.id
+            }
 
         if allowed_mentions:
             if state.allowed_mentions:
