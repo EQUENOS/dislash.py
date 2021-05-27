@@ -1,13 +1,16 @@
+from discord.abc import Messageable
 from discord.http import Route
 from discord.errors import Forbidden
+from discord.ext.commands import Context
 import asyncio
 import discord
+import json
 
 from .slash_core import SlashCommandResponse, get_class
 from .slash_command import SlashCommand, SlashCommandPermissions
 from ._decohub import _HANDLER
 
-from ..interactions import Interaction
+from ..interactions import Interaction, ButtonInteraction, ActionRow
 
 
 __all__ = ("SlashClient",)
@@ -33,6 +36,7 @@ class SlashClient:
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.events = {}
+        self._listeners = {}
         self._global_commands = {}
         self._guild_commands = {}
         self._show_warnings = show_warnings
@@ -41,6 +45,15 @@ class SlashClient:
         self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
         self.client.add_listener(self._on_connect, 'on_connect')
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
+        # Modify old discord.py methods
+        self._modify_discord()
+        # Link the slash ext to client
+        self.client.slash = self
+        # Inject cogs that are already loaded
+        for cog in self.client.cogs.values():
+            self._inject_cogs(cog)
+    
+    def _modify_discord(self):
         # Modify cog loader
         _add_cog = self.client.add_cog
         def add_cog_2(cog):
@@ -53,14 +66,23 @@ class SlashClient:
             self._eject_cogs(name)
             _rem_cog(name)
         self.client.remove_cog = rem_cog_2
-        # Link the slash ext to client
-        self.client.slash = self
-        # Inject cogs that are already loaded
-        for cog in self.client.cogs.values():
-            self._inject_cogs(cog)
+        # Change other class methods
+        async def send_with_components(messageable, *args, **kwargs):
+            if isinstance(messageable, Context):
+                messageable = messageable.channel
+            return await self._send_with_components(messageable, *args, **kwargs)
+        
+        async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
+            return await self.wait_for_button_click(check=check, timeout=timeout)
+
+        Messageable.send = send_with_components
+        discord.Message.edit = self._edit_with_components
+        Context.wait_for_button_click = ctx_wait_for_button_click
+
     @property
     def commands(self):
         return _HANDLER.commands
+    
     @property
     def global_commands(self):
         return [sc for sc in self._global_commands.values()]
@@ -85,7 +107,7 @@ class SlashClient:
             name = name[3:]
             if name in [
                 'slash_command', 'slash_command_error',
-                'ready', 'auto_register'
+                'ready', 'auto_register', 'button_click'
                 ]:
                 self.events[name] = func
         return func
@@ -781,7 +803,7 @@ class SlashClient:
         '''
         self.client.loop.create_task(self._invoke_slash_command(payload))
 
-    # Mega automated super-smart AI powered destructor-2000
+    # Automatically register commands
     async def _auto_register_or_patch(self):
         total_posts = 0
         total_patches = 0
@@ -835,7 +857,11 @@ class SlashClient:
                 self._activate_event('auto_register', total_posts, total_patches)
             )
 
-    # Cache guild commands
+    # Cache commands
+    async def _cache_global_commands(self):
+        commands = await self.fetch_global_commands()
+        self._global_commands = {cmd.id: cmd for cmd in commands}
+
     async def _cache_guild_commands(self):
         for guild in self.client.guilds:
             try:
@@ -853,13 +879,143 @@ class SlashClient:
             except:
                 pass
 
+    # Component support in discord.py
+    async def _send_with_components(self, channel,  content=None, *, tts=False,
+                                                    embed=None, file=None,
+                                                    components=None,
+                                                    allowed_mentions=None,
+                                                    **options):
+        state = self.client._get_state()
+        data = {**options}
+
+        if content is not None:
+            data["content"] = str(content)
+        if embed is not None:
+            data["embed"] = embed.to_dict()
+
+        if allowed_mentions:
+            if state.allowed_mentions:
+                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+            else:
+                allowed_mentions = allowed_mentions.to_dict()
+        else:
+            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
+        data["allowed_mentions"] = allowed_mentions
+
+        if components is not None:
+            if len(components) > 5:
+                raise discord.InvalidArgument("components must be a list of up to 5 elements")
+            if not all(isinstance(comp, ActionRow) for comp in components):
+                raise discord.InvalidArgument("components must be a list of ActionRow")
+            data["components"] = [comp.to_dict() for comp in components]
+
+        if file:
+            try:
+                await self.client.http.request(
+                    Route("POST", f"/channels/{channel.id}/messages"),
+                    form=[
+                        {
+                            "name": "payload_json",
+                            "value": json.dumps(data, separators=(",", ":"), ensure_ascii=True),
+                        },
+                        {
+                            "name": "file",
+                            "value": file.fp,
+                            "filename": file.filename,
+                            "content_type": "application/octet-stream",
+                        },
+                    ],
+                    files=[file],
+                )
+            finally:
+                file.close()
+        else:
+            data = await self.client.http.request(
+                Route("POST", f"/channels/{channel.id}/messages"), json=data
+            )
+        return discord.Message(
+            # components=components,
+            state=state,
+            channel=channel,
+            data=data
+        )
+
+    async def _edit_with_components(self, message,  content=None, *, tts=False,
+                                                    embed=None, file=None,
+                                                    components=None,
+                                                    allowed_mentions=None,
+                                                    **options):
+        state = self.client._get_state()
+        data = {**options}
+
+        if content is not None:
+            data["content"] = str(content)
+        if embed is not None:
+            data["embed"] = embed.to_dict()
+
+        if allowed_mentions:
+            if state.allowed_mentions:
+                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+            else:
+                allowed_mentions = allowed_mentions.to_dict()
+        else:
+            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
+        data["allowed_mentions"] = allowed_mentions
+
+        if components is not None:
+            if len(components) > 5:
+                raise discord.InvalidArgument("components must be a list of up to 5 elements")
+            if not all(isinstance(comp, ActionRow) for comp in components):
+                raise discord.InvalidArgument("components must be a list of ActionRow")
+            data["components"] = [comp.to_dict() for comp in components]
+        
+        if file:
+            try:
+                await self.client.http.request(
+                    Route("PATCH", f"/channels/{message.channel.id}/messages/{message.id}"),
+                    form=[
+                        {
+                            "name": "payload_json",
+                            "value": json.dumps(data, separators=(",", ":"), ensure_ascii=True),
+                        },
+                        {
+                            "name": "file",
+                            "value": file.fp,
+                            "filename": file.filename,
+                            "content_type": "application/octet-stream",
+                        },
+                    ],
+                    files=[file],
+                )
+            finally:
+                file.close()
+        else:
+            await self.client.http.request(
+                Route(
+                    "PATCH",
+                    "/channels/{channel_id}/messages/{message_id}",
+                    channel_id=message.channel.id,
+                    message_id=message.id
+                ),
+                json=data
+            )
+
+    async def wait_for_button_click(self, check=None, timeout=None):
+        if check is None:
+            check = lambda ctx: True
+        future = self.client.loop.create_future()
+        if "button_click" not in self._listeners:
+            self._listeners["button_click"] = []
+        listeners = self._listeners["button_click"]
+        listeners.append((future, check))
+        return await asyncio.wait_for(future, timeout)
+
     # Adding relevant listeners
     async def _on_shard_connect(self, shard_id):
         self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.active_shard_count += 1
         if self.active_shard_count >= self.client.shard_count:
-            global_commands = await self.fetch_global_commands()
-            self._global_commands = {cmd.id: cmd for cmd in global_commands}
+            await self._cache_global_commands()
             await self._auto_register_or_patch()
             await self._cache_guild_commands()
             self.is_ready = True
@@ -868,8 +1024,7 @@ class SlashClient:
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
             self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
-            global_commands = await self.fetch_global_commands()
-            self._global_commands = {cmd.id: cmd for cmd in global_commands}
+            await self._cache_global_commands()
             await self._auto_register_or_patch()
             await self._cache_guild_commands()
             self.is_ready = True
@@ -879,10 +1034,41 @@ class SlashClient:
         if guild.id in self._guild_commands:
             del self._guild_commands[guild.id]
 
+    async def _toggle_listeners(self, event, *args, **kwargs):
+        listeners = self._listeners.get(event)
+        if listeners:
+            removed = []
+            for i, (future, condition) in enumerate(listeners):
+                if future.cancelled():
+                    removed.append(i)
+                    continue
+
+                try:
+                    result = condition(*args)
+                except Exception as exc:
+                    future.set_exception(exc)
+                    removed.append(i)
+                else:
+                    if result:
+                        if len(args) == 0:
+                            future.set_result(None)
+                        elif len(args) == 1:
+                            future.set_result(args[0])
+                        else:
+                            future.set_result(args)
+                        removed.append(i)
+
+            if len(removed) == len(listeners):
+                self._listeners.pop(event)
+            else:
+                for idx in reversed(removed):
+                    del listeners[idx]
+
     async def _activate_event(self, event_name, *args, **kwargs):
         '''
         # Don't use it
         '''
+        self.client.loop.create_task(self._toggle_listeners(event_name, *args, **kwargs))
         func = self.events.get(event_name)
         if func is not None:
             cog = get_class(func)
@@ -895,18 +1081,23 @@ class SlashClient:
         '''
         # Don't use it
         '''
-        inter = Interaction(self.client, payload)
-        # Activate event
-        await self._activate_event('slash_command', inter)
-        # Invoke command
-        SCR = self.commands.get(inter.data.name)
-        if SCR is not None:
-            try:
-                await SCR.invoke(inter)
-            except Exception as err:
-                if 'slash_command_error' not in self.events:
-                    raise err
-                await self._activate_event('slash_command_error', inter, err)
+        _type = payload["type"]
+        if _type == 2:
+            inter = Interaction(self.client, payload)
+            # Activate event
+            await self._activate_event('slash_command', inter)
+            # Invoke command
+            SCR = self.commands.get(inter.data.name)
+            if SCR is not None:
+                try:
+                    await SCR.invoke(inter)
+                except Exception as err:
+                    if 'slash_command_error' not in self.events:
+                        raise err
+                    await self._activate_event('slash_command_error', inter, err)
+        elif _type == 3:
+            inter = ButtonInteraction(self.client, payload)
+            await self._activate_event('button_click', inter)
     
     # Aliases
     register_global_command = register_global_slash_command
