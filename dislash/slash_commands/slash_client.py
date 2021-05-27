@@ -43,20 +43,24 @@ class SlashClient:
         self.active_shard_count = 0
         self.is_ready = False
         # Add listeners
+        self._register_listeners()
+        # Modify old discord.py methods
+        self._modify_discord()
+        # Link the slash ext to client if doesn't already exists
+        if not hasattr(self.client, "slash"):
+            self.client.slash = self
+        # Inject cogs that are already loaded
+        for cog in self.client.cogs.values():
+            self._inject_cogs(cog)
+
+    def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
-        if isinstance(client, discord.AutoShardedClient):
+        if isinstance(self.client, discord.AutoShardedClient):
             self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.add_listener(self._on_ready, 'on_ready')
         else:
             self.client.add_listener(self._on_connect, 'on_connect')
-        # Modify old discord.py methods
-        self._modify_discord()
-        # Link the slash ext to client
-        self.client.slash = self
-        # Inject cogs that are already loaded
-        for cog in self.client.cogs.values():
-            self._inject_cogs(cog)
-    
+
     def _modify_discord(self):
         # Modify cog loader
         _add_cog = self.client.add_cog
@@ -97,6 +101,28 @@ class SlashClient:
         discord.Guild.get_commands = get_commands
         discord.Guild.get_command = get_command
         discord.Guild.get_command_named = get_command_named
+
+    def teardown(self):
+        self.client.remove_listener(self._on_guild_remove, 'on_guild_remove')
+        if isinstance(self.client, discord.AutoShardedClient):
+            self.client.remove_listener(self._on_shard_connect, 'on_shard_connect')
+            self.client.remove_listener(self._on_ready, 'on_ready')
+            for shard_id in self.client.shards:
+                self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers.pop('INTERACTION_CREATE', None)
+        else:
+            self.client.remove_listener(self._on_connect, 'on_connect')
+            self.client.ws._discord_parsers.pop('INTERACTION_CREATE', None)
+
+        self.events.clear()
+        self._listeners.clear()
+        self._global_commands.clear()
+        self._guild_commands.clear()
+        if hasattr(self.client, "slash"):
+            del self.client.slash
+        self.is_ready = False
+
+    def __del__(self):
+        self.teardown()
 
     @property
     def commands(self):
