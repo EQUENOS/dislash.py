@@ -42,9 +42,13 @@ class SlashClient:
         self._show_warnings = show_warnings
         self.active_shard_count = 0
         self.is_ready = False
-        self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
-        self.client.add_listener(self._on_connect, 'on_connect')
+        # Add listeners
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
+        if isinstance(client, discord.AutoShardedClient):
+            self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
+            self.client.add_listener(self._on_ready, 'on_ready')
+        else:
+            self.client.add_listener(self._on_connect, 'on_connect')
         # Modify old discord.py methods
         self._modify_discord()
         # Link the slash ext to client
@@ -72,12 +76,27 @@ class SlashClient:
                 messageable = messageable.channel
             return await self._send_with_components(messageable, *args, **kwargs)
         
+        async def edit_with_components(message, *args, **kwargs):
+            return await self._edit_with_components(message, *args, **kwargs)
+        
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
+        
+        def get_commands(guild):
+            return self.get_guild_commands(guild.id)
+        
+        def get_command(guild, command_id):
+            return self.get_guild_command(guild.id, command_id)
+        
+        def get_command_named(guild, name):
+            return self.get_guild_command_named(guild.id, name)
 
         Messageable.send = send_with_components
-        discord.Message.edit = self._edit_with_components
+        discord.Message.edit = edit_with_components
         Context.wait_for_button_click = ctx_wait_for_button_click
+        discord.Guild.get_commands = get_commands
+        discord.Guild.get_command = get_command
+        discord.Guild.get_command_named = get_command_named
 
     @property
     def commands(self):
@@ -862,8 +881,11 @@ class SlashClient:
         commands = await self.fetch_global_commands()
         self._global_commands = {cmd.id: cmd for cmd in commands}
 
-    async def _cache_guild_commands(self):
+    async def _cache_guild_commands(self, shard_id=None):
+        sc = getattr(self.client, "shard_count", 1)
         for guild in self.client.guilds:
+            if shard_id and ((guild.id >> 22) % sc) != shard_id:
+                continue
             try:
                 commands = await self.fetch_guild_commands(guild.id)
                 perms = await self.batch_fetch_guild_command_permissions(guild.id)
@@ -1014,22 +1036,25 @@ class SlashClient:
     async def _on_shard_connect(self, shard_id):
         self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.active_shard_count += 1
-        if self.active_shard_count >= self.client.shard_count:
+        await self._cache_guild_commands(shard_id)
+        if self.active_shard_count == 1:
             await self._cache_global_commands()
             await self._auto_register_or_patch()
-            await self._cache_guild_commands()
-            self.is_ready = True
-            await self._activate_event('ready')
     
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
             self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
             await self._cache_global_commands()
-            await self._auto_register_or_patch()
             await self._cache_guild_commands()
+            await self._auto_register_or_patch()
             self.is_ready = True
             await self._activate_event('ready')
     
+    async def _on_ready(self):
+        if isinstance(self.client, discord.AutoShardedClient):
+            self.is_ready = True
+            await self._activate_event('ready')
+
     async def _on_guild_remove(self, guild):
         if guild.id in self._guild_commands:
             del self._guild_commands[guild.id]
