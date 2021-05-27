@@ -6,9 +6,10 @@
 [![PyPi](https://img.shields.io/pypi/v/dislash.py.svg)](https://pypi.org/project/dislash.py)
 [![Python](https://img.shields.io/pypi/pyversions/dislash.py.svg)](https://pypi.python.org/pypi/dislash.py)
 
-An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome slash-commands.
+An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome slash-commands and message components.
 
 📄 Slash commands is a new discord API feature that allows to build user-friendly commands. Once "`/`" is pressed on keyboard, the entire list of slash-commands pops up. The list includes hints and short descriptions which make exploring your bot much easier.
+
 
 # Installation
 
@@ -27,17 +28,17 @@ python -m pip install dislash.py
 * Supports automatic registration of slash-commands
 * Supports manual and automatic sharding
 * Convenient decorator-based interface
-* OOP-based slash-command constructor
+* OOP-based slash-command and button constructor
 
 
 
 # Examples
-💡 This library does require **[discord.py](https://github.com/Rapptz/discord.py)** installed.
+💡 This library requires **[discord.py](https://github.com/Rapptz/discord.py)**.
 
 
 ## Creating a slash-command
 In this example registration is automatic.
-If you want to register slash-commands separately, see examples below.
+If you want to register slash-commands separately, see docs.
 
 ```python
 from discord.ext import commands
@@ -61,71 +62,45 @@ client.run("BOT_TOKEN")
 ```
 
 
-## Registering a slash-command
+## Creating buttons
 
-This example only shows how to register a slash-command.
+This example shows how to send a message with buttons.
 
 ```python
 from discord.ext import commands
-from dislash import slash_commands
+from dislash.slash_commands import *
 from dislash.interactions import *
 
 client = commands.Bot(command_prefix="!")
-slash = slash_commands.SlashClient(client)
-test_guild_ID = 12345
+slash = SlashClient(client)
 
-@slash.event
-async def on_ready():
-    sc = SlashCommand(
-        name="random",
-        description="Returns a random number from the given range",
-        options=[
-            Option(
-                name="start",
-                description="Enter a number",
-                required=True,
-                type=Type.INTEGER
-            ),
-            Option(
-                name="end",
-                description="Enter a number",
-                required=True,
-                type=Type.INTEGER
-            )
-        ]
+@client.command()
+async def test(ctx):
+    # Make a row of buttons
+    row_of_buttons = ActionRow(
+        Button(
+            style=ButtonStyle.green,
+            label="Green button",
+            custom_id="green"
+        ),
+        Button(
+            style=ButtonStyle.red,
+            label="Red button",
+            custom_id="red"
+        )
     )
-    await slash.register_global_slash_command(sc)
-    # Discord API uploads GLOBAL commands for more than 1 hour
-    # That's why I highly recommend .register_guild_slash_command for testing:
-    await slash.register_guild_slash_command(test_guild_id, sc)
-
-client.run("BOT_TOKEN")
-```
-You should register a slash-command only once in order to make it work. You can always edit it if you want, using `.edit_global_slash_command` / `.edit_guild_slash_command` methods.
-
-
-## Responding to a slash-command
-
-It's assumed that you've already registered the command.
-
-```python
-from random import randint
-from discord.ext import commands
-from dislash import slash_commands
-from dislash.interactions import *
-
-client = commands.Bot(command_prefix="!")
-slash = slash_commands.SlashClient(client)
-
-@slash.command()
-async def random(interaction):
-    # interaction is instance of `interactions.Interaction`
-    # It's pretty much the same as "ctx" from discord.py
-    # except <message> attribute is replaced by <data>
-    a = interaction.get('start')
-    b = interaction.get('end')
-    if b < a: a, b = b, a
-    await interaction.reply(randint(a, b))
+    # Send a message with buttons
+    msg = await ctx.send(
+        "This message has buttons!",
+        components=[row_of_buttons]
+    )
+    # Wait for someone to click on them
+    def check(inter):
+        return inter.message.id == msg.id
+    inter = await ctx.wait_for_button_click(check)
+    # Send what you received
+    button_text = inter.clicked_button.label
+    await inter.reply(f"Button: {button_text}")
 
 client.run("BOT_TOKEN")
 ```
