@@ -18,11 +18,12 @@ setup(
     
     long_description=long_description,
     long_description_content_type='text/markdown',
+    license='MIT',
     url='https://github.com/EQUENOS/dislash.py',
     author='EQUENOS',
     author_email='equenos1@gmail.com',
     keywords='python, discord, slash, commands, api, discord-api, discord-py, slash-commands',
-    packages=['dislash'],
+    packages=['dislash', 'dislash.slash_commands', 'dislash.interactions'],
     python_requires='>=3.6, <4',
     install_requires=requirements,
     project_urls={
