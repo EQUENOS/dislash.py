@@ -52,7 +52,7 @@ class SlashClient:
         # Inject cogs that are already loaded
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)
-
+    
     def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.add_listener(self._on_socket_response, 'on_socket_response')
@@ -86,7 +86,28 @@ class SlashClient:
         
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
+
+        async def fetch_commands(guild):
+            return await self.fetch_guild_commands(guild.id)
         
+        async def fetch_command(guild, command_id):
+            return await self.fetch_guild_command(guild.id, command_id)
+        
+        async def edit_command(guild, command_id, slash_command):
+            return await self.edit_guild_slash_command(guild.id, command_id, slash_command)
+        
+        async def edit_command_permissions(guild, command_id, permissions):
+            return await self.edit_guild_command_permissions(guild.id, command_id, permissions)
+
+        async def batch_edit_command_permissions(guild, permissions):
+            return await self.batch_edit_guild_command_permissions(guild.id, permissions)
+
+        async def delete_command(guild, command_id):
+            return await self.delete_guild_command(guild.id, command_id)
+        
+        async def delete_commands(guild):
+            return await self.delete_guild_commands(guild.id)
+
         def get_commands(guild):
             return self.get_guild_commands(guild.id)
         
@@ -102,6 +123,13 @@ class SlashClient:
         discord.Guild.get_commands = get_commands
         discord.Guild.get_command = get_command
         discord.Guild.get_command_named = get_command_named
+        discord.Guild.fetch_commands = fetch_commands
+        discord.Guild.fetch_command = fetch_command
+        discord.Guild.edit_command = edit_command
+        discord.Guild.edit_command_permissions = edit_command_permissions
+        discord.Guild.batch_edit_command_permissions = batch_edit_command_permissions
+        discord.Guild.delete_command = delete_command
+        discord.Guild.delete_commands = delete_commands
 
     def teardown(self):
         '''Cleanup the client by removing all registered listeners and caches.'''
@@ -110,11 +138,8 @@ class SlashClient:
         if isinstance(self.client, discord.AutoShardedClient):
             self.client.remove_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.remove_listener(self._on_ready, 'on_ready')
-            for shard_id in self.client.shards:
-                self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers.pop('INTERACTION_CREATE', None)
         else:
             self.client.remove_listener(self._on_connect, 'on_connect')
-            self.client.ws._discord_parsers.pop('INTERACTION_CREATE', None)
 
         self.events.clear()
         self._listeners.clear()
@@ -845,11 +870,8 @@ class SlashClient:
     def _eject_cogs(self, name):
         _HANDLER.commands = {kw: cmd for kw, cmd in _HANDLER.commands.items() if cmd._cog_name != name}
 
-    def _do_invokation(self, payload):
-        '''
-        # Don't use it
-        '''
-        self.client.loop.create_task(self._invoke_slash_command(payload))
+    def _do_interaction_processing(self, payload):
+        self.client.loop.create_task(self._process_interaction(payload))
 
     # Automatically register commands
     async def _auto_register_or_patch(self):
@@ -938,7 +960,7 @@ class SlashClient:
                                                     reference=None,
                                                     **options):
         state = self.client._get_state()
-        data = {**options}
+        data = {**options, "tts": tts}
 
         if content is not None:
             data["content"] = str(content)
@@ -1071,8 +1093,7 @@ class SlashClient:
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
             return
-
-        self._do_invokation(payload["d"])
+        self._do_interaction_processing(payload["d"])
 
     async def _on_shard_connect(self, shard_id):
         self.active_shard_count += 1
@@ -1141,7 +1162,7 @@ class SlashClient:
             else:
                 await func(*args, **kwargs)
 
-    async def _invoke_slash_command(self, payload):
+    async def _process_interaction(self, payload):
         '''
         # Don't use it
         '''
