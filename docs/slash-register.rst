@@ -1,4 +1,5 @@
-.. currentmodule:: dislash.interactions
+.. currentmodule:: dislash.slash_commands
+
 .. _slash-command_constructor:
 
 Slash-command constructor

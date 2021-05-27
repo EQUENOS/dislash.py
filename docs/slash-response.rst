@@ -12,7 +12,7 @@ Interaction
 | As well as via ``on_slash_command`` event.
 | See :ref:`slash_client` and :ref:`examples`
 
-.. autoclass:: Interaction
+.. autoclass:: SlashInteraction
 
     .. automethod:: get
 
@@ -25,8 +25,6 @@ Interaction
     .. automethod:: edit
 
     .. automethod:: delete
-    
-    .. automethod:: followup
 
 
 .. _interaction_data:

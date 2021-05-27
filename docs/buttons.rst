@@ -47,3 +47,21 @@ Button
 ------
 
 .. autoclass:: Button
+
+
+
+
+.. _button_interaction:
+
+ButtonInteraction
+-----------------
+
+.. autoclass:: ButtonInteraction
+
+    .. automethod:: reply
+
+    .. automethod:: edit
+
+    .. automethod:: delete
+
+    .. automethod:: followup
