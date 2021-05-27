@@ -55,6 +55,7 @@ class SlashClient:
 
     def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
+        self.client.add_listener(self._on_socket_response, 'on_socket_response')
         if isinstance(self.client, discord.AutoShardedClient):
             self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.add_listener(self._on_ready, 'on_ready')
@@ -104,6 +105,7 @@ class SlashClient:
 
     def teardown(self):
         self.client.remove_listener(self._on_guild_remove, 'on_guild_remove')
+        self.client.remove_listener(self._on_socket_response, 'on_socket_response')
         if isinstance(self.client, discord.AutoShardedClient):
             self.client.remove_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.remove_listener(self._on_ready, 'on_ready')
@@ -1059,8 +1061,13 @@ class SlashClient:
         return await asyncio.wait_for(future, timeout)
 
     # Adding relevant listeners
+    async def _on_socket_response(self, payload):
+        if payload.get("t") != "INTERACTION_CREATE":
+            return
+
+        self._do_invokation(payload["d"])
+
     async def _on_shard_connect(self, shard_id):
-        self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
         self.active_shard_count += 1
         await self._cache_guild_commands(shard_id)
         if self.active_shard_count == 1:
@@ -1069,7 +1076,6 @@ class SlashClient:
     
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
-            self.client.ws._discord_parsers['INTERACTION_CREATE'] = self._do_invokation
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
