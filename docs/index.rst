@@ -22,6 +22,7 @@ Sections
    slash-register
    slash-response
    slash-permissions
+   buttons
    cogs
    examples
 
