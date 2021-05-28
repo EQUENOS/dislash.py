@@ -4,13 +4,13 @@ from discord.errors import Forbidden
 from discord.ext.commands import Context
 import asyncio
 import discord
-import json
 
 from .slash_core import SlashCommandResponse, get_class
 from .slash_command import SlashCommand, SlashCommandPermissions
 from ._decohub import _HANDLER
+from ._send_modifications import *
 
-from ..interactions import Interaction, ButtonInteraction, ActionRow
+from ..interactions import SlashInteraction, ButtonInteraction, ActionRow
 
 
 __all__ = ("SlashClient",)
@@ -84,14 +84,6 @@ class SlashClient:
             _rem_cog(name)
         self.client.remove_cog = rem_cog_2
         # Change other class methods
-        async def send_with_components(messageable, *args, **kwargs):
-            if isinstance(messageable, Context):
-                messageable = messageable.channel
-            return await self._send_with_components(messageable, *args, **kwargs)
-        
-        async def edit_with_components(message, *args, **kwargs):
-            return await self._edit_with_components(message, *args, **kwargs)
-        
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
 
@@ -157,9 +149,6 @@ class SlashClient:
         if hasattr(self.client, "slash"):
             del self.client.slash
         self.is_ready = False
-
-    def __del__(self):
-        self.teardown()
 
     @property
     def commands(self):
@@ -886,9 +875,6 @@ class SlashClient:
                 guilds = guilds.union(set(cmd.guild_ids))
         return list(guilds)
 
-    def _do_interaction_processing(self, payload):
-        self.client.loop.create_task(self._process_interaction(payload))
-
     # Automatically register commands
     async def _auto_register_or_patch(self):
         total_posts = 0
@@ -965,142 +951,7 @@ class SlashClient:
             except Exception:
                 pass
 
-    # Component support in discord.py
-    async def _send_with_components(self, channel,  content=None, *, tts=False,
-                                                    embed=None, components=None,
-                                                    file=None, files=None,
-                                                    allowed_mentions=None,
-                                                    reference=None,
-                                                    **options):
-        try:
-            channel = await channel._get_channel()
-        except Exception:
-            pass
-
-        state = self.client._get_state()
-        data = {**options, "tts": tts}
-
-        if content is not None:
-            data["content"] = str(content)
-        if embed is not None:
-            data["embed"] = embed.to_dict()
-        if reference is not None:
-            try:
-                reference = reference.to_message_reference_dict()
-                data["message_reference"] = reference
-            except AttributeError:
-                raise discord.InvalidArgument('reference parameter must be Message or MessageReference') from None
-        
-        if allowed_mentions:
-            if state.allowed_mentions:
-                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
-            else:
-                allowed_mentions = allowed_mentions.to_dict()
-        else:
-            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
-        data["allowed_mentions"] = allowed_mentions
-
-        if components is not None:
-            if len(components) > 5:
-                raise discord.InvalidArgument("components must be a list of up to 5 elements")
-            if not all(isinstance(comp, ActionRow) for comp in components):
-                raise discord.InvalidArgument("components must be a list of ActionRow")
-            data["components"] = [comp.to_dict() for comp in components]
-
-        if files is not None and len(files) > 0:
-            file = files[0]
-        if file:
-            try:
-                data = await self.client.http.request(
-                    Route("POST", f"/channels/{channel.id}/messages"),
-                    form=[
-                        {
-                            "name": "payload_json",
-                            "value": json.dumps(data, separators=(",", ":"), ensure_ascii=True),
-                        },
-                        {
-                            "name": "file",
-                            "value": file.fp,
-                            "filename": file.filename,
-                            "content_type": "application/octet-stream",
-                        },
-                    ],
-                    files=[file]
-                )
-            finally:
-                file.close()
-        else:
-            data = await self.client.http.request(
-                Route("POST", f"/channels/{channel.id}/messages"), json=data
-            )
-        return discord.Message(
-            state=state,
-            channel=channel,
-            data=data
-        )
-
-    async def _edit_with_components(self, message,  content=None, *, tts=False,
-                                                    embed=None, components=None,
-                                                    file=None, files=None,
-                                                    allowed_mentions=None,
-                                                    **options):
-        state = self.client._get_state()
-        data = {**options, "tts": tts}
-
-        if content is not None:
-            data["content"] = str(content)
-        if embed is not None:
-            data["embed"] = embed.to_dict()
-
-        if allowed_mentions:
-            if state.allowed_mentions:
-                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
-            else:
-                allowed_mentions = allowed_mentions.to_dict()
-        else:
-            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
-        data["allowed_mentions"] = allowed_mentions
-
-        if components is not None:
-            if len(components) > 5:
-                raise discord.InvalidArgument("components must be a list of up to 5 elements")
-            if not all(isinstance(comp, ActionRow) for comp in components):
-                raise discord.InvalidArgument("components must be a list of ActionRow")
-            data["components"] = [comp.to_dict() for comp in components]
-        
-        if files is not None and len(files) > 0:
-            file = files[0]
-        if file is not None:
-            try:
-                await self.client.http.request(
-                    Route("PATCH", f"/channels/{message.channel.id}/messages/{message.id}"),
-                    form=[
-                        {
-                            "name": "payload_json",
-                            "value": json.dumps(data, separators=(",", ":"), ensure_ascii=True),
-                        },
-                        {
-                            "name": "file",
-                            "value": file.fp,
-                            "filename": file.filename,
-                            "content_type": "application/octet-stream",
-                        },
-                    ],
-                    files=[file],
-                )
-            finally:
-                file.close()
-        else:
-            await self.client.http.request(
-                Route(
-                    "PATCH",
-                    "/channels/{channel_id}/messages/{message_id}",
-                    channel_id=message.channel.id,
-                    message_id=message.id
-                ),
-                json=data
-            )
-
+    # Special waiter
     async def wait_for_button_click(self, check=None, timeout=None):
         if check is None:
             check = lambda ctx: True
@@ -1115,7 +966,7 @@ class SlashClient:
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
             return
-        self._do_interaction_processing(payload["d"])
+        await self._process_interaction(payload["d"])
 
     async def _on_shard_connect(self, shard_id):
         self.active_shard_count += 1
@@ -1175,7 +1026,7 @@ class SlashClient:
         '''
         # Don't use it
         '''
-        self.client.loop.create_task(self._toggle_listeners(event_name, *args, **kwargs))
+        await self._toggle_listeners(event_name, *args, **kwargs)
         if event_name != "ready":
             self.client.dispatch(event_name, *args, **kwargs)
         func = self.events.get(event_name)
@@ -1187,12 +1038,9 @@ class SlashClient:
                 await func(*args, **kwargs)
 
     async def _process_interaction(self, payload):
-        '''
-        # Don't use it
-        '''
-        _type = payload["type"]
+        _type = payload.get("type", 1)
         if _type == 2:
-            inter = Interaction(self.client, payload)
+            inter = SlashInteraction(self.client, payload)
             # Activate event
             await self._activate_event('slash_command', inter)
             # Invoke command
