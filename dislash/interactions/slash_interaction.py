@@ -258,7 +258,7 @@ class SlashInteraction(BaseInteraction):
     def __init__(self, client, payload):
         super().__init__(client, payload)
 
-        state = client._get_state()
+        state = client._connection
         self.prefix = "/" # Just in case
         self.data = InteractionData(
             data=payload.get('data', {}),

@@ -46,7 +46,7 @@ class BaseInteraction:
     """
 
     def __init__(self, client, data: dict):
-        state = client._get_state()
+        state = client._connection
 
         self.id = int(data["id"])
         self.application_id = int(data["application_id"])
@@ -164,7 +164,8 @@ class BaseInteraction:
                 content=content, embed=embed,
                 file=file, files=files,
                 tts=tts, delete_after=delete_after,
-                allowed_mentions=allowed_mentions
+                allowed_mentions=allowed_mentions,
+                components=components
             )
         # JSON data formation
         data = {}
@@ -195,7 +196,7 @@ class BaseInteraction:
         
         # Allowed mentions
         if not is_empty_message:
-            state = self._client._get_state()
+            state = self._client._connection
             if allowed_mentions is not None:
                 if state.allowed_mentions is not None:
                     allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
@@ -285,7 +286,7 @@ class BaseInteraction:
                 raise discord.InvalidArgument("components must be a list of ActionRow")
             data["components"] = [comp.to_dict() for comp in components]
         # Allowed mentions
-        state = self._client._get_state()
+        state = self._client._connection
         if allowed_mentions is not None:
             if state.allowed_mentions is not None:
                 allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
@@ -344,7 +345,7 @@ class BaseInteraction:
             allowed_mentions=allowed_mentions
         )
         return discord.Message(
-            state=self._client._get_state(),
+            state=self._client._connection,
             channel=self.channel,
             data=r
         )

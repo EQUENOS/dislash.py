@@ -29,7 +29,7 @@ class ButtonInteraction(BaseInteraction):
     """
     def __init__(self, client, data):
         super().__init__(client, data)
-        state = client._get_state()
+        state = client._connection
 
         msg_data = data.get("message")
         if msg_data is None:
