@@ -94,7 +94,8 @@ class SlashCommandResponse:
             self.registerable = None
         self._auto_merged = False
         # Cog indication
-        self._cog_name = class_name(func)
+        self._cog_class_name = class_name(func)
+        self._cog_name = None
         self.__cog = None
     
     async def __call__(self, interaction):
@@ -119,6 +120,7 @@ class SlashCommandResponse:
 
     def _inject_cog(self, cog):
         self.__cog = cog
+        self._cog_name = cog.qualified_name
 
     async def _run_checks(self, ctx):
         for _check in self.checks:

@@ -1,5 +1,5 @@
 import discord
-from .components import *
+from .message_components import *
 from .interaction import *
 
 

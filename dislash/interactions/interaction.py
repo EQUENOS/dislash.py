@@ -3,7 +3,7 @@ import datetime
 import discord
 from discord.http import Route
 from discord.utils import snowflake_time
-from .components import ActionRow
+from .message_components import ActionRow
 
 
 __all__ = (
@@ -30,6 +30,8 @@ class ResponseType:
     ChannelMessage = 3 [DEPRECATED]
     ChannelMessageWithSource = 4
     AcknowledgeWithSource = 5
+    DeferredUpdateMessage = 6
+    UpdateMessage = 7
     """
     Pong                     = 1
     Acknowledge              = 1
@@ -106,38 +108,38 @@ class BaseInteraction:
                                             allowed_mentions=None, type=None,
                                             fetch_response_message=True):
         '''
-        Replies to the interaction.
+        Creates an interaction response.
 
         Parameters
         ----------
-        content : str
-            content of the message that you're going so send
-        embed : discord.Embed
-            an embed that'll be attached to the message
-        embeds : List[discord.Embed]
+        content : :class:`str`
+            message content
+        embed : :class:`discord.Embed`
+            message embed
+        embeds : :class:`List[discord.Embed]`
             a list of up to 10 embeds to attach
-        components : List[ActionRow]
+        components : :class:`List[ActionRow]`
             a list of up to 5 action rows
         file : :class:`discord.File`
             if it's the first interaction reply, the file will be ignored due to API limitations.
             Everything else is the same as in :class:`discord.TextChannel.send()` method.
         files : List[:class:`discord.File`]
             same as ``file`` but for multiple files.
-        hide_user_input : bool
+        hide_user_input : :class:`bool`
             if set to ``True``, user's input won't be displayed
-        ephemeral : bool
+        ephemeral : :class:`bool`
             if set to ``True``, your response will only be visible to the command author
-        tts : bool
+        tts : :class:`bool`
             whether the message is text-to-speech or not
-        delete_after : float
+        delete_after : :class:`float`
             if specified, your reply will be deleted after ``delete_after`` seconds
-        allowed_mentions : discord.AllowedMentions
+        allowed_mentions : :class:`discord.AllowedMentions`
             controls the mentions being processed in this message.
         type : :class:`int` | :class:`ResponseType`
             sets the response type. If it's not specified, this method sets
             it according to ``hide_user_input``, ``content`` and ``embed`` params.
         fetch_response_message : :class:`bool`
-            whether to fetch and return the response message or not. Defaults to ``True``.
+            whether to fetch and return the response message. Defaults to ``True``.
 
         Raises
         ------
@@ -237,19 +239,19 @@ class BaseInteraction:
 
     async def edit(self, content=None, *, embed=None, embeds=None, components=None, allowed_mentions=None):
         '''
-        Edits your reply to the interaction.
+        Edits the original interaction response.
 
         Parameters
         ----------
-        content : str
-            Content of the message that you're going so edit
-        embed : discord.Embed
-            An embed that'll be attached to the message
-        embeds : List[discord.Embed]
-            a list of up to 10 embeds to reattach
-        components : List[ActionRow]
+        content : :class:`str`
+            New message content
+        embed : :class:`discord.Embed`
+            New message embed
+        embeds : :class:`List[discord.Embed]`
+            a list of up to 10 embeds of a new message
+        components : :class:`List[ActionRow]`
             a list of up to 5 action rows
-        allowed_mentions : discord.AllowedMentions
+        allowed_mentions : :class:`discord.AllowedMentions`
             controls the mentions being processed in this message.
         
         Returns
@@ -309,7 +311,7 @@ class BaseInteraction:
     
     async def delete(self):
         '''
-        Deletes your interaction response.
+        Deletes the original interaction response.
         '''
         if not self.editable:
             raise TypeError("There's nothing to delete. Send a reply first.")

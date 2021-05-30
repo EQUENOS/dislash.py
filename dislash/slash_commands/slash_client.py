@@ -10,7 +10,7 @@ from .slash_command import SlashCommand, SlashCommandPermissions
 from ._decohub import _HANDLER
 from ._send_modifications import *
 
-from ..interactions import SlashInteraction, ButtonInteraction, ActionRow
+from ..interactions import SlashInteraction, ButtonInteraction
 
 
 __all__ = ("SlashClient",)
@@ -27,7 +27,8 @@ class SlashClient:
     show_warnings : :class:`bool`
         Whether to show the warnings or not
     modify_send : :class:`bool`
-        Whether to modify :class:`Messageable.send` and :class:`Message.edit`
+        Whether to modify :class:`Messageable.send` and :class:`Message.edit`.
+        Modified methods allow to specify the ``components`` parameter.
 
     Attributes
     ----------
@@ -86,6 +87,15 @@ class SlashClient:
         # Change other class methods
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
+        
+        async def message_wait_for_button_click(message, check=None, timeout=None):
+            if check is None:
+                check = lambda inter: True
+            def auto_check(inter):
+                if message.id != inter.message.id:
+                    return False
+                return check(inter)
+            return await self.wait_for_button_click(auto_check, timeout)
 
         async def fetch_commands(guild):
             return await self.fetch_guild_commands(guild.id)
@@ -121,6 +131,7 @@ class SlashClient:
             Messageable.send = send_with_components
             discord.Message.edit = edit_with_components
         Context.wait_for_button_click = ctx_wait_for_button_click
+        discord.Message.wait_for_button_click = message_wait_for_button_click
         discord.Guild.get_commands = get_commands
         discord.Guild.get_command = get_command
         discord.Guild.get_command_named = get_command_named
@@ -860,13 +871,18 @@ class SlashClient:
 
     def _inject_cogs(self, cog):
         for cmd in self.commands.values():
-            if cmd._cog_name == cog.__cog_name__:
+            if cmd._cog_class_name == cog.__class__.__name__:
                 cmd._inject_cog(cog)
         if self.is_ready:
             self.client.loop.create_task(self._auto_register_or_patch())
     
     def _eject_cogs(self, name):
-        _HANDLER.commands = {kw: cmd for kw, cmd in _HANDLER.commands.items() if cmd._cog_name != name}
+        bad_keys = []
+        for kw, cmd in _HANDLER.commands.items():
+            if cmd._cog_name == name:
+                bad_keys.append(kw)
+        for key in bad_keys:
+            del _HANDLER.commands[key]
 
     def _guilds_with_commands(self):
         guilds = set()
