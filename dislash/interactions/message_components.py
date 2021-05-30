@@ -31,15 +31,15 @@ def auto_rows(*buttons, max_in_row: int=5):
     buttons : List[:class:`Button`]
         a list of buttons to distribute
     max_in_row : :class:`int`
-        limit of buttons in a single row
+        limit of buttons in a single row. Must be between 1 and 5.
     
     Returns
     -------
     List[:class:`ActionRow`]
         the list of rows with buttons
     """
-    if not (0 < max_in_row < 5):
-        raise discord.InvalidArgument("max_in_row should be from 0 to 5")
+    if not (1 <= max_in_row <= 5):
+        raise discord.InvalidArgument("max_in_row parameter should be between 1 and 5.")
     rows = []
     for i in range(0, len(buttons), max_in_row):
         rows.append(ActionRow(*buttons[i:i + max_in_row]))
@@ -177,7 +177,7 @@ class ActionRow(Component):
             raise discord.InvalidArgument("components must be a list of Component")
         
         super().__init__(1)
-        self.components = components
+        self.components = list(components)
     
     def __repr__(self):
         return "<ActionRow buttons={0.components!r}>".format(self)
