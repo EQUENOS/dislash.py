@@ -54,3 +54,7 @@ class ButtonInteraction(BaseInteraction):
                     break
             if self.clicked_button is not None:
                 break
+    
+    @property
+    def button(self):
+        return self.clicked_button
