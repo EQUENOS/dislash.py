@@ -1,4 +1,5 @@
 import discord
+import re
 
 
 __all__ = (
@@ -10,14 +11,28 @@ __all__ = (
 )
 
 
+def _partial_emoji_converter(argument: str):
+    if len(argument) == 1:
+        return discord.PartialEmoji(name=argument)
+    
+    match = re.match(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$', argument)
+
+    if match:
+        emoji_animated = bool(match.group(1))
+        emoji_name = match.group(2)
+        emoji_id = int(match.group(3))
+
+        return discord.PartialEmoji(name=emoji_name, animated=emoji_animated, id=emoji_id)
+
+    raise discord.InvalidArgument(f"Failed to convert {argument} to PartialEmoji")
+
+
 def auto_rows(*buttons, max_in_row: int=5):
     """
     Distributes buttons across multiple rows
     and returns the list of rows.
-
     Example
     -------
-
     ::
 
         rows = auto_rows(
@@ -25,7 +40,8 @@ def auto_rows(*buttons, max_in_row: int=5):
             Button(label="Green", custom_id="green", style=3),
             max_in_row=1
         )
-
+        await ctx.send("Buttons", components=rows)
+    
     Parameters
     ----------
     buttons : List[:class:`Button`]
@@ -90,7 +106,7 @@ class Button(Component):
         Style of the button
     label : :class:`str`
         Button text
-    emoji : :class:`discord.PartialEmoji`
+    emoji : :class:`str` | :class:`discord.PartialEmoji`
         Button emoji
     custom_id : :class:`str`
         You should set it by yourself, it's not a snowflake.
@@ -113,6 +129,9 @@ class Button(Component):
             raise discord.InvalidArgument("you can't specify both url and custom_id")
         elif style == ButtonStyle.link:
             raise discord.InvalidArgument("style 'link' expects url to be specified")
+        
+        if isinstance(emoji, str):
+            emoji = _partial_emoji_converter(emoji)
 
         super().__init__(2)
         self.style = style
