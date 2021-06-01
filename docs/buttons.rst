@@ -8,8 +8,7 @@ Here's a basic example of how buttons work:
 ::
 
     from discord.ext import commands
-    from dislash.interactions import *
-    from dislash.slash_commands import *
+    from dislash import *
 
     client = commands.Bot(command_prefix="!")
     slash = SlashClient(client)
@@ -23,10 +22,10 @@ Here's a basic example of how buttons work:
                 custom_id="test_button"
             )
         )
-        await ctx.send("I have a button!", components=[row])
+        msg = await ctx.send("I have a button!", components=[row])
         def check(inter):
             return inter.author == ctx.author
-        inter = await ctx.wait_for_button_click(check=check)
+        inter = await msg.wait_for_button_click(check=check)
         await inter.reply(f"Button: {inter.clicked_button.label}")
     
     client.run("BOT_TOKEN")
@@ -65,3 +64,12 @@ ButtonInteraction
     .. automethod:: delete
 
     .. automethod:: followup
+
+
+
+.. _auto_rows:
+
+auto_rows
+---------
+
+.. autofunction:: auto_rows

@@ -15,11 +15,10 @@ Auto registration
 .. code-block:: python
 
     from discord.ext import commands
-    from dislash import slash_commands
-    from dislash.interactions import *
+    from dislash import *
 
     client = commands.Bot(command_prefix="!")
-    slash = slash_commands.SlashClient(client)
+    slash = SlashClient(client)
 
     # If description is specified, the command will be
     # registered automatically
@@ -44,11 +43,10 @@ This is useful when you learn how to register different types of commands.
 .. code-block:: python
 
     from discord.ext import commands
-    from dislash import slash_commands
-    from dislash.interactions import *
+    from dislash import *
 
     client = commands.Bot(command_prefix="!")
-    slash = slash_commands.SlashClient(client)
+    slash = SlashClient(client)
 
     @slash.event
     async def on_ready():
@@ -86,10 +84,10 @@ In order to start responding to **/random**, run the following code:
 
     from random import randint
     from discord.ext import commands
-    from dislash import slash_commands
+    from dislash import *
 
     client = commands.Bot(command_prefix="!")
-    slash = slash_commands.SlashClient(client)
+    slash = SlashClient(client)
 
     @slash.command()
     async def random(interaction):
@@ -112,8 +110,7 @@ For example, a command that generates an embed.
 ::
 
     from discord.ext import commands
-    from dislash.interactions import *
-    from dislash.slash_commands import SlashClient
+    from dislash import *
 
     client = commands.Bot(command_prefix="!")
     slash = SlashClient(client)
@@ -177,8 +174,7 @@ This example shows how to easily make a **/user-info** command
 ::
 
     from discord.ext import commands
-    from dislash.interactions import *
-    from dislash.slash_commands import SlashClient
+    from dislash import *
 
     client = commands.Bot(command_prefix="!")
     slash = SlashClient(client)
@@ -210,3 +206,44 @@ This example shows how to easily make a **/user-info** command
 Here's how this slash command looks like in Discord:
 
 .. image:: https://cdn.discordapp.com/attachments/808032994668576829/814251227789393930/unknown.png
+
+
+
+Buttons
+-------
+
+::
+
+    from discord.ext import commands
+    from dislash import *
+
+    client = commands.Bot(command_prefix="!")
+    slash = SlashClient(client)
+
+    @client.command()
+    async def test(ctx):
+        # Make a row of buttons
+        row_of_buttons = ActionRow(
+            Button(
+                style=ButtonStyle.green,
+                label="Green button",
+                custom_id="green"
+            ),
+            Button(
+                style=ButtonStyle.red,
+                label="Red button",
+                custom_id="red"
+            )
+        )
+        # Send a message with buttons
+        msg = await ctx.send(
+            "This message has buttons!",
+            components=[row_of_buttons]
+        )
+        # Wait for someone to click on them
+        inter = await msg.wait_for_button_click(check)
+        # Send what you received
+        button_text = inter.clicked_button.label
+        await inter.reply(f"Button: {button_text}")
+
+    client.run("BOT_TOKEN")
