@@ -1065,8 +1065,6 @@ class SlashClient:
                 try:
                     await SCR.invoke(inter)
                 except Exception as err:
-                    if 'slash_command_error' not in self.events:
-                        raise err
                     await self._activate_event('slash_command_error', inter, err)
         elif _type == 3:
             inter = ButtonInteraction(self.client, payload)
