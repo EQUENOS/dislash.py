@@ -17,8 +17,8 @@ Auto registration
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
 
     # If description is specified, the command will be
     # registered automatically
@@ -26,7 +26,7 @@ Auto registration
     async def hello(interaction):
         await interaction.reply("Hello!")
     
-    client.run("BOT_TOKEN")
+    bot.run("BOT_TOKEN")
 
 
 
@@ -45,8 +45,8 @@ This is useful when you learn how to register different types of commands.
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
 
     @slash.event
     async def on_ready():
@@ -69,10 +69,10 @@ This is useful when you learn how to register different types of commands.
             ]
         )
         # Post this command via API
-        await slash_client.register_global_slash_command(sc)
+        await slash.register_global_slash_command(sc)
         # Discord API uploads global commands for more than 1 hour
         # That's why I highly recommend .register_guild_slash_command for testing:
-        await slash_client.register_guild_slash_command(guild_id, sc)
+        await slash.register_guild_slash_command(guild_id, sc)
 
 
 Okay, we've just registered **/random**.
@@ -86,8 +86,8 @@ In order to start responding to **/random**, run the following code:
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
 
     @slash.command()
     async def random(interaction):
@@ -96,7 +96,7 @@ In order to start responding to **/random**, run the following code:
         if b < a: a, b = b, a
         await interaction.reply(randint(a, b))
 
-    client.run("BOT_TOKEN")
+    bot.run("BOT_TOKEN")
 
 
 
@@ -112,8 +112,8 @@ For example, a command that generates an embed.
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
     test_guilds = [12345]   # Insert ID of your guild here
 
     @slash.command(
@@ -150,7 +150,7 @@ For example, a command that generates an embed.
         # Sending the output
         await inter.reply(embed=emb, hide_user_input=True)
     
-    client.run("BOT_TOKEN")
+    bot.run("BOT_TOKEN")
 
 .. seealso::
 
@@ -176,8 +176,8 @@ This example shows how to easily make a **/user-info** command
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
     test_guilds = [12345]
 
     @slash.command(
@@ -201,7 +201,7 @@ This example shows how to easily make a **/user-info** command
         emb.set_thumbnail(url=user.avatar_url)
         await ctx.send(embed=emb)
     
-    client.run("BOT_TOKEN")
+    bot.run("BOT_TOKEN")
 
 Here's how this slash command looks like in Discord:
 
@@ -217,10 +217,10 @@ Buttons
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
 
-    @client.command()
+    @bot.command()
     async def test(ctx):
         # Make a row of buttons
         row_of_buttons = ActionRow(
@@ -246,4 +246,4 @@ Buttons
         button_text = inter.clicked_button.label
         await inter.reply(f"Button: {button_text}")
 
-    client.run("BOT_TOKEN")
+    bot.run("BOT_TOKEN")

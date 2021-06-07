@@ -10,10 +10,10 @@ Here's a basic example of how buttons work:
     from discord.ext import commands
     from dislash import *
 
-    client = commands.Bot(command_prefix="!")
-    slash = SlashClient(client)
+    bot = commands.Bot(command_prefix="!")
+    slash = SlashClient(bot)
 
-    @client.command()
+    @bot.command()
     async def test(ctx):
         row = ActionRow(
             Button(
@@ -28,7 +28,7 @@ Here's a basic example of how buttons work:
         inter = await msg.wait_for_button_click(check=check)
         await inter.reply(f"Button: {inter.clicked_button.label}")
     
-    client.run("BOT_TOKEN")
+    bot.run("BOT_TOKEN")
 
 .. _action_row:
 
@@ -50,12 +50,12 @@ Button
 
 
 
-.. _button_interaction:
+.. _message_interaction:
 
-ButtonInteraction
+MessageInteraction
 -----------------
 
-.. autoclass:: ButtonInteraction
+.. autoclass:: MessageInteraction
 
     .. automethod:: reply
 
