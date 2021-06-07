@@ -10,7 +10,7 @@ from .slash_command import SlashCommand, SlashCommandPermissions
 from ._decohub import _HANDLER
 from ._send_modifications import *
 
-from ..interactions import SlashInteraction, ButtonInteraction
+from ..interactions import ComponentType, SlashInteraction, MessageInteraction
 
 
 __all__ = ("SlashClient",)
@@ -978,6 +978,7 @@ class SlashClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
+
     # Adding relevant listeners
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
@@ -1031,6 +1032,9 @@ class SlashClient:
                         else:
                             future.set_result(args)
                         removed.append(i)
+                    else:
+                        # Add on_check_fail in the future
+                        pass
 
             if len(removed) == len(listeners):
                 self._listeners.pop(event)
@@ -1067,8 +1071,12 @@ class SlashClient:
                 except Exception as err:
                     await self._activate_event('slash_command_error', inter, err)
         elif _type == 3:
-            inter = ButtonInteraction(self.client, payload)
-            await self._activate_event('button_click', inter)
+            inter = MessageInteraction(self.client, payload)
+            if inter.component.type == ComponentType.Button:
+                await self._activate_event('button_click', inter)
+            elif inter.component.type == ComponentType.SelectMenu:
+                # FIXME: naming might be different
+                await self._activate_event('select_menu_click', inter)
     
     # Aliases
     register_global_command = register_global_slash_command

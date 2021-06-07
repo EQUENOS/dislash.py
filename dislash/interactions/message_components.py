@@ -4,15 +4,19 @@ import re
 
 __all__ = (
     "auto_rows",
+    "ComponentType",
     "ButtonStyle",
     "Component",
     "Button",
-    "ActionRow"
+    "ActionRow",
+    "OptionSelect",
+    "SelectMenu"
 )
 
 
 def _partial_emoji_converter(argument: str):
-    if len(argument) == 1:
+    if len(argument) < 5:
+        # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
     
     match = re.match(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$', argument)
@@ -25,6 +29,16 @@ def _partial_emoji_converter(argument: str):
         return discord.PartialEmoji(name=emoji_name, animated=emoji_animated, id=emoji_id)
 
     raise discord.InvalidArgument(f"Failed to convert {argument} to PartialEmoji")
+
+
+def _component_factory(data: dict):
+    _type = data.get("type")
+    if _type == 1:
+        return ActionRow.from_dict(data)
+    if _type == 2:
+        return Button.from_dict(data)
+    if _type == 3:
+        return SelectMenu.from_dict(data)
 
 
 def auto_rows(*buttons, max_in_row: int=5):
@@ -62,6 +76,12 @@ def auto_rows(*buttons, max_in_row: int=5):
     return rows
 
 
+class ComponentType:
+    ActionRow = 1
+    Button = 2
+    SelectMenu = 3
+
+
 class ButtonStyle:
     """
     Attributes
@@ -87,6 +107,24 @@ class ButtonStyle:
 
     link      = 5
 
+# Beta
+class OptionSelect:
+    __slots__ = ("label", "value")
+
+    def __init__(self, label: str, value):
+        self.label = label
+        self.value = value
+    
+    def __repr__(self):
+        return "<OptionSelect label='{0.label}' value={0.value}>".format(self)
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return OptionSelect(label=data.get("label"), value=data.get("value"))
+    
+    def to_dict(self):
+        return {"label": self.label, "value": self.value}
+
 
 class Component:
     """
@@ -94,6 +132,33 @@ class Component:
     """
     def __init__(self, type: int):
         self.type = type
+
+# Beta
+class SelectMenu(Component):
+    def __init__(self, *, custom_id: str, options: list=None):
+        super().__init__(3)
+        self.custom_id = custom_id
+        self.options = options or []
+    
+    def __repr__(self):
+        desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
+        return f"<SelectMenu {desc}>"
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        options = data.get("options", [])
+        return SelectMenu(
+            custom_id=data.get("custom_id"),
+            options=[OptionSelect.from_dict(o) for o in options]
+        )
+
+    def to_dict(self):
+        payload = {
+            "type": self.type,
+            "custom_id": self.custom_id,
+            "options": [o.to_dict() for o in self.options]
+        }
+        return payload
 
 
 class Button(Component):
@@ -199,7 +264,7 @@ class ActionRow(Component):
         self.components = list(components)
     
     def __repr__(self):
-        return "<ActionRow buttons={0.components!r}>".format(self)
+        return "<ActionRow components={0.components!r}>".format(self)
 
     @property
     def buttons(self):
@@ -207,14 +272,29 @@ class ActionRow(Component):
     
     @classmethod
     def from_dict(cls, data: dict):
-        buttons = [Button.from_dict(elem) for elem in data.get("components", [])]
+        buttons = [_component_factory(elem) for elem in data.get("components", [])]
         return ActionRow(*buttons)
 
-    def add_button(self, button: Button):
-        self.components.append(button)
-    
     def to_dict(self):
         return {
             "type": self.type,
             "components": [comp.to_dict() for comp in self.components]
         }
+
+    def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
+                        custom_id: str=None, url: str=None, disabled: bool=False):
+        self.components.append(
+            Button(
+                style=style,
+                label=label,
+                emoji=emoji,
+                custom_id=custom_id,
+                url=url,
+                disabled=disabled
+            )
+        )
+    
+    def add_menu(self, *, custom_id: str, options: list=None):
+        self.components.append(
+            SelectMenu(custom_id=custom_id, options=options)
+        )
