@@ -12,7 +12,6 @@ from ._send_modifications import *
 
 from ..interactions import ComponentType, SlashInteraction, MessageInteraction
 
-
 __all__ = ("SlashClient",)
 
 
@@ -40,7 +39,8 @@ class SlashClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, show_warnings: bool=False, modify_send: bool=True):
+
+    def __init__(self, client, *, show_warnings: bool = False, modify_send: bool = True):
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.events = {}
@@ -61,7 +61,7 @@ class SlashClient:
         # Inject cogs that are already loaded
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)
-    
+
     def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.add_listener(self._on_socket_response, 'on_socket_response')
@@ -74,38 +74,45 @@ class SlashClient:
     def _modify_discord(self):
         # Modify cog loader
         _add_cog = self.client.add_cog
+
         def add_cog_2(cog):
             self._inject_cogs(cog)
             _add_cog(cog)
+
         self.client.add_cog = add_cog_2
         # Modify cog unloader
         _rem_cog = self.client.remove_cog
+
         def rem_cog_2(name):
             self._eject_cogs(name)
             _rem_cog(name)
+
         self.client.remove_cog = rem_cog_2
+
         # Change other class methods
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
-        
+
         async def message_wait_for_button_click(message, check=None, timeout=None):
             if check is None:
                 check = lambda inter: True
+
             def auto_check(inter):
                 if message.id != inter.message.id:
                     return False
                 return check(inter)
+
             return await self.wait_for_button_click(auto_check, timeout)
 
         async def fetch_commands(guild):
             return await self.fetch_guild_commands(guild.id)
-        
+
         async def fetch_command(guild, command_id):
             return await self.fetch_guild_command(guild.id, command_id)
-        
+
         async def edit_command(guild, command_id, slash_command):
             return await self.edit_guild_slash_command(guild.id, command_id, slash_command)
-        
+
         async def edit_command_permissions(guild, command_id, permissions):
             return await self.edit_guild_command_permissions(guild.id, command_id, permissions)
 
@@ -114,16 +121,16 @@ class SlashClient:
 
         async def delete_command(guild, command_id):
             return await self.delete_guild_command(guild.id, command_id)
-        
+
         async def delete_commands(guild):
             return await self.delete_guild_commands(guild.id)
 
         def get_commands(guild):
             return self.get_guild_commands(guild.id)
-        
+
         def get_command(guild, command_id):
             return self.get_guild_command(guild.id, command_id)
-        
+
         def get_command_named(guild, name):
             return self.get_guild_command_named(guild.id, name)
 
@@ -164,7 +171,7 @@ class SlashClient:
     @property
     def commands(self):
         return _HANDLER.commands
-    
+
     @property
     def global_commands(self):
         return [sc for sc in self._global_commands.values()]
@@ -190,7 +197,7 @@ class SlashClient:
             if name in [
                 'slash_command', 'slash_command_error',
                 'ready', 'auto_register', 'button_click'
-                ]:
+            ]:
                 self.events[name] = func
         return func
 
@@ -220,6 +227,7 @@ class SlashClient:
             if specified, the client will register a command in these guilds.
             Otherwise this command will be registered globally. Requires ``description``
         '''
+
         def decorator(func):
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
@@ -233,8 +241,9 @@ class SlashClient:
             )
             self.commands[name] = new_func
             return new_func
+
         return decorator
-    
+
     # Getters
     def get_global_command(self, command_id: int):
         """
@@ -252,7 +261,7 @@ class SlashClient:
         slash_command : SlashCommand | None
         """
         return self._global_commands.get(command_id)
-    
+
     def get_global_command_named(self, name: str):
         """
         Get a cached global command matching the specified name
@@ -365,10 +374,10 @@ class SlashClient:
         '''
         data = await self.client.http.request(
             Route('GET', '/applications/{app_id}/guilds/{guild_id}/commands',
-            app_id=self.client.user.id, guild_id=guild_id)
+                  app_id=self.client.user.id, guild_id=guild_id)
         )
         return [SlashCommand.from_dict(dat) for dat in data]
-    
+
     async def fetch_global_command(self, command_id: int):
         '''Requests a registered global slash-command
 
@@ -442,7 +451,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._global_commands[sc.id] = sc
         return sc
-    
+
     async def register_guild_slash_command(self, guild_id: int, slash_command: SlashCommand):
         '''Registers a local slash-command
         
@@ -470,7 +479,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._add_guild_command(guild_id, sc)
         return sc
-    
+
     async def overwrite_global_commands(self, slash_commands: list):
         '''
         Bulk overwrites all global commands
@@ -548,7 +557,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._global_commands[sc.id] = sc
         return sc
-    
+
     async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand, **kwargs):
         '''Edits a local command
 
@@ -576,7 +585,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._add_guild_command(guild_id, sc)
         return sc
-    
+
     async def delete_global_slash_command(self, command_id: int):
         '''Deletes a global command
 
@@ -595,7 +604,7 @@ class SlashClient:
         )
         # Update cache
         self._remove_global_command(command_id)
-    
+
     async def delete_guild_slash_command(self, guild_id: int, command_id: int):
         '''Deletes a local command
 
@@ -680,7 +689,8 @@ class SlashClient:
         )
         return {int(obj["id"]): SlashCommandPermissions.from_dict(obj) for obj in array}
 
-    async def edit_guild_command_permissions(self, guild_id: int, command_id: int, permissions: SlashCommandPermissions):
+    async def edit_guild_command_permissions(self, guild_id: int, command_id: int,
+                                             permissions: SlashCommandPermissions):
         """
         Edits command permissions for a specific command in a guild.
 
@@ -710,7 +720,7 @@ class SlashClient:
         )
         # Update cache
         self._set_permissions(guild_id, command_id, permissions)
-    
+
     async def batch_edit_guild_command_permissions(self, guild_id: int, permissions: dict):
         """
         Batch edits permissions for all commands in a guild.
@@ -875,7 +885,7 @@ class SlashClient:
                 cmd._inject_cog(cog)
         if self.is_ready:
             self.client.loop.create_task(self._auto_register_or_patch())
-    
+
     def _eject_cogs(self, name):
         bad_keys = []
         for kw, cmd in _HANDLER.commands.items():
@@ -936,10 +946,10 @@ class SlashClient:
                     except Exception as e:
                         if self._show_warnings:
                             print(f"[WARNING] Failed to globally build {name}: {e}")
-        
+
         if len(bad_guilds) > 0 and self._show_warnings:
             print(f"[WARNING] Missing access: '" + "', '".join(str(ID) for ID in bad_guilds) + "'")
-        
+
         if total_patches > 0 or total_posts > 0:
             self.client.loop.create_task(
                 self._activate_event('auto_register', total_posts, total_patches)
@@ -978,7 +988,6 @@ class SlashClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
-
     # Adding relevant listeners
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
@@ -991,7 +1000,7 @@ class SlashClient:
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
-    
+
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
             await self._cache_global_commands()
@@ -999,7 +1008,7 @@ class SlashClient:
             await self._auto_register_or_patch()
             self.is_ready = True
             await self._activate_event('ready')
-    
+
     async def _on_ready(self):
         if isinstance(self.client, discord.AutoShardedClient):
             self.is_ready = True
@@ -1077,10 +1086,10 @@ class SlashClient:
             elif inter.component.type == ComponentType.SelectMenu:
                 # FIXME: naming might be different
                 await self._activate_event('select_menu_click', inter)
-    
+
     # Aliases
     register_global_command = register_global_slash_command
-    
+
     register_guild_command = register_guild_slash_command
 
     edit_global_command = edit_global_slash_command
