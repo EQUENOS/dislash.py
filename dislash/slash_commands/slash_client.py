@@ -1073,10 +1073,10 @@ class SlashClient:
             # Activate event
             await self._activate_event('slash_command', inter)
             # Invoke command
-            SCR = self.commands.get(inter.data.name)
-            if SCR is not None:
+            scr = self.commands.get(inter.data.name)
+            if scr is not None:
                 try:
-                    await SCR.invoke(inter)
+                    await scr.invoke(inter)
                 except Exception as err:
                     await self._activate_event('slash_command_error', inter, err)
         elif _type == 3:
