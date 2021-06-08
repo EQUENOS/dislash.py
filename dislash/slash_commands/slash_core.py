@@ -128,7 +128,7 @@ class SlashCommandResponse:
 
 
 def command(*args, **kwargs):
-    '''
+    """
     A decorator that registers a function below as response for specified slash-command.
 
     Parameters are similar to SlashCommand arguments.
@@ -151,7 +151,7 @@ def command(*args, **kwargs):
     guild_ids : List[int]
         if specified, the client will register a command in these guilds.
         Otherwise this command will be registered globally. Requires ``description``
-    '''
+    """
 
     def decorator(func):
         if not asyncio.iscoroutinefunction(func):
@@ -171,7 +171,7 @@ def command(*args, **kwargs):
 
 
 def check(predicate):
-    '''
+    """
     A function that converts ``predicate(interaction)`` functions
     into slash-command decorators
 
@@ -183,18 +183,18 @@ def check(predicate):
             def predicate(inter):
                 return inter.author.id == inter.guild.owner_id
             return check(predicate)
-        
+
         @is_guild_owner()
         @slash.command(description="Says Hello if you own the guild")
         async def hello(inter):
             await inter.reply("Hello, Mr.Owner!")
-    
+
     .. note::
-        
+
         | In this example registration of slash-command is automatic.
         | See :ref:`slash-command_constructor` to learn more about manual registration
-    
-    '''
+
+    """
     if inspect.iscoroutinefunction(predicate):
         wrapper = predicate
     else:
@@ -447,7 +447,7 @@ def is_nsfw():
 
 
 def cooldown(rate, per, type=BucketType.default):
-    '''
+    """
     A decorator that adds a cooldown to a slash-command. Similar to **discord.py** cooldown decorator.
 
     A cooldown allows a command to only be used a specific amount
@@ -469,7 +469,7 @@ def cooldown(rate, per, type=BucketType.default):
         The amount of seconds to wait for a cooldown when it's been triggered.
     type : BucketType
         The type of cooldown to have.
-    '''
+    """
 
     def decorator(func):
         if isinstance(func, SlashCommandResponse):
