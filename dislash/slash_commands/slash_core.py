@@ -72,11 +72,11 @@ class SlashCommandResponse:
             try:
                 # Assuming that it's discord.py 1.7.0+
                 self._buckets = CooldownMapping(cooldown, BucketType.default)
-            except:
+            except Exception:
                 # discord.py <= 1.6.x
                 try:
                     self._buckets = CooldownMapping(cooldown)
-                except:
+                except Exception:
                     # Hopefully we never reach this
                     self._buckets = None
         else:
