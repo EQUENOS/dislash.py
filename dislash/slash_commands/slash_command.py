@@ -13,7 +13,7 @@ __all__ = (
 
 
 class Type:
-    '''
+    """
     Attributes
     ----------
     SUB_COMMAND = 1
@@ -25,7 +25,7 @@ class Type:
     CHANNEL = 7
     ROLE = 8
     MENTIONABLE = 9
-    '''
+    """
     SUB_COMMAND       = 1
     SUB_COMMAND_GROUP = 2
     STRING            = 3
@@ -38,14 +38,14 @@ class Type:
 
 
 class OptionChoice:
-    '''
+    """
     Parameters
     ----------
     name : str
         the name of the option-choice (visible to users)
     value : str or int
         the value of the option-choice
-    '''
+    """
 
     def __init__(self, name: str, value: Union[str, int]):
         self.name = name
@@ -120,7 +120,7 @@ class Option:
         return Option(**payload)
 
     def add_choice(self, choice: OptionChoice):
-        '''
+        """
         Adds an OptionChoice to the list of current choices
 
         Parameters
@@ -128,11 +128,11 @@ class Option:
 
         choice : OptionChoice
             the choice you're going to add
-        '''
+        """
         self.choices.append(choice)
     
     def add_option(self, option):
-        '''
+        """
         Adds an option to the current list of options
 
         Parameters
@@ -140,7 +140,7 @@ class Option:
 
         option : Option
             the option you're going to add
-        '''
+        """
         if self.type == 1:
             if option.type < 3:
                 raise ValueError('sub_command can only be folded in a sub_command_group')
@@ -165,7 +165,7 @@ class Option:
 
 
 class SlashCommand:
-    '''A base class for building slash-commands.
+    """A base class for building slash-commands.
 
     Parameters
     ----------
@@ -177,7 +177,7 @@ class SlashCommand:
         The options of the command. See :ref:`option`
     default_permission : :class:`bool`
         Whether the command is enabled by default when the app is added to a guild
-    '''
+    """
 
     def __init__(self, name: str, description: str, options: list=None,
                                 default_permission: bool=True, **kwargs):
@@ -210,7 +210,7 @@ class SlashCommand:
         return SlashCommand(**payload)
 
     def add_option(self, option: Option):
-        '''
+        """
         Adds an option to the current list of options
 
         Parameters
@@ -218,7 +218,7 @@ class SlashCommand:
 
         option : Option
             the option you're going to add
-        '''
+        """
         self.options.append(option)
 
     def to_dict(self, *, hide_name=False):
