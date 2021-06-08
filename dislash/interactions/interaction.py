@@ -26,12 +26,16 @@ class ResponseType:
     Attributes
     ----------
     Pong = 1
-    Acknowledge = 2 [DEPRECATED]
-    ChannelMessage = 3 [DEPRECATED]
+        ACK a Ping
     ChannelMessageWithSource = 4
+        Respond to an interaction with a message
     AcknowledgeWithSource = 5
+        ACK an interaction and edit a response later, the user sees a loading state
     DeferredUpdateMessage = 6
+        For components, ACK an interaction and edit the original message later;
+        the user does not see a loading state
     UpdateMessage = 7
+        For components, edit the message the component was attached to
     """
     Pong                     = 1
     Acknowledge              = 1
@@ -107,7 +111,7 @@ class BaseInteraction:
                                             ephemeral=False, delete_after=None,
                                             allowed_mentions=None, type=None,
                                             fetch_response_message=True):
-        '''
+        """
         Creates an interaction response.
 
         Parameters
@@ -152,7 +156,7 @@ class BaseInteraction:
         -------
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
-        '''
+        """
         is_empty_message = content is None and embed is None
         # Which callback type is it
         if type is None:
@@ -238,7 +242,7 @@ class BaseInteraction:
             return await self.edit()
 
     async def edit(self, content=None, *, embed=None, embeds=None, components=None, allowed_mentions=None):
-        '''
+        """
         Edits the original interaction response.
 
         Parameters
@@ -258,7 +262,7 @@ class BaseInteraction:
         -------
         message : :class:`discord.Message`
             The message that was edited
-        '''
+        """
         if not self.editable:
             raise TypeError("There's nothing to edit or the message is ephemeral.")
         # Form JSON params
@@ -310,9 +314,9 @@ class BaseInteraction:
         )
     
     async def delete(self):
-        '''
+        """
         Deletes the original interaction response.
-        '''
+        """
         if not self.editable:
             raise TypeError("There's nothing to delete. Send a reply first.")
         # patch

@@ -135,20 +135,31 @@ class Component:
 
 # Beta
 class SelectMenu(Component):
-    def __init__(self, *, custom_id: str, options: list=None):
+    def __init__(self, *, custom_id: str, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
         super().__init__(3)
         self.custom_id = custom_id
+        self.placeholder = placeholder
+        self.min_values = min_values
+        self.max_values = max_values
         self.options = options or []
     
     def __repr__(self):
         desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
         return f"<SelectMenu {desc}>"
 
+    def add_option(self, *, label: str, value):
+        self.options.append(
+            OptionSelect(label=label, value=value)
+        )
+
     @classmethod
     def from_dict(cls, data: dict):
         options = data.get("options", [])
         return SelectMenu(
             custom_id=data.get("custom_id"),
+            placeholder=data.get("placeholder"),
+            min_values=data.get("min_values", 1),
+            max_values=data.get("max_values", 1),
             options=[OptionSelect.from_dict(o) for o in options]
         )
 
@@ -156,8 +167,12 @@ class SelectMenu(Component):
         payload = {
             "type": self.type,
             "custom_id": self.custom_id,
+            "min_values": self.min_values,
+            "max_values": self.max_values,
             "options": [o.to_dict() for o in self.options]
         }
+        if self.placeholder:
+            payload["placeholder"] = self.placeholder
         return payload
 
 
