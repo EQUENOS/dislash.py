@@ -17,7 +17,7 @@ __all__ = ("SlashClient",)
 
 
 class SlashClient:
-    '''
+    """
     The main purpose of this class is to track ``INTERACTION_CREATE`` API event.
 
     Parameters
@@ -39,7 +39,7 @@ class SlashClient:
         All working slash commands
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
-    '''
+    """
     def __init__(self, client, *, show_warnings: bool=False, modify_send: bool=True):
         _HANDLER.client = client
         self.client = _HANDLER.client
