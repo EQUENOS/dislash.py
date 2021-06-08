@@ -1,10 +1,8 @@
 from setuptools import setup
 import pathlib
 
-
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / 'README.md').read_text(encoding='utf-8')
-requirements = []
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 with open('dislash/__init__.py', 'r') as f:
@@ -15,7 +13,6 @@ setup(
     name='dislash.py',
     version=version,
     description='A python wrapper for discord slash commands.',
-    
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',

@@ -13,7 +13,6 @@ from .errors import *
 from .slash_command import SlashCommand
 from ._decohub import _HANDLER
 
-
 __all__ = (
     "BucketType",
     "SlashCommandResponse",
@@ -36,9 +35,9 @@ __all__ = (
 )
 
 
-#-----------------------------------+
+# -----------------------------------+
 #              Utils                |
-#-----------------------------------+
+# -----------------------------------+
 def class_name(func):
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
@@ -52,13 +51,13 @@ def get_class(func):
             return getattr(mod, class_name(func), None)
 
 
-#-----------------------------------+
+# -----------------------------------+
 #         Core and checks           |
-#-----------------------------------+
+# -----------------------------------+
 class SlashCommandResponse:
-    def __init__(self, client, func, name: str, description: str=None,
-                options: list=None, default_permission: bool=True,
-                guild_ids: list=None):
+    def __init__(self, client, func, name: str, description: str = None,
+                 options: list = None, default_permission: bool = True,
+                 guild_ids: list = None):
         self.client = client
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
@@ -73,16 +72,16 @@ class SlashCommandResponse:
             try:
                 # Assuming that it's discord.py 1.7.0+
                 self._buckets = CooldownMapping(cooldown, BucketType.default)
-            except:
+            except Exception:
                 # discord.py <= 1.6.x
                 try:
                     self._buckets = CooldownMapping(cooldown)
-                except:
+                except Exception:
                     # Hopefully we never reach this
                     self._buckets = None
         else:
             self._buckets = cooldown
-        
+
         self.name = name
         self.func = func
         self.guild_ids = guild_ids
@@ -97,13 +96,13 @@ class SlashCommandResponse:
         self._cog_class_name = class_name(func)
         self._cog_name = None
         self.__cog = None
-    
+
     async def __call__(self, interaction):
         if self.__cog is not None:
             return await self.func(self.__cog, interaction)
         else:
             return await self.func(interaction)
-    
+
     async def invoke(self, interaction):
         self._prepare_cooldowns(interaction)
         await self._run_checks(interaction)
@@ -129,7 +128,7 @@ class SlashCommandResponse:
 
 
 def command(*args, **kwargs):
-    '''
+    """
     A decorator that registers a function below as response for specified slash-command.
 
     Parameters are similar to SlashCommand arguments.
@@ -152,7 +151,8 @@ def command(*args, **kwargs):
     guild_ids : List[int]
         if specified, the client will register a command in these guilds.
         Otherwise this command will be registered globally. Requires ``description``
-    '''
+    """
+
     def decorator(func):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
@@ -166,11 +166,12 @@ def command(*args, **kwargs):
         )
         _HANDLER.commands[name] = new_func
         return new_func
+
     return decorator
 
 
 def check(predicate):
-    '''
+    """
     A function that converts ``predicate(interaction)`` functions
     into slash-command decorators
 
@@ -182,23 +183,24 @@ def check(predicate):
             def predicate(inter):
                 return inter.author.id == inter.guild.owner_id
             return check(predicate)
-        
+
         @is_guild_owner()
         @slash.command(description="Says Hello if you own the guild")
         async def hello(inter):
             await inter.reply("Hello, Mr.Owner!")
-    
+
     .. note::
-        
+
         | In this example registration of slash-command is automatic.
         | See :ref:`slash-command_constructor` to learn more about manual registration
-    
-    '''
+
+    """
     if inspect.iscoroutinefunction(predicate):
         wrapper = predicate
     else:
         async def wrapper(ctx):
             return predicate(ctx)
+
     def decorator(func):
         if isinstance(func, SlashCommandResponse):
             func.checks.append(wrapper)
@@ -207,6 +209,7 @@ def check(predicate):
                 func.__slash_checks__ = []
             func.__slash_checks__.append(wrapper)
         return func
+
     decorator.predicate = wrapper
     return decorator
 
@@ -259,12 +262,14 @@ def has_role(item):
 
 def has_any_role(*items):
     """Similar to ``commands.has_any_role``"""
+
     def predicate(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
         getter = functools.partial(discord.utils.get, ctx.author.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in
+               items):
             return True
         raise MissingAnyRole(items)
 
@@ -287,11 +292,13 @@ def bot_has_role(item):
         if role is None:
             raise BotMissingRole(item)
         return True
+
     return check(predicate)
 
 
 def bot_has_any_role(*items):
     """Similar to ``commands.bot_has_any_role``"""
+
     def predicate(ctx):
         ch = ctx.channel
         if not isinstance(ch, discord.abc.GuildChannel):
@@ -299,9 +306,11 @@ def bot_has_any_role(*items):
 
         me = ch.guild.me
         getter = functools.partial(discord.utils.get, me.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in
+               items):
             return True
         raise BotMissingAnyRole(items)
+
     return check(predicate)
 
 
@@ -427,16 +436,18 @@ def is_owner():
 
 def is_nsfw():
     """Similar to ``commands.is_nsfw``"""
+
     def pred(ctx):
         ch = ctx.channel
         if ctx.guild is None or (isinstance(ch, discord.TextChannel) and ch.is_nsfw()):
             return True
         raise NSFWChannelRequired(ch)
+
     return check(pred)
 
 
 def cooldown(rate, per, type=BucketType.default):
-    '''
+    """
     A decorator that adds a cooldown to a slash-command. Similar to **discord.py** cooldown decorator.
 
     A cooldown allows a command to only be used a specific amount
@@ -458,12 +469,13 @@ def cooldown(rate, per, type=BucketType.default):
         The amount of seconds to wait for a cooldown when it's been triggered.
     type : BucketType
         The type of cooldown to have.
-    '''
+    """
+
     def decorator(func):
         if isinstance(func, SlashCommandResponse):
             func._buckets = CooldownMapping(Cooldown(rate, per, type))
         else:
             func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))
         return func
-    return decorator
 
+    return decorator

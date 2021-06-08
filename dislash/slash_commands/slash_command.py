@@ -1,7 +1,6 @@
 from typing import Union, List
 import discord
 
-
 __all__ = (
     "Type",
     "OptionChoice",
@@ -13,7 +12,7 @@ __all__ = (
 
 
 class Type:
-    '''
+    """
     Attributes
     ----------
     SUB_COMMAND = 1
@@ -25,27 +24,27 @@ class Type:
     CHANNEL = 7
     ROLE = 8
     MENTIONABLE = 9
-    '''
-    SUB_COMMAND       = 1
+    """
+    SUB_COMMAND = 1
     SUB_COMMAND_GROUP = 2
-    STRING            = 3
-    INTEGER           = 4
-    BOOLEAN           = 5
-    USER              = 6
-    CHANNEL           = 7
-    ROLE              = 8
-    MENTIONABLE       = 9
+    STRING = 3
+    INTEGER = 4
+    BOOLEAN = 5
+    USER = 6
+    CHANNEL = 7
+    ROLE = 8
+    MENTIONABLE = 9
 
 
 class OptionChoice:
-    '''
+    """
     Parameters
     ----------
     name : str
         the name of the option-choice (visible to users)
     value : str or int
         the value of the option-choice
-    '''
+    """
 
     def __init__(self, name: str, value: Union[str, int]):
         self.name = name
@@ -56,8 +55,8 @@ class OptionChoice:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.value == other.value
+                self.name == other.name and
+                self.value == other.value
         )
 
 
@@ -75,7 +74,8 @@ class Option:
         list of option choices, type :ref:`option_choice`
     """
 
-    def __init__(self, name: str, description: str, type: int, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def __init__(self, name: str, description: str, type: int, required: bool = False,
+                 choices: List[OptionChoice] = None, options: list = None):
         self.name = name
         self.description = description
         self.type = type
@@ -91,7 +91,7 @@ class Option:
                     if option.type != 1:
                         raise ValueError('Expected sub_command in this sub_command_group')
         self.options = options or []
-    
+
     def __repr__(self):
         string = f"name='{self.name}' description='{self.description}'\
             type={self.type} required={self.required}"
@@ -103,14 +103,14 @@ class Option:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.description == other.description and
-            self.type == other.type and
-            self.required == other.required and
-            self.choices == other.choices and
-            self.options == other.options
+                self.name == other.name and
+                self.description == other.description and
+                self.type == other.type and
+                self.required == other.required and
+                self.choices == other.choices and
+                self.options == other.options
         )
-    
+
     @classmethod
     def from_dict(cls, payload: dict):
         if 'options' in payload:
@@ -120,7 +120,7 @@ class Option:
         return Option(**payload)
 
     def add_choice(self, choice: OptionChoice):
-        '''
+        """
         Adds an OptionChoice to the list of current choices
 
         Parameters
@@ -128,11 +128,11 @@ class Option:
 
         choice : OptionChoice
             the choice you're going to add
-        '''
+        """
         self.choices.append(choice)
-    
+
     def add_option(self, option):
-        '''
+        """
         Adds an option to the current list of options
 
         Parameters
@@ -140,7 +140,7 @@ class Option:
 
         option : Option
             the option you're going to add
-        '''
+        """
         if self.type == 1:
             if option.type < 3:
                 raise ValueError('sub_command can only be folded in a sub_command_group')
@@ -165,7 +165,7 @@ class Option:
 
 
 class SlashCommand:
-    '''A base class for building slash-commands.
+    """A base class for building slash-commands.
 
     Parameters
     ----------
@@ -177,10 +177,10 @@ class SlashCommand:
         The options of the command. See :ref:`option`
     default_permission : :class:`bool`
         Whether the command is enabled by default when the app is added to a guild
-    '''
+    """
 
-    def __init__(self, name: str, description: str, options: list=None,
-                                default_permission: bool=True, **kwargs):
+    def __init__(self, name: str, description: str, options: list = None,
+                 default_permission: bool = True, **kwargs):
         self.id = kwargs.pop('id', None)
         if self.id is not None:
             self.id = int(self.id)
@@ -198,9 +198,9 @@ class SlashCommand:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.description == other.description and
-            self.options == other.options
+                self.name == other.name and
+                self.description == other.description and
+                self.options == other.options
         )
 
     @classmethod
@@ -210,7 +210,7 @@ class SlashCommand:
         return SlashCommand(**payload)
 
     def add_option(self, option: Option):
-        '''
+        """
         Adds an option to the current list of options
 
         Parameters
@@ -218,7 +218,7 @@ class SlashCommand:
 
         option : Option
             the option you're going to add
-        '''
+        """
         self.options.append(option)
 
     def to_dict(self, *, hide_name=False):
@@ -252,7 +252,7 @@ class SlashCommandPermissions:
         might be more convenient.
     """
 
-    def __init__(self, raw_permissions: list=None):
+    def __init__(self, raw_permissions: list = None):
         self.permissions = raw_permissions or []
 
     def __repr__(self):
@@ -273,9 +273,9 @@ class SlashCommandPermissions:
         for target, perm in permissions.items():
             raw_perms.append(RawCommandPermission.from_pair(target, perm))
         return SlashCommandPermissions(raw_perms)
-    
+
     @classmethod
-    def from_ids(cls, role_perms: dict=None, user_perms: dict=None):
+    def from_ids(cls, role_perms: dict = None, user_perms: dict = None):
         """
         Creates :class:`SlashCommandPermissions` from
         2 dictionaries of IDs and permissions.
@@ -295,7 +295,7 @@ class SlashCommandPermissions:
         for user_id, perm in user_perms.items():
             raw_perms.append(RawCommandPermission(user_id, 2, perm))
         return SlashCommandPermissions(raw_perms)
-    
+
     @classmethod
     def from_dict(cls, data: dict):
         return SlashCommandPermissions([
@@ -329,7 +329,7 @@ class RawCommandPermission:
         self.id = id
         self.type = type
         self.permission = permission
-    
+
     def __repr__(self):
         return "<RawCommandPermission id={0.id} type={0.type} permission={0.permission}>".format(self)
 
@@ -344,7 +344,7 @@ class RawCommandPermission:
             type=1 if isinstance(target, discord.Role) else 2,
             permission=permission
         )
-    
+
     @classmethod
     def from_dict(cls, data: dict):
         return RawCommandPermission(
