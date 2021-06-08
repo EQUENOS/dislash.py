@@ -18,11 +18,12 @@ Sections
    :maxdepth: 2
    
    quickstart
+   buttons
+   click-manager
    slash-client
    slash-register
    slash-response
    slash-permissions
-   buttons
    cogs
    examples
 
