@@ -13,7 +13,6 @@ setup(
     name='dislash.py',
     version=version,
     description='A python wrapper for discord slash commands.',
-    
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',
