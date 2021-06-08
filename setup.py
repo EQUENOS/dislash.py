@@ -1,10 +1,8 @@
 from setuptools import setup
 import pathlib
 
-
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / 'README.md').read_text(encoding='utf-8')
-requirements = []
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 with open('dislash/__init__.py', 'r') as f:
