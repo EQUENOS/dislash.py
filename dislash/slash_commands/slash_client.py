@@ -952,12 +952,12 @@ class SlashClient:
             else:
                 for cmd in cmds:
                     old_cmd = self.get_guild_command_named(guild_id, cmd.name)
-                    if old_cmd is None or not cmd == old_cmd:
+                    if old_cmd is None or not (cmd == old_cmd):
                         update_required = True
                         break
             if update_required:
                 try:
-                    await self.overwrite_guild_commands(guild_id, global_cmds)
+                    await self.overwrite_guild_commands(guild_id, cmds)
                     total_posts += 1
                 except Exception as e:
                     if self._show_warnings:
