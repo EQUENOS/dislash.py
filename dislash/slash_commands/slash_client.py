@@ -1,6 +1,5 @@
 from discord.abc import Messageable
 from discord.http import Route
-from discord.errors import Forbidden
 from discord.ext.commands import Context
 import asyncio
 import discord
@@ -56,7 +55,7 @@ class SlashClient:
         self._register_listeners()
         # Modify old discord.py methods
         self._modify_discord()
-        # Link the slash ext to client if doesn't already exists
+        # Link the slash ext to client if doesn't already exist
         if not hasattr(self.client, "slash"):
             self.client.slash = self
         # Inject cogs that are already loaded
@@ -906,58 +905,67 @@ class SlashClient:
                 guilds = guilds.union(set(cmd.guild_ids))
         return list(guilds)
 
+    def _per_guild_commands(self):
+        global_cmds = []
+        guilds = {}
+        for cmd in _HANDLER.commands.values():
+            if cmd.guild_ids is None:
+                global_cmds.append(cmd.registerable)
+            else:
+                for guild_id in cmd.guild_ids:
+                    if guild_id not in guilds:
+                        guilds[guild_id] = [cmd.registerable]
+                    else:
+                        guilds[guild_id].append(cmd.registerable)
+        return global_cmds, guilds
+
     # Automatically register commands
     async def _auto_register_or_patch(self):
+        """
+        Assuming that all commands are already cached
+        ---------------------------------------------
+        """
+        global_cmds, guild_cmds = self._per_guild_commands()
         total_posts = 0
-        total_patches = 0
-        bad_guilds = []
-        for name, cmd in _HANDLER.commands.items():
-            if cmd.registerable is not None and not cmd._auto_merged:
-                cmd._auto_merged = True
-                # Local registration
-                if cmd.guild_ids is not None:
-                    # Iterate through guilds
-                    for ID in cmd.guild_ids:
-                        if ID in bad_guilds:
-                            continue
-                        # Check if the command is registered
-                        try:
-                            old_cmd = self.get_guild_command_named(ID, cmd.name)
-                            if old_cmd is None:
-                                old_cmd = await self.fetch_guild_command_named(ID, cmd.name)
-                            if old_cmd is None:
-                                await self.register_guild_slash_command(ID, cmd.registerable)
-                                total_posts += 1
-                            elif not (old_cmd == cmd.registerable):
-                                await self.edit_guild_slash_command(ID, old_cmd.id, cmd.registerable, ignore_name=True)
-                                total_patches += 1
-                        except Exception as e:
-                            if isinstance(e, Forbidden):
-                                bad_guilds.append(ID)
-                            elif self._show_warnings:
-                                print(f"[WARNING] Failed to build <{name}> in <{ID}>: {e}")
-                # Global registration
-                else:
-                    try:
-                        old_cmd = self.get_global_command_named(cmd.name)
-                        if old_cmd is None:
-                            old_cmd = await self.fetch_global_command_named(cmd.name)
-                        if old_cmd is None:
-                            await self.register_global_slash_command(cmd.registerable)
-                            total_posts += 1
-                        elif not (old_cmd == cmd.registerable):
-                            await self.edit_global_slash_command(old_cmd.id, cmd.registerable, ignore_name=True)
-                            total_patches += 1
-                    except Exception as e:
-                        if self._show_warnings:
-                            print(f"[WARNING] Failed to globally build {name}: {e}")
-        
-        if len(bad_guilds) > 0 and self._show_warnings:
-            print(f"[WARNING] Missing access: '" + "', '".join(str(ID) for ID in bad_guilds) + "'")
-        
-        if total_patches > 0 or total_posts > 0:
+        # Update global commands first
+        update_required = False
+        if len(global_cmds) != len(self._global_commands):
+            update_required = True
+        else:
+            for cmd in global_cmds:
+                old_cmd = self.get_global_command_named(cmd.name)
+                if old_cmd is None or not cmd == old_cmd:
+                    update_required = True
+                    break
+        if update_required:
+            try:
+                await self.overwrite_global_commands(global_cmds)
+                total_posts += 1
+            except Exception as e:
+                if self._show_warnings:
+                    print(f"[WARNING] Failed to overwrite global commands due to {e}")
+        # Update guild commands
+        for guild_id, cmds in guild_cmds.items():
+            update_required = False
+            if len(cmds) != len(self.get_guild_commands(guild_id)):
+                update_required = True
+            else:
+                for cmd in cmds:
+                    old_cmd = self.get_guild_command_named(guild_id, cmd.name)
+                    if old_cmd is None or not cmd == old_cmd:
+                        update_required = True
+                        break
+            if update_required:
+                try:
+                    await self.overwrite_guild_commands(guild_id, global_cmds)
+                    total_posts += 1
+                except Exception as e:
+                    if self._show_warnings:
+                        print(f"[WARNING] Failed to overwrite commands in <Guild id={guild_id}> due to {e}")
+        # Dispatch an event
+        if total_posts > 0:
             self.client.loop.create_task(
-                self._activate_event('auto_register', total_posts, total_patches)
+                self._activate_event('auto_register', total_posts, 0)
             )
 
     # Cache commands
