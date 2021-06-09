@@ -225,6 +225,10 @@ class Button(Component):
         desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
         return f"<Button {desc}>"
 
+    @property
+    def id(self):
+        return self.custom_id
+
     @classmethod
     def from_dict(cls, data: dict):
         if "emoji" in data:
@@ -296,6 +300,22 @@ class ActionRow(Component):
             "components": [comp.to_dict() for comp in self.components]
         }
 
+    def disable_buttons(self):
+        """
+        Sets ``disabled`` to ``True`` for all buttons in this row.
+        """
+        for component in self.components:
+            if component.type == ComponentType.Button:
+                component.disabled = True
+
+    def enable_buttons(self):
+        """
+        Sets ``disabled`` to ``False`` for all buttons in this row.
+        """
+        for component in self.components:
+            if component.type == ComponentType.Button:
+                component.disabled = False
+
     def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
                         custom_id: str=None, url: str=None, disabled: bool=False):
         self.components.append(
@@ -309,7 +329,13 @@ class ActionRow(Component):
             )
         )
     
-    def add_menu(self, *, custom_id: str, options: list=None):
+    def add_menu(self, *, custom_id: str, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
         self.components.append(
-            SelectMenu(custom_id=custom_id, options=options)
+            SelectMenu(
+                custom_id=custom_id,
+                placeholder=placeholder,
+                min_values=min_values,
+                max_values=max_values,
+                options=options
+            )
         )
