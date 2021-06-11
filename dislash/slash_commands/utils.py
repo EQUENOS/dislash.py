@@ -76,7 +76,7 @@ class ClickListener:
                 if cancel_others:
                     break
         # Delay more
-        if task_toggled:
+        if task_toggled and self._ends_at is not None:
             self._ends_at = datetime.now() + timedelta(seconds=self._timeout)
 
     def kill(self):
