@@ -1,5 +1,6 @@
 .. currentmodule:: dislash.interactions
 
+
 Responding to a slash-command
 =============================
 
@@ -25,6 +26,10 @@ Interaction
     .. automethod:: edit
 
     .. automethod:: delete
+
+    .. automethod:: create_response
+
+    .. automethod:: fetch_initial_response
 
 
 .. _interaction_data:

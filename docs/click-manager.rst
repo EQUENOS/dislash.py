@@ -137,6 +137,12 @@ ClickListener
 
     .. automethod:: matching_id
 
+    .. automethod:: from_user
+
+    .. automethod:: not_from_user
+
+    .. automethod:: no_checks
+
     .. automethod:: timeout
 
     .. automethod:: kill
