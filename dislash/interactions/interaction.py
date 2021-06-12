@@ -112,7 +112,9 @@ class BaseInteraction:
                                             allowed_mentions=None, type=None,
                                             fetch_response_message=True):
         """
-        Creates an interaction response.
+        Creates an interaction response. This method is a bit "smarter" than
+        :meth:`create_response`. If the token is no longer valid, it sends a usual
+        channel message instead of creating an interaction response.
 
         Parameters
         ----------
@@ -157,7 +159,7 @@ class BaseInteraction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         """
-        is_empty_message = content is None and embed is None
+        is_empty_message = content is None and embed is None and embeds is None
         # Which callback type is it
         if type is None:
             if is_empty_message:
@@ -173,7 +175,69 @@ class BaseInteraction:
                 allowed_mentions=allowed_mentions,
                 components=components
             )
-        # JSON data formation
+        # Create response
+        await self.create_response(
+            content=content,
+            type=type,
+            embed=embed,
+            embeds=embeds,
+            components=components,
+            ephemeral=ephemeral,
+            tts=tts,
+            allowed_mentions=allowed_mentions
+        )
+        self._sent = True
+        # Type-5 responses are always editable
+        if type == 5:
+            self.editable = True
+            return None
+        # Ephemeral messages aren't stored and can't be deleted or edited
+        # Same for type-1 and type-2 messages
+        if ephemeral or type in (1, 2):
+            return None
+        
+        self.editable = True
+        if delete_after is not None:
+            self._client.loop.create_task(self.delete_after(delete_after))
+        
+        if fetch_response_message:
+            return await self.fetch_initial_response()
+
+    async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
+                                                    components=None,
+                                                    ephemeral=False, tts=False,
+                                                    allowed_mentions=None):
+        """
+        Creates an interaction response.
+
+        Parameters
+        ----------
+        content : :class:`str`
+            response content
+        type : :class:`int` | :class:`ResponseType`
+            sets the response type. See :class:`ResponseType`
+        embed : :class:`discord.Embed`
+            response embed
+        embeds : :class:`List[discord.Embed]`
+            a list of up to 10 embeds to attach
+        components : :class:`List[ActionRow]`
+            a list of up to 5 action rows
+        ephemeral : :class:`bool`
+            if set to ``True``, your response will only be visible to the command author
+        tts : :class:`bool`
+            whether the message is text-to-speech or not
+        allowed_mentions : :class:`discord.AllowedMentions`
+            controls the mentions being processed in this message.
+
+        Raises
+        ------
+        ~discord.HTTPException
+            sending the response failed
+        ~discord.InvalidArgument
+            Both ``embed`` and ``embeds`` are specified
+        """
+        type = type or 4
+        
         data = {}
         if content is not None:
             data['content'] = str(content)
@@ -201,7 +265,7 @@ class BaseInteraction:
             data["components"] = [comp.to_dict() for comp in components]
         
         # Allowed mentions
-        if not is_empty_message:
+        if content or embed or embeds:
             state = self._client._connection
             if allowed_mentions is not None:
                 if state.allowed_mentions is not None:
@@ -226,20 +290,6 @@ class BaseInteraction:
             ),
             json=_json
         )
-        self._sent = True
-        # Type-5 responses are always editable
-        if type == 5:
-            self.editable = True
-            return None
-        # Ephemeral messages aren't stored and can't be deleted or edited
-        # Same for type-1 and type-2 messages
-        if ephemeral or type in (1, 2):
-            return None
-        self.editable = True
-        if delete_after is not None:
-            self._client.loop.create_task(self.delete_after(delete_after))
-        if fetch_response_message:
-            return await self.edit()
 
     async def edit(self, content=None, *, embed=None, embeds=None, components=None, allowed_mentions=None):
         """
@@ -334,6 +384,22 @@ class BaseInteraction:
             await self.delete()
         except:
             pass
+
+    async def fetch_initial_response(self):
+        """
+        Fetches the original interaction response.
+        """
+        data = await self._client.http.request(
+            Route(
+                'GET', '/webhooks/{app_id}/{token}/messages/@original',
+                app_id=self._client.user.id, token=self.token
+            )
+        )
+        return discord.Message(
+            state=self._client._connection,
+            channel=self.channel,
+            data=data
+        )
 
     async def followup(self, content=None, *,   embed=None, embeds=None,
                                                 file=None, files=None,
