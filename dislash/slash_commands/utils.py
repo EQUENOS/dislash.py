@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import asyncio
+import discord
 
 from ._decohub import _HANDLER
 
@@ -59,7 +60,7 @@ class ClickListener:
                 delay = (self._ends_at - now).total_seconds()
             else:
                 break
-        self.kill()
+        PER_MESSAGE_LISTENERS.pop(self.id, None)
         if self._timeout_waiter is not None:
             await self._timeout_waiter()
 
@@ -84,6 +85,7 @@ class ClickListener:
         Kills the click manager. Only useful if the ``timeout``
         param was specified as ``None``.
         """
+        self._timeout_waiter = None # Also kills the timeout waiter
         PER_MESSAGE_LISTENERS.pop(self.id, None)
 
     def timeout(self, func):
@@ -129,7 +131,54 @@ class ClickListener:
             self._listeners.append((new_func, check, cancel_others, reset_timeout))
             return func
         return deco
-    
+
+    def from_user(self, user: discord.User, *, cancel_others: bool=False, reset_timeout: bool=True):
+        """
+        A decorator that makes the function below waiting for a click
+        from the specified user.
+
+        Parameters are the same as in :meth:`matching_condition`, except
+        ``check`` parameter is replaced with a ``user`` to compare with.
+        """
+        def is_user(inter):
+            return inter.author == user
+        return self.matching_condition(
+            is_user,
+            cancel_others=cancel_others,
+            reset_timeout=reset_timeout
+        )
+
+    def not_from_user(self, user: discord.User, *, cancel_others: bool=False, reset_timeout: bool=True):
+        """
+        A decorator that makes the function below waiting for a click
+        from a user not maching the specified one.
+
+        Parameters are the same as in :meth:`matching_condition`, except
+        ``check`` parameter is replaced with a ``user`` to compare with.
+        """
+        def is_not_user(inter):
+            return inter.author != user
+        return self.matching_condition(
+            is_not_user,
+            cancel_others=cancel_others,
+            reset_timeout=reset_timeout
+        )
+
+    def no_checks(self, *, cancel_others: bool=False, reset_timeout: bool=True):
+        """
+        A decorator that makes the function below waiting for any click.
+
+        Parameters are the same as in :meth:`matching_condition`, except
+        there's no ``check``.
+        """
+        def always(inter):
+            return True
+        return self.matching_condition(
+            always,
+            cancel_others=cancel_others,
+            reset_timeout=reset_timeout
+        )
+
     def matching_id(self, custom_id: str, *, cancel_others: bool=False, reset_timeout: bool=True):
         """
         A decorator that makes the function below waiting for a click
