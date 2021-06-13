@@ -9,9 +9,13 @@ __all__ = (
     "Component",
     "Button",
     "ActionRow",
-    "OptionSelect",
+    "MenuOption",
     "SelectMenu"
 )
+
+# I don't like this solution for default custom_ids...
+ID_SOURCE = 0
+MAX_ID = 25
 
 
 def _partial_emoji_converter(argument: str):
@@ -108,7 +112,7 @@ class ButtonStyle:
     link      = 5
 
 # Beta
-class OptionSelect:
+class MenuOption:
     __slots__ = ("label", "value")
 
     def __init__(self, label: str, value):
@@ -120,7 +124,7 @@ class OptionSelect:
 
     @classmethod
     def from_dict(cls, data: dict):
-        return OptionSelect(label=data.get("label"), value=data.get("value"))
+        return MenuOption(label=data.get("label"), value=data.get("value"))
     
     def to_dict(self):
         return {"label": self.label, "value": self.value}
@@ -149,7 +153,7 @@ class SelectMenu(Component):
 
     def add_option(self, *, label: str, value):
         self.options.append(
-            OptionSelect(label=label, value=value)
+            MenuOption(label=label, value=value)
         )
 
     @classmethod
@@ -160,7 +164,7 @@ class SelectMenu(Component):
             placeholder=data.get("placeholder"),
             min_values=data.get("min_values", 1),
             max_values=data.get("max_values", 1),
-            options=[OptionSelect.from_dict(o) for o in options]
+            options=[MenuOption.from_dict(o) for o in options]
         )
 
     def to_dict(self):
@@ -200,10 +204,14 @@ class Button(Component):
     """
     def __init__(self, *, style: ButtonStyle, label: str=None, emoji: discord.PartialEmoji=None,
                                     custom_id: str=None, url: str=None, disabled: bool=False):
+        global ID_SOURCE # Ugly as hell
+
         if custom_id is None:
             if url is None:
-                raise discord.InvalidArgument("url or custom_id must be specified")
-            if style != ButtonStyle.link:
+                custom_id = str(ID_SOURCE)
+                ID_SOURCE = (ID_SOURCE + 1) % MAX_ID
+                # raise discord.InvalidArgument("url or custom_id must be specified")
+            elif style != ButtonStyle.link:
                 raise discord.InvalidArgument("if you specify url, the style must be ButtonStyle.link")
         elif url is not None:
             raise discord.InvalidArgument("you can't specify both url and custom_id")
