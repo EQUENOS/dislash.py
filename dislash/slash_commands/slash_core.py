@@ -58,7 +58,7 @@ def get_class(func):
 class SlashCommandResponse:
     def __init__(self, client, func, name: str, description: str=None,
                 options: list=None, default_permission: bool=True,
-                guild_ids: list=None):
+                guild_ids: list=None, connectors: dict=None):
         self.client = client
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
@@ -86,12 +86,15 @@ class SlashCommandResponse:
         self.name = name
         self.func = func
         self.guild_ids = guild_ids
+        self.connectors = connectors
+
         if description is not None:
             self.registerable = SlashCommand(name, description, options, default_permission)
         elif options is not None:
             raise SyntaxError('<options> require <description> specified')
         else:
             self.registerable = None
+        
         self._auto_merged = False
         # Cog indication
         self._cog_class_name = class_name(func)
@@ -99,10 +102,17 @@ class SlashCommandResponse:
         self.__cog = None
     
     async def __call__(self, interaction):
+        code = self.func.__code__
+        argcount = code.co_argcount + code.co_kwonlyargcount
+        params = {}
         if self.__cog is not None:
-            return await self.func(self.__cog, interaction)
+            if argcount > 2:
+                params = interaction.data._to_dict_values(self.connectors)
+            return await self.func(self.__cog, interaction, **params)
         else:
-            return await self.func(interaction)
+            if argcount > 1:
+                params = interaction.data._to_dict_values(self.connectors)
+            return await self.func(interaction, **params)
     
     async def invoke(self, interaction):
         self._prepare_cooldowns(interaction)
@@ -162,7 +172,8 @@ def command(*args, **kwargs):
             kwargs.get('description'),
             kwargs.get('options'),
             kwargs.get("default_permission", True),
-            kwargs.get('guild_ids')
+            kwargs.get('guild_ids'),
+            kwargs.get("connectors")
         )
         _HANDLER.commands[name] = new_func
         return new_func

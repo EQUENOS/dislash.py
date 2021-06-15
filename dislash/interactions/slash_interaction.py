@@ -111,6 +111,12 @@ class InteractionDataOption:
     def __repr__(self):
         return "<InteractionDataOption name='{0.name}' value={0.value} options={0.options}>".format(self)
 
+    @property
+    def sub_command(self):
+        opt = self.option_at(0)
+        if opt is not None and opt.type == 1:
+            return opt
+    
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -181,6 +187,29 @@ class InteractionData:
     def __repr__(self):
         return "<InteractionData id={0.id} name='{0.name}' options={0.options}>".format(self)
 
+    def _to_dict_values(self, connectors: dict=None):
+        connectors = connectors or {}
+        out = {}
+        for kw, val in self.options.items():
+            new_kw = connectors.get(kw, kw)
+            if val.type > 2:
+                out[new_kw] = val.value
+            else:
+                out[new_kw] = val
+        return out
+
+    @property
+    def sub_command(self):
+        opt = self.option_at(0)
+        if opt is not None and opt.type == 1:
+            return opt
+    
+    @property
+    def sub_command_group(self):
+        opt = self.option_at(0)
+        if opt is not None and opt.type == 2:
+            return opt
+
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -214,10 +243,10 @@ class InteractionData:
         option: :class:`InteractionDataOption` | ``default``
             Otherwise
         '''
-        for n, o in self.options.items():
-            if n == name:
-                return o.value if o.type > 2 else o
-        return default
+        opt = self.options.get(name)
+        if opt is None:
+            return default
+        return opt.value if opt.type > 2 else opt
 
     def option_at(self, index: int):
         """

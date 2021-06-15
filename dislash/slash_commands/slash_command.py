@@ -93,8 +93,7 @@ class Option:
         self.options = options or []
     
     def __repr__(self):
-        string = f"name='{self.name}' description='{self.description}'\
-            type={self.type} required={self.required}"
+        string = "name='{0.name}' description='{0.description} type={0.type} required={0.required}".format(self)
         if len(self.options) > 0:
             string = f"{string} options={self.options}"
         if len(self.choices) > 0:
@@ -188,6 +187,7 @@ class SlashCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
+        
         self.name = name
         self.description = description
         self.options = options or []

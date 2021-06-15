@@ -235,7 +235,8 @@ class SlashClient:
                 kwargs.get('description'),
                 kwargs.get('options'),
                 kwargs.get("default_permission", True),
-                kwargs.get('guild_ids')
+                kwargs.get('guild_ids'),
+                kwargs.get("connectors")
             )
             self.commands[name] = new_func
             return new_func
@@ -909,6 +910,8 @@ class SlashClient:
         global_cmds = []
         guilds = {}
         for cmd in _HANDLER.commands.values():
+            if cmd.registerable is None:
+                continue
             if cmd.guild_ids is None:
                 global_cmds.append(cmd.registerable)
             else:
@@ -1032,6 +1035,18 @@ class SlashClient:
         if guild.id in self._guild_commands:
             del self._guild_commands[guild.id]
 
+    async def _pong_interaction(self, payload):
+        print("Ping-pong")
+        await self.client.http.request(
+            Route(
+                "POST",
+                "/interactions/{interaction_id}/{interaction_token}/callback",
+                interaction_id=payload["id"],
+                interaction_token=payload["token"]
+            ),
+            json={"type": 1}
+        )
+
     async def _toggle_listeners(self, event, *args, **kwargs):
         listeners = self._listeners.get(event)
         if listeners:
@@ -1079,7 +1094,9 @@ class SlashClient:
 
     async def _process_interaction(self, payload):
         _type = payload.get("type", 1)
-        if _type == 2:
+        if _type == 1:
+            await self._pong_interaction(payload)
+        elif _type == 2:
             inter = SlashInteraction(self.client, payload)
             # Activate event
             await self._activate_event('slash_command', inter)
