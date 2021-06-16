@@ -348,7 +348,7 @@ class BaseInteraction:
         r = await self._client.http.request(
             Route(
                 'PATCH', '/webhooks/{app_id}/{token}/messages/@original',
-                app_id=self._client.user.id, token=self.token
+                app_id=self.application_id, token=self.token
             ),
             json=data
         )
@@ -365,7 +365,7 @@ class BaseInteraction:
         await self._client.http.request(
             Route(
                 'DELETE', '/webhooks/{app_id}/{token}/messages/@original',
-                app_id=self._client.user.id, token=self.token
+                app_id=self.application_id, token=self.token
             )
         )
     
@@ -383,7 +383,7 @@ class BaseInteraction:
         data = await self._client.http.request(
             Route(
                 'GET', '/webhooks/{app_id}/{token}/messages/@original',
-                app_id=self._client.user.id, token=self.token
+                app_id=self.application_id, token=self.token
             )
         )
         return discord.Message(

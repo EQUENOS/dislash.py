@@ -48,6 +48,7 @@ class SlashClient:
         self._listeners = {}
         self._global_commands = {}
         self._guild_commands = {}
+        self._cogs_with_err_listeners = []
         self._show_warnings = show_warnings
         self._modify_send = modify_send
         self.active_shard_count = 0
@@ -893,14 +894,33 @@ class SlashClient:
             if command_id in granula:
                 granula[command_id].permissions = permissions
 
+    def _error_handler_exists(self):
+        return not (
+            len(self._cogs_with_err_listeners) == 0 and
+            "slash_command_error" not in self.client._listeners and
+            "slash_command_error" not in self._listeners and
+            "slash_command_error" not in self.events
+        )
+
     def _inject_cogs(self, cog):
         for cmd in self.commands.values():
             if cmd._cog_class_name == cog.__class__.__name__:
                 cmd._inject_cog(cog)
         if self.is_ready:
             self.client.loop.create_task(self._auto_register_or_patch())
+        # We need to know which cogs are able to dispatch errors
+        pairs = cog.get_listeners()
+        for name, func in pairs:
+            if name == "on_slash_command_error":
+                self._cogs_with_err_listeners.append(cog.qualified_name)
+                break
     
     def _eject_cogs(self, name):
+        try:
+            self._cogs_with_err_listeners.remove(name)
+        except Exception:
+            pass
+        # Remove the commands from cache
         bad_keys = []
         for kw, cmd in _HANDLER.commands.items():
             if cmd._cog_name == name:
@@ -1115,6 +1135,8 @@ class SlashClient:
                 try:
                     await SCR.invoke(inter)
                 except Exception as err:
+                    if not self._error_handler_exists():
+                        raise err
                     await self._activate_event('slash_command_error', inter, err)
         elif _type == 3:
             inter = MessageInteraction(self.client, payload)
