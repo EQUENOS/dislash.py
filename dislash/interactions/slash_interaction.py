@@ -111,6 +111,17 @@ class InteractionDataOption:
     def __repr__(self):
         return "<InteractionDataOption name='{0.name}' value={0.value} options={0.options}>".format(self)
 
+    def _to_dict_values(self, connectors: dict=None):
+        connectors = connectors or {}
+        out = {}
+        for kw, val in self.options.items():
+            new_kw = connectors.get(kw, kw)
+            if val.type > 2:
+                out[new_kw] = val.value
+            else:
+                out[new_kw] = val
+        return out
+
     @property
     def sub_command(self):
         opt = self.option_at(0)
@@ -195,7 +206,7 @@ class InteractionData:
             if val.type > 2:
                 out[new_kw] = val.value
             else:
-                out[new_kw] = val
+                out[new_kw] = val._to_dict_values(connectors)
         return out
 
     @property
@@ -294,6 +305,7 @@ class SlashInteraction(BaseInteraction):
             guild=self.guild,
             state=state
         )
+        self.invoked_with = self.data.name
     
     def __repr__(self):
         return "<SlashInteraction id={0.id} version={0.version} type={0.type} "\

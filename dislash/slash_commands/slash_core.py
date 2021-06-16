@@ -10,13 +10,15 @@ import inspect
 import functools
 
 from .errors import *
-from .slash_command import SlashCommand
+from .slash_command import SlashCommand, Option, Type
 from ._decohub import _HANDLER
 
 
 __all__ = (
     "BucketType",
-    "SlashCommandResponse",
+    "SubCommand",
+    "SubCommandGroup",
+    "CommandParent",
     "command",
     "check",
     "check_any",
@@ -55,11 +57,12 @@ def get_class(func):
 #-----------------------------------+
 #         Core and checks           |
 #-----------------------------------+
-class SlashCommandResponse:
-    def __init__(self, client, func, name: str, description: str=None,
-                options: list=None, default_permission: bool=True,
-                guild_ids: list=None, connectors: dict=None):
-        self.client = client
+class BaseSlashCommand:
+    def __init__(self, func, *, name=None, connectors=None):
+        self.func = func
+        self.name = name or func.__name__
+        self.connectors = connectors
+        # Extract checks
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
         else:
@@ -82,42 +85,17 @@ class SlashCommandResponse:
                     self._buckets = None
         else:
             self._buckets = cooldown
-        
-        self.name = name
-        self.func = func
-        self.guild_ids = guild_ids
-        self.connectors = connectors
-
-        if description is not None:
-            self.registerable = SlashCommand(name, description, options, default_permission)
-        elif options is not None:
-            raise SyntaxError('<options> require <description> specified')
-        else:
-            self.registerable = None
-        
-        self._auto_merged = False
-        # Cog indication
-        self._cog_class_name = class_name(func)
-        self._cog_name = None
-        self.__cog = None
     
-    async def __call__(self, interaction):
+    async def __call__(self, *args, **kwargs):
+        return await self.func(*args, **kwargs)
+
+    def _uses_ui(self, from_cog: bool):
         code = self.func.__code__
         argcount = code.co_argcount + code.co_kwonlyargcount
-        params = {}
-        if self.__cog is not None:
-            if argcount > 2:
-                params = interaction.data._to_dict_values(self.connectors)
-            return await self.func(self.__cog, interaction, **params)
+        if from_cog:
+            return argcount > 2
         else:
-            if argcount > 1:
-                params = interaction.data._to_dict_values(self.connectors)
-            return await self.func(interaction, **params)
-    
-    async def invoke(self, interaction):
-        self._prepare_cooldowns(interaction)
-        await self._run_checks(interaction)
-        await self(interaction)
+            return argcount > 1
 
     def _prepare_cooldowns(self, inter):
         if self._buckets.valid:
@@ -128,14 +106,196 @@ class SlashCommandResponse:
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
 
-    def _inject_cog(self, cog):
-        self.__cog = cog
-        self._cog_name = cog.qualified_name
-
     async def _run_checks(self, ctx):
         for _check in self.checks:
             if not await _check(ctx):
                 raise SlashCheckFailure(f"command <{self.name}> has failed")
+
+    async def _maybe_cog_call(self, cog, inter, data):
+        if self._uses_ui(cog):
+            params = data._to_dict_values(self.connectors)
+        else:
+            params = {}
+        if cog:
+            return await self(cog, inter, **params)
+        else:
+            return await self(inter, **params)
+
+
+class SubCommand(BaseSlashCommand):
+    def __init__(self, func, *, name=None, description=None, options=None, connectors=None):
+        super().__init__(func, name=name, connectors=connectors)
+        self.option = Option(
+            name=self.name,
+            description=description,
+            type=Type.SUB_COMMAND,
+            options=options
+        )
+
+
+class SubCommandGroup(BaseSlashCommand):
+    def __init__(self, func, *, name=None):
+        super().__init__(func, name=name)
+        self.children = {}
+        self.option = Option(
+            name=self.name,
+            description="-",
+            type=Type.SUB_COMMAND_GROUP,
+            options=[]
+        )
+
+    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None):
+        """
+        A decorator that creates a subcommand in the
+        subcommand group.
+
+        Parameters are the same as in :class:`CommandParent.sub_command`
+        """
+        def decorator(func):
+            new_func = SubCommand(
+                func,
+                name=name,
+                description=description,
+                options=options,
+                connectors=connectors
+            )
+            self.children[new_func.name] = new_func
+            self.option.options.append(new_func.option)
+            return new_func
+        return decorator
+
+
+class CommandParent(BaseSlashCommand):
+    def __init__(self, func, *, name=None, description=None, options=None, default_permission=True,
+                                                             guild_ids=None, connectors=None, auto_sync=True):
+        super().__init__(func, name=name, connectors=connectors)
+        self.children = {}
+        self.auto_sync = auto_sync
+        self.registerable = SlashCommand(
+            name=self.name,
+            description=description or "-",
+            options=options or [],
+            default_permission=default_permission
+        )
+        self.guild_ids = guild_ids
+        self.children_type = None
+        # Cog indication
+        self._cog_class_name = class_name(func)
+        self._cog_name = None
+        self._cog = None
+
+    def _inject_cog(self, cog):
+        self._cog = cog
+        self._cog_name = cog.qualified_name
+
+    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None):
+        """
+        A decorator that creates a subcommand under the base command.
+
+        Parameters
+        ----------
+        name : :class:`str`
+            the name of the subcommand. Defaults to the function name
+        description : :class:`str`
+            the description of the subcommand
+        options : :class:`list`
+            the options of the subcommand for registration in API
+        connectors : :class:`dict`
+            which function param states for each option. If the name
+            of an option already matches the corresponding function param,
+            you don't have to specify the connectors. Connectors template: 
+            ``{"option-name": "param_name", ...}``
+        """
+        def decorator(func):
+            if self.children_type is None:
+                if len(self.registerable.options) > 0:
+                    self.registerable.options = []
+                self.children_type = Type.SUB_COMMAND
+            elif self.children_type != Type.SUB_COMMAND:
+                raise discord.InvalidArgument(f"do not nest sub_commands and sub_command_groups to the same parent")
+            
+            new_func = SubCommand(
+                func,
+                name=name,
+                description=description,
+                options=options,
+                connectors=connectors
+            )
+            self.children[new_func.name] = new_func
+            self.registerable.options.append(new_func.option)
+            return new_func
+        return decorator
+    
+    def sub_command_group(self, name=None):
+        """
+        A decorator that creates a subcommand group under the base command.
+        Remember that the group must have at least one subcommand.
+
+        Parameters
+        ----------
+        name : :class:`str`
+            the name of the subcommand group. Defaults to the function name
+        """
+        def decorator(func):
+            if self.children_type is None:
+                if len(self.registerable.options) > 0:
+                    self.registerable.options = []
+                self.children_type = Type.SUB_COMMAND_GROUP
+            elif self.children_type != Type.SUB_COMMAND_GROUP:
+                raise discord.InvalidArgument("don't nest sub_command_groups and sub_commands to the same parent")
+            
+            new_func = SubCommandGroup(func, name=name)
+            self.children[new_func.name] = new_func
+            self.registerable.options.append(new_func.option)
+            return new_func
+        return decorator
+
+    async def invoke_children(self, interaction):
+        data = interaction.data
+        if self.children_type is None:
+            group = None
+            subcmd = None
+        elif self.children_type == Type.SUB_COMMAND:
+            group = None
+            option = data.option_at(0)
+            if option is None or option.type != Type.SUB_COMMAND:
+                subcmd = None
+            else:
+                subcmd = self.children.get(option.name)
+        elif self.children_type == Type.SUB_COMMAND_GROUP:
+            option = data.option_at(0)
+            if option is None or option.type != Type.SUB_COMMAND_GROUP:
+                group = None
+            else:
+                group = self.children.get(option.name)
+            if group is None:
+                subcmd = None
+            else:
+                option = option.option_at(0)
+                if option is None:
+                    subcmd = None
+                else:
+                    subcmd = group.children.get(option.name)
+        else:
+            group = None
+            subcmd = None
+        
+        if group is not None:
+            interaction.invoked_with += f" {group.name}"
+            group._prepare_cooldowns(interaction)
+            await group._run_checks(interaction)
+            await group._maybe_cog_call(self._cog, interaction, data)
+        if subcmd is not None:
+            interaction.invoked_with += f" {subcmd.name}"
+            subcmd._prepare_cooldowns(interaction)
+            await subcmd._run_checks(interaction)
+            await subcmd._maybe_cog_call(self._cog, interaction, option)
+
+    async def invoke(self, interaction):
+        self._prepare_cooldowns(interaction)
+        await self._run_checks(interaction)
+        await self._maybe_cog_call(self._cog, interaction, interaction.data)
+        await self.invoke_children(interaction)
 
 
 def command(*args, **kwargs):
@@ -167,13 +327,14 @@ def command(*args, **kwargs):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         name = kwargs.get('name', func.__name__)
-        new_func = SlashCommandResponse(
-            _HANDLER.client, func, name,
-            kwargs.get('description'),
-            kwargs.get('options'),
-            kwargs.get("default_permission", True),
-            kwargs.get('guild_ids'),
-            kwargs.get("connectors")
+        new_func = CommandParent(
+            func,
+            name=name,
+            description=kwargs.get('description'),
+            options=kwargs.get('options'),
+            default_permission=kwargs.get("default_permission", True),
+            guild_ids=kwargs.get('guild_ids'),
+            connectors=kwargs.get("connectors")
         )
         _HANDLER.commands[name] = new_func
         return new_func
@@ -211,7 +372,7 @@ def check(predicate):
         async def wrapper(ctx):
             return predicate(ctx)
     def decorator(func):
-        if isinstance(func, SlashCommandResponse):
+        if isinstance(func, CommandParent):
             func.checks.append(wrapper)
         else:
             if not hasattr(func, '__slash_checks__'):
@@ -471,7 +632,7 @@ def cooldown(rate, per, type=BucketType.default):
         The type of cooldown to have.
     '''
     def decorator(func):
-        if isinstance(func, SlashCommandResponse):
+        if isinstance(func, CommandParent):
             func._buckets = CooldownMapping(Cooldown(rate, per, type))
         else:
             func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))

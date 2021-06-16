@@ -79,7 +79,6 @@ class BaseInteraction:
         else:
             self.channel = None
         
-        self.editable = False
         self._client = client
         self._sent = False
         self._webhook = None
@@ -187,16 +186,14 @@ class BaseInteraction:
             allowed_mentions=allowed_mentions
         )
         self._sent = True
-        # Type-5 responses are always editable
+
         if type == 5:
-            self.editable = True
             return None
         # Ephemeral messages aren't stored and can't be deleted or edited
         # Same for type-1 and type-2 messages
         if ephemeral or type in (1, 2):
             return None
         
-        self.editable = True
         if delete_after is not None:
             self._client.loop.create_task(self.delete_after(delete_after))
         
@@ -313,8 +310,6 @@ class BaseInteraction:
         message : :class:`discord.Message`
             The message that was edited
         """
-        if not self.editable:
-            raise TypeError("There's nothing to edit or the message is ephemeral.")
         # Form JSON params
         data = {}
         if content is not None:
@@ -367,16 +362,12 @@ class BaseInteraction:
         """
         Deletes the original interaction response.
         """
-        if not self.editable:
-            raise TypeError("There's nothing to delete. Send a reply first.")
-        # patch
         await self._client.http.request(
             Route(
                 'DELETE', '/webhooks/{app_id}/{token}/messages/@original',
                 app_id=self._client.user.id, token=self.token
             )
         )
-        self.editable = False
     
     async def delete_after(self, delay: float):
         await asyncio.sleep(delay)

@@ -4,7 +4,7 @@ from discord.ext.commands import Context
 import asyncio
 import discord
 
-from .slash_core import SlashCommandResponse, get_class
+from .slash_core import CommandParent, get_class
 from .slash_command import SlashCommand, SlashCommandPermissions
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
@@ -43,6 +43,7 @@ class SlashClient:
     def __init__(self, client, *, show_warnings: bool=False, modify_send: bool=True):
         _HANDLER.client = client
         self.client = _HANDLER.client
+        self.application_id = None
         self.events = {}
         self._listeners = {}
         self._global_commands = {}
@@ -230,13 +231,14 @@ class SlashClient:
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             name = kwargs.get('name', func.__name__)
-            new_func = SlashCommandResponse(
-                self.client, func, name,
-                kwargs.get('description'),
-                kwargs.get('options'),
-                kwargs.get("default_permission", True),
-                kwargs.get('guild_ids'),
-                kwargs.get("connectors")
+            new_func = CommandParent(
+                func,
+                name=name,
+                description=kwargs.get('description'),
+                options=kwargs.get('options'),
+                default_permission=kwargs.get("default_permission", True),
+                guild_ids=kwargs.get('guild_ids'),
+                connectors=kwargs.get("connectors")
             )
             self.commands[name] = new_func
             return new_func
@@ -354,7 +356,11 @@ class SlashClient:
         global_commands : List[SlashCommand]
         """
         data = await self.client.http.request(
-            Route('GET', '/applications/{app_id}/commands', app_id=self.client.user.id)
+            Route(
+                'GET',
+                '/applications/{application_id}/commands',
+                application_id=self.application_id
+            )
         )
         return [SlashCommand.from_dict(dat) for dat in data]
 
@@ -373,8 +379,11 @@ class SlashClient:
         guild_commands : List[SlashCommand]
         """
         data = await self.client.http.request(
-            Route('GET', '/applications/{app_id}/guilds/{guild_id}/commands',
-            app_id=self.client.user.id, guild_id=guild_id)
+            Route(
+                'GET', '/applications/{application_id}/guilds/{guild_id}/commands',
+                application_id=self.application_id,
+                guild_id=guild_id
+            )
         )
         return [SlashCommand.from_dict(dat) for dat in data]
     
@@ -395,8 +404,8 @@ class SlashClient:
         data = await self.client.http.request(
             Route(
                 "GET",
-                "/applications/{app_id}/commands/{cmd_id}",
-                app_id=self.client.user.id,
+                "/applications/{application_id}/commands/{cmd_id}",
+                application_id=self.application_id,
                 cmd_id=command_id
             )
         )
@@ -421,8 +430,8 @@ class SlashClient:
         data = await self.client.http.request(
             Route(
                 "GET",
-                "/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}",
-                app_id=self.client.user.id,
+                "/applications/{application_id}/guilds/{guild_id}/commands/{cmd_id}",
+                application_id=self.application_id,
                 guild_id=guild_id,
                 cmd_id=command_id
             )
@@ -445,8 +454,8 @@ class SlashClient:
         r = await self.client.http.request(
             Route(
                 "POST",
-                "/applications/{app_id}/commands",
-                app_id=self.client.user.id
+                "/applications/{application_id}/commands",
+                application_id=self.application_id
             ),
             json=slash_command.to_dict()
         )
@@ -473,7 +482,7 @@ class SlashClient:
             Route(
                 "POST",
                 "/applications/{app_id}/guilds/{guild_id}/commands",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id
             ),
             json=slash_command.to_dict()
@@ -499,7 +508,7 @@ class SlashClient:
             Route(
                 "PUT",
                 "/applications/{app_id}/commands",
-                app_id=self.client.user.id
+                app_id=self.application_id
             ),
             json=[sc.to_dict() for sc in slash_commands]
         )
@@ -525,7 +534,7 @@ class SlashClient:
             Route(
                 "PUT",
                 "/applications/{app_id}/guilds/{guild_id}/commands",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id
             ),
             json=[sc.to_dict() for sc in slash_commands]
@@ -551,7 +560,7 @@ class SlashClient:
             Route(
                 "PATCH",
                 "/applications/{app_id}/commands/{cmd_id}",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 cmd_id=command_id
             ),
             json=slash_command.to_dict(hide_name=ignore_name)
@@ -579,7 +588,7 @@ class SlashClient:
             Route(
                 "PATCH",
                 "/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id,
                 cmd_id=command_id
             ),
@@ -603,7 +612,7 @@ class SlashClient:
             Route(
                 "DELETE",
                 "/applications/{app_id}/commands/{cmd_id}",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 cmd_id=command_id
             )
         )
@@ -625,7 +634,7 @@ class SlashClient:
             Route(
                 "DELETE",
                 "/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id,
                 cmd_id=command_id
             )
@@ -669,7 +678,7 @@ class SlashClient:
             Route(
                 "GET",
                 "/applications/{app_id}/guilds/{guild_id}/commands/{command_id}/permissions",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id,
                 command_id=command_id
             )
@@ -689,7 +698,7 @@ class SlashClient:
             Route(
                 "GET",
                 "/applications/{app_id}/guilds/{guild_id}/commands/permissions",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id
             )
         )
@@ -717,7 +726,7 @@ class SlashClient:
             Route(
                 "PUT",
                 "/applications/{app_id}/guilds/{guild_id}/commands/{command_id}/permissions",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id,
                 command_id=command_id
             ),
@@ -750,7 +759,7 @@ class SlashClient:
             Route(
                 "PUT",
                 "/applications/{app_id}/guilds/{guild_id}/commands/permissions",
-                app_id=self.client.user.id,
+                app_id=self.application_id,
                 guild_id=guild_id
             ),
             json=data
@@ -910,7 +919,7 @@ class SlashClient:
         global_cmds = []
         guilds = {}
         for cmd in _HANDLER.commands.values():
-            if cmd.registerable is None:
+            if not cmd.auto_sync:
                 continue
             if cmd.guild_ids is None:
                 global_cmds.append(cmd.registerable)
@@ -1004,7 +1013,6 @@ class SlashClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
-
     # Adding relevant listeners
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
@@ -1014,12 +1022,14 @@ class SlashClient:
     async def _on_shard_connect(self, shard_id):
         self.active_shard_count += 1
         if self.active_shard_count == 1:
+            await self._fill_app_id()
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
     
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
+            await self._fill_app_id()
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
@@ -1036,7 +1046,6 @@ class SlashClient:
             del self._guild_commands[guild.id]
 
     async def _pong_interaction(self, payload):
-        print("Ping-pong")
         await self.client.http.request(
             Route(
                 "POST",
@@ -1115,6 +1124,10 @@ class SlashClient:
                 # FIXME: naming might be different
                 await self._activate_event('select_menu_click', inter)
     
+    async def _fill_app_id(self):
+        data = await self.client.http.application_info()
+        self.application_id = int(data["id"])
+
     # Aliases
     register_global_command = register_global_slash_command
     

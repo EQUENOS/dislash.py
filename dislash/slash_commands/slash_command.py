@@ -75,10 +75,10 @@ class Option:
         list of option choices, type :ref:`option_choice`
     """
 
-    def __init__(self, name: str, description: str, type: int, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
         self.name = name
         self.description = description
-        self.type = type
+        self.type = type or 3
         self.required = required
         self.choices = choices or []
         if options is not None:
