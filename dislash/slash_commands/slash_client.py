@@ -203,29 +203,28 @@ class SlashClient:
 
     def command(self, *args, **kwargs):
         """
-        A decorator that registers a function below as response for specified slash-command.
-
-        Parameters are similar to SlashCommand arguments.
-
-        If ``description`` is specified, the decorator will be interpreted as SlashCommand and
-        will be registered (or edited) automatically with the given set of arguments.
+        A decorator that allows to build a slash command.
 
         Parameters
         ----------
-
-        name : str
-            name of the slash-command you want to respond to (equals to function name by default)
-        description : str
-            if specified, the client will automatically register a command with this description
-        options : List[Option]
-            if specified, the client will
-            automatically register a command with this list of options. Requires ``description``
+        auto_sync : :class:`bool`
+            whether to automatically register the command or not. Defaults to ``True``
+        name : :class:`str`
+            name of the slash command you want to respond to (equals to function name by default).
+        description : :class:`str`
+            the description of the slash command. It will be visible in Discord.
+        options : :class:`List[Option]`
+            the list of slash command options. The options will be visible in Discord.
         default_permission : :class:`bool`
             whether the command is enabled by default when the app is added to a guild.
-            Requires ``description``
-        guild_ids : List[int]
+        guild_ids : :class:`List[int]`
             if specified, the client will register a command in these guilds.
-            Otherwise this command will be registered globally. Requires ``description``
+            Otherwise this command will be registered globally.
+        connectors : :class:`dict`
+            which function param states for each option. If the name
+            of an option already matches the corresponding function param,
+            you don't have to specify the connectors. Connectors template: 
+            ``{"option-name": "param_name", ...}``
         """
         def decorator(func):
             if not asyncio.iscoroutinefunction(func):
@@ -238,7 +237,8 @@ class SlashClient:
                 options=kwargs.get('options'),
                 default_permission=kwargs.get("default_permission", True),
                 guild_ids=kwargs.get('guild_ids'),
-                connectors=kwargs.get("connectors")
+                connectors=kwargs.get("connectors"),
+                auto_sync=kwargs.get("auto_sync", True)
             )
             self.commands[name] = new_func
             return new_func
