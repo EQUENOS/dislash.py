@@ -18,14 +18,12 @@ Sections
    :maxdepth: 2
    
    quickstart
-   buttons
-   click-manager
-   slash-client
-   slash-register
-   slash-response
-   slash-permissions
-   cogs
    examples
+   guides
+   cogs
+   events
+   checks
+   objects_and_methods
 
 Links
 =====

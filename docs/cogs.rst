@@ -6,6 +6,9 @@ This section shows how to build slash commands in cogs.
 
 It's as simple as this:
 
+Example
+-------
+
 ::
 
     from dislash import *
@@ -47,7 +50,9 @@ It's as simple as this:
     def setup(bot):
         bot.add_cog(mycog(bot))
 
-**What's different in cogs:**
+
+Differences
+-----------
 
 * :class:`@slash_commands.command()` instead of :class:`@SlashClient.command()`
 

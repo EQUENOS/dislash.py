@@ -18,7 +18,7 @@ Enter one of these commands to install the library:
     python -m pip install dislash.py
 
 
-If these commands don't work, just clone the repo: https://github.com/EQUENOS/dislash.py
+Or just clone the repo: https://github.com/EQUENOS/dislash.py
 
 
 
@@ -26,7 +26,7 @@ If these commands don't work, just clone the repo: https://github.com/EQUENOS/di
 Authorising
 -----------
 
-| Before we start, make sure your bot has ``application.commands`` scope.
+| Before we start, make sure your bot has ``application.commands`` scope, in case you want to make some slash commands.
 | In order to grant it, authorise (or reauthorise) your bot with this tick pressed:
 
 .. image:: https://cdn.discordapp.com/attachments/808032994668576829/808061105855397899/scopes.png
@@ -48,7 +48,6 @@ Let's make a **/hello** command that will send "Hello!" to the chat.
     slash = SlashClient(bot)
     test_guilds = [12345]   # Insert ID of your guild here
 
-    # If description is specified, the command is auto-registered
     @slash.command(
         guild_ids=test_guilds,   # Delete this param if you want to register globally
         description="Says Hello"
@@ -116,6 +115,11 @@ Let's make a text command that sends 2 buttons and removes them as soon as one o
 
 .. image:: https://cdn.discordapp.com/attachments/642107341868630024/851521774016528414/unknown.png
 
+.. note::
+
+    :ref:`slash_client` should always be called in the main file,
+    even if you're not making any slash commands. This class modifies
+    some **discord.py** methods so they work with buttons.
 
 
 More examples

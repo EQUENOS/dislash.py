@@ -3,14 +3,8 @@
 Examples
 ========
 
-Auto registration
------------------
-
-.. note::
-
-    In this example registration is automatic.
-    If you want to perform registration separately, see :ref:`slash-command_constructor`
-    and exmaples below this one.
+A simple slash command
+----------------------
 
 .. code-block:: python
 
@@ -20,86 +14,15 @@ Auto registration
     bot = commands.Bot(command_prefix="!")
     slash = SlashClient(bot)
 
-    # If description is specified, the command will be
-    # registered automatically
     @slash.command(description="Sends Hello")
     async def hello(interaction):
         await interaction.reply("Hello!")
     
     bot.run("BOT_TOKEN")
 
-
-
-Manual registration
--------------------
-
 .. seealso::
 
-    :ref:`slash-command_constructor` and why is it important
-
-In this example we are **only** registering a command.
-This is useful when you learn how to register different types of commands.
-
-.. code-block:: python
-
-    from discord.ext import commands
-    from dislash import *
-
-    bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
-
-    @slash.event
-    async def on_ready():
-        sc = SlashCommand(
-            name="random",
-            description="Returns a random number from the given range",
-            options=[
-                Option(
-                    name="start",
-                    description="Enter a number",
-                    type=Type.INTEGER,
-                    required=True
-                ),
-                Option(
-                    name="end",
-                    description="Enter a number",
-                    type=Type.INTEGER,
-                    required=True
-                )
-            ]
-        )
-        # Post this command via API
-        await slash.register_global_slash_command(sc)
-        # Discord API uploads global commands for more than 1 hour
-        # That's why I highly recommend .register_guild_slash_command for testing:
-        await slash.register_guild_slash_command(guild_id, sc)
-
-
-Okay, we've just registered **/random**.
-If you try to execute it, nothing happens.
-That's absolutely normal, because we haven't defined a response yet.
-In order to start responding to **/random**, run the following code:
-
-.. code-block:: python
-
-    from random import randint
-    from discord.ext import commands
-    from dislash import *
-
-    bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
-
-    @slash.command()
-    async def random(interaction):
-        a = interaction.data.get('start')
-        b = interaction.data.get('end')
-        if b < a: a, b = b, a
-        await interaction.reply(randint(a, b))
-
-    bot.run("BOT_TOKEN")
-
-
-
+    | What's interaction? See :ref:`slash_interaction` to learn more.
 
 Slash embed
 -----------
@@ -128,11 +51,7 @@ For example, a command that generates an embed.
             # because we didn't specify required=True in Options
         ]
     )
-    async def embed(inter):
-        # Get arguments
-        title = inter.get('title')
-        desc = inter.get('description')
-        color = inter.get('color')
+    async def embed(inter, title=None, description=None, color=None):
         # Converting color
         if color is not None:
             try:
@@ -154,7 +73,6 @@ For example, a command that generates an embed.
 
 .. seealso::
 
-    | :ref:`interaction_data` to learn more about how arguments are passed.
     | :ref:`option` to learn more about slash-command options.
 
 Here's the result we've just achieved:
@@ -188,9 +106,9 @@ This example shows how to easily make a **/user-info** command
             Option("user", "Specify any user", Type.USER),
         ]
     )
-    async def user_info(ctx):
-        # Returns <ctx.author> if "user" argument wasn't passed
-        user = ctx.get("user", ctx.author)
+    async def user_info(inter, user=None):
+        # Default user is the command author
+        user = user or inter.author
 
         emb = discord.Embed(color=discord.Color.blurple())
         emb.title = str(user)
@@ -199,7 +117,7 @@ This example shows how to easily make a **/user-info** command
             f"**ID:** `{user.id}`
         )
         emb.set_thumbnail(url=user.avatar_url)
-        await ctx.send(embed=emb)
+        await inter.send(embed=emb)
     
     bot.run("BOT_TOKEN")
 
