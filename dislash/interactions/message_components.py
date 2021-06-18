@@ -308,21 +308,37 @@ class ActionRow(Component):
             "components": [comp.to_dict() for comp in self.components]
         }
 
-    def disable_buttons(self):
+    def disable_buttons(self, *positions: int=None):
         """
         Sets ``disabled`` to ``True`` for all buttons in this row.
         """
-        for component in self.components:
-            if component.type == ComponentType.Button:
-                component.disabled = True
+        if positions is None:
+            for component in self.components:
+                if component.type == ComponentType.Button:
+                    component.disabled = True
+        else:
+            for i in positions:
+                component = self.components[i]
+                if component.type == ComponentType.Button:
+                    component.disabled = True
 
-    def enable_buttons(self):
+
+
+    def enable_buttons(self, *positions: int=None):
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
         """
-        for component in self.components:
-            if component.type == ComponentType.Button:
-                component.disabled = False
+        if positions is None:
+            for component in self.components:
+                if component.type == ComponentType.Button:
+                    component.disabled = False
+        else:
+            for i in positions:
+                component = self.components[i]
+                if component.type == ComponentType.Button:
+                    component.disabled = False
+
+
 
     def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
                         custom_id: str=None, url: str=None, disabled: bool=False):
