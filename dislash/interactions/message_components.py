@@ -313,28 +313,31 @@ class ActionRow(Component):
         Sets ``disabled`` to ``True`` for all buttons in this row.
         """
         if positions is None:
+            for component in self.components:
+                if component.type == ComponentType.Button:
+                    component.disabled = True
+        else:
             for i in positions:
                 component = self.components[i]
                 if component.type == ComponentType.Button:
                     component.disabled = True
-        else:
-            for component in self.components:
-                if component.type == ComponentType.Button:
-                    component.disabled = True
+
+
 
     def enable_buttons(self, *positions: int=None):
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
         """
         if positions is None:
+            for component in self.components:
+                if component.type == ComponentType.Button:
+                    component.disabled = False
+        else:
             for i in positions:
                 component = self.components[i]
                 if component.type == ComponentType.Button:
                     component.disabled = False
-        else:
-            for component in self.components:
-                if component.type == ComponentType.Button:
-                    component.disabled = False
+
 
 
     def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
