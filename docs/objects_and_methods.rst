@@ -74,6 +74,30 @@ SlashClient
 
 
 
+.. _command_parent:
+
+CommandParent
+-------------
+
+.. autoclass:: CommandParent
+
+    .. automethod:: sub_command
+
+    .. automethod:: sub_command_group
+
+
+
+.. _sub_command_group:
+
+SubCommandGroup
+---------------
+
+.. autoclass:: SubCommandGroup
+
+    .. automethod:: sub_command
+
+
+
 .. _message_interaction:
 
 MessageInteraction

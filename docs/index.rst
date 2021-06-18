@@ -19,7 +19,8 @@ Sections
    
    quickstart
    examples
-   guides
+   buttons_guide
+   slash_commands_guide
    cogs
    events
    checks
