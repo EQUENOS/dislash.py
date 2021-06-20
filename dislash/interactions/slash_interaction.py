@@ -319,8 +319,6 @@ class SlashInteraction(BaseInteraction):
             opt = self.data.option_at(key)
         else:
             raise TypeError(f'unsupported type of key (str or int required, {type(key)} passed)')
-        if opt is None:
-            raise KeyError(key)
         return opt.value if opt.type > 2 else opt
 
     def get(self, name: str, default=None):
