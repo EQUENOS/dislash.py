@@ -311,7 +311,18 @@ class SlashInteraction(BaseInteraction):
         return "<SlashInteraction id={0.id} version={0.version} type={0.type} "\
                 "token='{0.token}' guild={0.guild} channel_id={0.channel_id} "\
                 "author={0.author} data={0.data!r}>".format(self)
-    
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            opt = self.data.get_option(key)
+        elif isinstance(key, int):
+            opt = self.data.option_at(key)
+        else:
+            raise TypeError(f'unsupported type of key (str or int required, {type(key)} passed)')
+        if opt is None:
+            raise KeyError(key)
+        return opt.value if opt.type > 2 else opt
+
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
         return self.data.get(name, default)
