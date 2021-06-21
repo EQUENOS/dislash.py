@@ -308,7 +308,7 @@ class ActionRow(Component):
             "components": [comp.to_dict() for comp in self.components]
         }
 
-    def disable_buttons(self, *positions: int=None):
+    def disable_buttons(self, *positions: int):
         """
         Sets ``disabled`` to ``True`` for all buttons in this row.
         """
@@ -324,7 +324,7 @@ class ActionRow(Component):
 
 
 
-    def enable_buttons(self, *positions: int=None):
+    def enable_buttons(self, *positions: int):
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
         """
