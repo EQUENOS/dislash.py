@@ -312,7 +312,7 @@ class ActionRow(Component):
         """
         Sets ``disabled`` to ``True`` for all buttons in this row.
         """
-        if positions is None:
+        if len(positions) == 0:
             for component in self.components:
                 if component.type == ComponentType.Button:
                     component.disabled = True
@@ -328,7 +328,7 @@ class ActionRow(Component):
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
         """
-        if positions is None:
+        if len(positions) == 0:
             for component in self.components:
                 if component.type == ComponentType.Button:
                     component.disabled = False

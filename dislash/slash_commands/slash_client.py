@@ -897,6 +897,7 @@ class SlashClient:
     def _error_handler_exists(self):
         return not (
             len(self._cogs_with_err_listeners) == 0 and
+            not hasattr(self.client, "on_slash_command_error") and
             "slash_command_error" not in self.client._listeners and
             "slash_command_error" not in self._listeners and
             "slash_command_error" not in self.events

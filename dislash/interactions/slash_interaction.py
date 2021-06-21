@@ -41,8 +41,7 @@ class Resolved:
                 self.channels[ID] = factory(guild=guild, data=c, state=state)
 
     def __repr__(self):
-        return "<Resolved users={0.users} members={0.members}\
-                roles={0.roles} channels={0.channels}>".format(self)
+        return "<Resolved users={0.users} members={0.members}roles={0.roles} channels={0.channels}>".format(self)
 
     def get(self, any_id):
         if any_id in self.members:
@@ -198,6 +197,17 @@ class InteractionData:
     def __repr__(self):
         return "<InteractionData id={0.id} name='{0.name}' options={0.options}>".format(self)
 
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            opt = self.get_option(key)
+        elif isinstance(key, int):
+            opt = self.option_at(key)
+        else:
+            raise TypeError(f'unsupported key type. Expected str or int, but received {type(key)} instead')
+        if opt is None:
+            return None
+        return opt.value if opt.type > 2 else opt
+
     def _to_dict_values(self, connectors: dict=None):
         connectors = connectors or {}
         out = {}
@@ -315,15 +325,7 @@ class SlashInteraction(BaseInteraction):
         ).format(self)
 
     def __getitem__(self, key):
-        if isinstance(key, str):
-            opt = self.data.get(key)
-        elif isinstance(key, int):
-            opt = self.data.option_at(key)
-        else:
-            raise TypeError(f'unsupported type of key (str or int required, {type(key)} passed)')
-        if opt is None:
-            return None
-        return opt.value if opt.type > 2 else opt
+        return self.data[key]
 
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
