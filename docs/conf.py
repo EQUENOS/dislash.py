@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import sphinx_pdj_theme
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 
@@ -47,10 +48,13 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
+# a list of builtin themes. I added the dark theme (Hopefully)
 #
-html_theme = 'sphinx_rtd_theme'
-
+html_theme = 'sphinx_pdj_theme'
+htm_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
+html_theme_options = {
+    'style': 'darker'
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
