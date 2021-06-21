@@ -11,8 +11,10 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sphinx_pdj_theme
 import sys
+import sphinx_pdj_theme
+
+
 sys.path.insert(0, os.path.abspath('.'))
 
 
@@ -51,7 +53,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # a list of builtin themes. I added the dark theme (Hopefully)
 #
 html_theme = 'sphinx_pdj_theme'
-htm_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
+html_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
 html_theme_options = {
     'style': 'darker'
 }
@@ -60,3 +62,24 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+
+def replace_stylesheet(custom_css):
+    base_path = html_theme_path[0]
+    style_path = f"{base_path}/static/css/pdj.css"
+    backup_path = f"{base_path}/static/css/old_pdj.css"
+    # Move the code to another dir
+    with open(style_path, "r", encoding="utf-8") as f:
+        style_code = f.read()
+    with open(backup_path, "w", encoding="utf-8") as f:
+        f.write(style_code)
+    # Replace with custom css
+    with open(custom_css, "r", encoding="utf-8") as f:
+        style_code = f.read()
+    with open(style_path, "w", encoding="utf-8") as f:
+        f.write(style_code)
+
+
+
+replace_stylesheet('css/pdj_modified.css')
