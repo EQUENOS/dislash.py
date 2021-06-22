@@ -62,6 +62,7 @@ class BaseSlashCommand:
         self.func = func
         self.name = name or func.__name__
         self.connectors = connectors
+        self._error_handler = None
         # Extract checks
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__
@@ -106,6 +107,9 @@ class BaseSlashCommand:
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
 
+    def _dispatch_error(self, cog, inter, error):
+        _HANDLER.client.loop.create_task(self._invoke_error_handler(cog, inter, error))
+
     async def _run_checks(self, ctx):
         for _check in self.checks:
             if not await _check(ctx):
@@ -120,6 +124,24 @@ class BaseSlashCommand:
             return await self(cog, inter, **params)
         else:
             return await self(inter, **params)
+
+    async def _invoke_error_handler(self, cog, inter, error):
+        if self._error_handler is None:
+            return
+        if cog:
+            await self._error_handler(cog, inter, error)
+        else:
+            await self._error_handler(inter, error)
+
+    def error(self, func):
+        """
+        A decorator that makes the function below
+        work as error handler for this command.
+        """
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("The local error handler must be an async function")
+        self._error_handler = func
+        return func
 
 
 class SubCommand(BaseSlashCommand):
@@ -282,20 +304,33 @@ class CommandParent(BaseSlashCommand):
         
         if group is not None:
             interaction.invoked_with += f" {group.name}"
-            group._prepare_cooldowns(interaction)
-            await group._run_checks(interaction)
-            await group._maybe_cog_call(self._cog, interaction, data)
+            try:
+                group._prepare_cooldowns(interaction)
+                await group._run_checks(interaction)
+                await group._maybe_cog_call(self._cog, interaction, data)
+            except Exception as err:
+                group._dispatch_error(self._cog, interaction, err)
+                raise err
+        
         if subcmd is not None:
             interaction.invoked_with += f" {subcmd.name}"
-            subcmd._prepare_cooldowns(interaction)
-            await subcmd._run_checks(interaction)
-            await subcmd._maybe_cog_call(self._cog, interaction, option)
+            try:
+                subcmd._prepare_cooldowns(interaction)
+                await subcmd._run_checks(interaction)
+                await subcmd._maybe_cog_call(self._cog, interaction, option)
+            except Exception as err:
+                subcmd._dispatch_error(self._cog, interaction, err)
+                raise err
 
     async def invoke(self, interaction):
-        self._prepare_cooldowns(interaction)
-        await self._run_checks(interaction)
-        await self._maybe_cog_call(self._cog, interaction, interaction.data)
-        await self.invoke_children(interaction)
+        try:
+            self._prepare_cooldowns(interaction)
+            await self._run_checks(interaction)
+            await self._maybe_cog_call(self._cog, interaction, interaction.data)
+            await self.invoke_children(interaction)
+        except Exception as err:
+            self._dispatch_error(self._cog, interaction, err)
+            raise err
 
 
 def command(*args, **kwargs):
@@ -633,7 +668,7 @@ def cooldown(rate, per, type=BucketType.default):
         The type of cooldown to have.
     '''
     def decorator(func):
-        if isinstance(func, CommandParent):
+        if isinstance(func, BaseSlashCommand):
             func._buckets = CooldownMapping(Cooldown(rate, per, type))
         else:
             func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))

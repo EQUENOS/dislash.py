@@ -54,6 +54,7 @@ class BaseInteraction:
     def __init__(self, client, data: dict):
         state = client._connection
 
+        self.bot = client
         self.id = int(data["id"])
         self.application_id = int(data["application_id"])
         self.type = data["type"]
@@ -79,7 +80,6 @@ class BaseInteraction:
         else:
             self.channel = None
         
-        self._client = client
         self._sent = False
         self._webhook = None
 
@@ -87,8 +87,8 @@ class BaseInteraction:
     def webhook(self):
         if self._webhook is None:
             self._webhook = discord.Webhook(
-                {"id": self._client.user.id, "type": 1, "token": self.token},
-                adapter=discord.AsyncWebhookAdapter(self._client.http._HTTPClient__session)
+                {"id": self.application_id, "type": 1, "token": self.token},
+                adapter=discord.AsyncWebhookAdapter(self.bot.http._HTTPClient__session)
             )
         return self._webhook
     
@@ -195,7 +195,7 @@ class BaseInteraction:
             return None
         
         if delete_after is not None:
-            self._client.loop.create_task(self.delete_after(delete_after))
+            self.bot.loop.create_task(self.delete_after(delete_after))
         
         if fetch_response_message:
             return await self.fetch_initial_response()
@@ -263,7 +263,7 @@ class BaseInteraction:
         
         # Allowed mentions
         if content or embed or embeds:
-            state = self._client._connection
+            state = self.bot._connection
             if allowed_mentions is not None:
                 if state.allowed_mentions is not None:
                     allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
@@ -280,7 +280,7 @@ class BaseInteraction:
         if len(data) > 0:
             _json["data"] = data
         # HTTP-request
-        await self._client.http.request(
+        await self.bot.http.request(
             Route(
                 'POST', '/interactions/{interaction_id}/{token}/callback',
                 interaction_id=self.id, token=self.token
@@ -337,7 +337,7 @@ class BaseInteraction:
                 raise discord.InvalidArgument("components must be a list of ActionRow")
             data["components"] = [comp.to_dict() for comp in components]
         # Allowed mentions
-        state = self._client._connection
+        state = self.bot._connection
         if allowed_mentions is not None:
             if state.allowed_mentions is not None:
                 allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
@@ -345,7 +345,7 @@ class BaseInteraction:
                 allowed_mentions = allowed_mentions.to_dict()
             data['allowed_mentions'] = allowed_mentions
         # HTTP-response
-        r = await self._client.http.request(
+        r = await self.bot.http.request(
             Route(
                 'PATCH', '/webhooks/{app_id}/{token}/messages/@original',
                 app_id=self.application_id, token=self.token
@@ -362,7 +362,7 @@ class BaseInteraction:
         """
         Deletes the original interaction response.
         """
-        await self._client.http.request(
+        await self.bot.http.request(
             Route(
                 'DELETE', '/webhooks/{app_id}/{token}/messages/@original',
                 app_id=self.application_id, token=self.token
@@ -380,14 +380,14 @@ class BaseInteraction:
         """
         Fetches the original interaction response.
         """
-        data = await self._client.http.request(
+        data = await self.bot.http.request(
             Route(
                 'GET', '/webhooks/{app_id}/{token}/messages/@original',
                 app_id=self.application_id, token=self.token
             )
         )
         return discord.Message(
-            state=self._client._connection,
+            state=self.bot._connection,
             channel=self.channel,
             data=data
         )
@@ -408,7 +408,7 @@ class BaseInteraction:
             allowed_mentions=allowed_mentions
         )
         return discord.Message(
-            state=self._client._connection,
+            state=self.bot._connection,
             channel=self.channel,
             data=r
         )

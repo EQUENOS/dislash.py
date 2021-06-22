@@ -320,7 +320,7 @@ class SlashInteraction(BaseInteraction):
     def __repr__(self):
         return (
             "<SlashInteraction id={0.id} version={0.version} type={0.type} "
-            "token='{0.token}' guild={0.guild} channel_id={0.channel_id} "
+            "token='{0.token}' guild={0.guild} channel={0.channel} "
             "author={0.author} data={0.data!r}>"
         ).format(self)
 

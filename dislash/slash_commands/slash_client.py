@@ -10,7 +10,7 @@ from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
 from ._send_modifications import *
 
-from ..interactions import ComponentType, SlashInteraction, MessageInteraction
+from ..interactions import ComponentType, BaseInteraction, SlashInteraction, MessageInteraction
 
 
 __all__ = ("SlashClient",)
@@ -195,11 +195,7 @@ class SlashClient:
         name = func.__name__
         if name.startswith('on_'):
             name = name[3:]
-            if name in [
-                'slash_command', 'slash_command_error',
-                'ready', 'auto_register', 'button_click'
-                ]:
-                self.events[name] = func
+            self.events[name] = func
         return func
 
     def command(self, *args, **kwargs):
@@ -869,6 +865,9 @@ class SlashClient:
             await self.delete_guild_command(guild_id, cmd.id)
 
     # Internal things
+    def dispatch(self, event_name, *args, **kwargs):
+        self.client.loop.create_task(self._activate_event(event_name, *args, **kwargs))
+
     def _add_global_command(self, command):
         self._global_commands[command.id] = command
 
@@ -1066,17 +1065,6 @@ class SlashClient:
         if guild.id in self._guild_commands:
             del self._guild_commands[guild.id]
 
-    async def _pong_interaction(self, payload):
-        await self.client.http.request(
-            Route(
-                "POST",
-                "/interactions/{interaction_id}/{interaction_token}/callback",
-                interaction_id=payload["id"],
-                interaction_token=payload["token"]
-            ),
-            json={"type": 1}
-        )
-
     async def _toggle_listeners(self, event, *args, **kwargs):
         listeners = self._listeners.get(event)
         if listeners:
@@ -1115,32 +1103,33 @@ class SlashClient:
         if event_name != "ready":
             self.client.dispatch(event_name, *args, **kwargs)
         func = self.events.get(event_name)
-        if func is not None:
-            cog = get_class(func)
-            if cog is not None:
-                await func(cog(self.client), *args, **kwargs)
-            else:
-                await func(*args, **kwargs)
+        if func:
+            await func(*args, **kwargs)
 
     async def _process_interaction(self, payload):
         _type = payload.get("type", 1)
+        # Received a ping
         if _type == 1:
-            await self._pong_interaction(payload)
+            inter = BaseInteraction(self.client, payload)
+            self.dispatch('interaction', inter)
+            await inter.create_response(type=1)
+        # Slash command invoked
         elif _type == 2:
             inter = SlashInteraction(self.client, payload)
-            # Activate event
-            await self._activate_event('slash_command', inter)
-            # Invoke command
-            SCR = self.commands.get(inter.data.name)
-            if SCR is not None:
+            self.dispatch('interaction', inter)
+            self.dispatch('slash_command', inter)
+            slash_parent = self.commands.get(inter.data.name)
+            if slash_parent:
                 try:
-                    await SCR.invoke(inter)
+                    await slash_parent.invoke(inter)
                 except Exception as err:
                     if not self._error_handler_exists():
                         raise err
                     await self._activate_event('slash_command_error', inter, err)
+        # Message component clicked
         elif _type == 3:
             inter = MessageInteraction(self.client, payload)
+            self.dispatch('interaction', inter)
             if inter.component.type == ComponentType.Button:
                 await self._activate_event('button_click', inter)
             elif inter.component.type == ComponentType.SelectMenu:
