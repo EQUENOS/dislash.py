@@ -626,7 +626,7 @@ def is_owner():
     """Similar to ``commands.is_owner``"""
 
     async def predicate(ctx):
-        if not await ctx.client.is_owner(ctx.author):
+        if not await ctx.bot.is_owner(ctx.author):
             raise NotOwner('You do not own this bot.')
         return True
 
