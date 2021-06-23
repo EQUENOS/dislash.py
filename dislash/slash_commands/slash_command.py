@@ -13,8 +13,6 @@ __all__ = (
     "RawCommandPermission"
 )
 
-REDEX = r"^[\w-]{1,32}$"
-
 class Type:
     """
     Attributes
@@ -192,8 +190,8 @@ class SlashCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
-        assert re.match(REDEX, name) is not None and name.islower(),\
-            f"Slash command name {name!r} has not match validation regex({REDEX})"
+        assert re.match(r"^[\w-]{1,32}$", name) is not None and name.islower(),\
+            f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
 
         self.name = name
         self.description = description
