@@ -13,6 +13,7 @@ __all__ = (
     "RawCommandPermission"
 )
 
+REDEX = r"^[\w-]{1,32}$"
 
 class Type:
     """
@@ -78,7 +79,8 @@ class Option:
     """
 
     def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
-        assert re.match(r"^[\w-]{1,32}$", name) is not None, f"Option name {name!r} has not match validation regex"
+        assert re.match(REDEX, name) is not None and name.islower(),\
+            f"Option name {name!r} has not match validation regex({REDEX})"
         self.name = name
         self.description = description
         self.type = type or 3
@@ -94,7 +96,7 @@ class Option:
                     if option.type != 1:
                         raise ValueError('Expected sub_command in this sub_command_group')
         self.options = options or []
-    
+
     def __repr__(self):
         string = "name='{0.name}' description='{0.description} type={0.type} required={0.required}".format(self)
         if len(self.options) > 0:
@@ -112,7 +114,7 @@ class Option:
             self.choices == other.choices and
             self.options == other.options
         )
-    
+
     @classmethod
     def from_dict(cls, payload: dict):
         if 'options' in payload:
@@ -132,7 +134,7 @@ class Option:
             the choice you're going to add
         '''
         self.choices.append(choice)
-    
+
     def add_option(self, option):
         '''
         Adds an option to the current list of options
@@ -190,7 +192,8 @@ class SlashCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
-        assert re.match(r"^[\w-]{1,32}$", name) is not None, f"Slash command name {name!r} has not match validation regex"
+        assert re.match(REDEX, name) is not None and name.islower(),\
+            f"Slash command name {name!r} has not match validation regex({REDEX})"
 
         self.name = name
         self.description = description
@@ -278,7 +281,7 @@ class SlashCommandPermissions:
         for target, perm in permissions.items():
             raw_perms.append(RawCommandPermission.from_pair(target, perm))
         return SlashCommandPermissions(raw_perms)
-    
+
     @classmethod
     def from_ids(cls, role_perms: dict=None, user_perms: dict=None):
         """
@@ -300,7 +303,7 @@ class SlashCommandPermissions:
         for user_id, perm in user_perms.items():
             raw_perms.append(RawCommandPermission(user_id, 2, perm))
         return SlashCommandPermissions(raw_perms)
-    
+
     @classmethod
     def from_dict(cls, data: dict):
         return SlashCommandPermissions([
@@ -334,7 +337,7 @@ class RawCommandPermission:
         self.id = id
         self.type = type
         self.permission = permission
-    
+
     def __repr__(self):
         return "<RawCommandPermission id={0.id} type={0.type} permission={0.permission}>".format(self)
 
@@ -349,7 +352,7 @@ class RawCommandPermission:
             type=1 if isinstance(target, discord.Role) else 2,
             permission=permission
         )
-    
+
     @classmethod
     def from_dict(cls, data: dict):
         return RawCommandPermission(
