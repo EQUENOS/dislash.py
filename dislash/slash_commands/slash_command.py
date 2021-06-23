@@ -1,3 +1,5 @@
+import re
+
 from typing import Union, List
 import discord
 
@@ -76,7 +78,7 @@ class Option:
     """
 
     def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
-        assert name.islower(), f"Option name '{name}' must be lowercase only"
+        assert re.match(r"^[\w-]{1,32}$", name) is not None, f"Option name {name!r} has not match validation regex"
         self.name = name
         self.description = description
         self.type = type or 3
@@ -188,7 +190,7 @@ class SlashCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
-        assert name.islower(), f"Slash command name '{name}' must be lowercase only"
+        assert re.match(r"^[\w-]{1,32}$", name) is not None, f"Slash command name {name!r} has not match validation regex"
 
         self.name = name
         self.description = description
