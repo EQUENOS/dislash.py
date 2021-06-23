@@ -77,8 +77,7 @@ class Option:
     """
 
     def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
-        assert re.match(REDEX, name) is not None and name.islower(),\
-            f"Option name {name!r} has not match validation regex({REDEX})"
+        assert name.islower(), f"Option name {name!r} must be lowercase"
         self.name = name
         self.description = description
         self.type = type or 3
