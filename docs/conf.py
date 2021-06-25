@@ -12,7 +12,7 @@
 #
 import os
 import sys
-import sphinx_pdj_theme
+# import sphinx_pdj_theme
 
 
 sys.path.insert(0, os.path.abspath('.'))
@@ -49,14 +49,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes. I added the dark theme (Hopefully)
+# The theme to use for HTML and HTML Help pages. See the documentation for
+# a list of builtin themes.
 #
-html_theme = 'sphinx_pdj_theme'
-html_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
-html_theme_options = {
-    'style': 'darker'
-}
+html_theme = 'sphinx_rtd_theme'
+# html_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
+# html_theme_options = {
+#     'style': 'darker'
+# }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -65,21 +65,21 @@ html_static_path = ['_static']
 
 
 
-def replace_stylesheet(custom_css):
-    base_path = html_theme_path[0]
-    style_path = f"{base_path}/static/css/pdj.css"
-    backup_path = f"{base_path}/static/css/old_pdj.css"
-    # Move the code to another dir
-    with open(style_path, "r", encoding="utf-8") as f:
-        style_code = f.read()
-    with open(backup_path, "w", encoding="utf-8") as f:
-        f.write(style_code)
-    # Replace with custom css
-    with open(custom_css, "r", encoding="utf-8") as f:
-        style_code = f.read()
-    with open(style_path, "w", encoding="utf-8") as f:
-        f.write(style_code)
+# def replace_stylesheet(custom_css):
+#     base_path = html_theme_path[0]
+#     style_path = f"{base_path}/static/css/pdj.css"
+#     backup_path = f"{base_path}/static/css/old_pdj.css"
+#     # Move the code to another dir
+#     with open(style_path, "r", encoding="utf-8") as f:
+#         style_code = f.read()
+#     with open(backup_path, "w", encoding="utf-8") as f:
+#         f.write(style_code)
+#     # Replace with custom css
+#     with open(custom_css, "r", encoding="utf-8") as f:
+#         style_code = f.read()
+#     with open(style_path, "w", encoding="utf-8") as f:
+#         f.write(style_code)
 
 
 
-replace_stylesheet('css/pdj_modified.css')
+# replace_stylesheet('css/pdj_modified.css')
