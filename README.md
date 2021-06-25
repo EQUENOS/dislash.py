@@ -111,3 +111,11 @@ client.run("BOT_TOKEN")
 - **[Documentation](https://dislashpy.readthedocs.io/en/latest)**
 - **[PyPi](https://pypi.org/project/dislash.py)**
 - **[Our Discord](https://discord.gg/gJDbCw8aQy)**
+
+
+# Downloads
+
+
+[![Downloads](https://pepy.tech/badge/dislash.py)](https://pepy.tech/project/dislash.py)
+[![Downloads](https://pepy.tech/badge/dislash.py/month)](https://pepy.tech/project/dislash.py)
+[![Downloads](https://pepy.tech/badge/dislash.py/week)]
