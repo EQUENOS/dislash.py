@@ -20,6 +20,10 @@ class SlashCommandError(DiscordException):
             super().__init__(*args)
 
 
+class BadArgument(SlashCommandError):
+    pass
+            
+            
 class SlashCheckFailure(SlashCommandError):
     pass
 
