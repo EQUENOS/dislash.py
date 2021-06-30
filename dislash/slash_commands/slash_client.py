@@ -4,7 +4,7 @@ from discord.ext.commands import Context
 import asyncio
 import discord
 
-from .slash_core import CommandParent, get_class
+from .slash_core import CommandParent
 from .slash_command import SlashCommand, SlashCommandPermissions
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
@@ -101,6 +101,15 @@ class SlashClient:
                 return check(inter)
             return await self.wait_for_button_click(auto_check, timeout)
 
+        async def message_wait_for_dropdown(message, check=None, timeout=None):
+            if check is None:
+                check = lambda inter: True
+            def auto_check(inter):
+                if message.id != inter.message.id:
+                    return False
+                return check(inter)
+            return await self.wait_for_dropdown(auto_check, timeout)
+
         async def fetch_commands(guild):
             return await self.fetch_guild_commands(guild.id)
         
@@ -140,6 +149,7 @@ class SlashClient:
         Context.wait_for_button_click = ctx_wait_for_button_click
         discord.Message.create_click_listener = create_click_listener
         discord.Message.wait_for_button_click = message_wait_for_button_click
+        discord.Message.wait_for_dropdown = message_wait_for_dropdown
         discord.Guild.get_commands = get_commands
         discord.Guild.get_command = get_command
         discord.Guild.get_command_named = get_command_named
@@ -1033,6 +1043,16 @@ class SlashClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
+    async def wait_for_dropdown(self, check=None, timeout=None):
+        if check is None:
+            check = lambda ctx: True
+        future = self.client.loop.create_future()
+        if "dropdown" not in self._listeners:
+            self._listeners["dropdown"] = []
+        listeners = self._listeners["dropdown"]
+        listeners.append((future, check))
+        return await asyncio.wait_for(future, timeout)
+
     # Adding relevant listeners
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
@@ -1133,8 +1153,7 @@ class SlashClient:
             if inter.component.type == ComponentType.Button:
                 await self._activate_event('button_click', inter)
             elif inter.component.type == ComponentType.SelectMenu:
-                # FIXME: naming might be different
-                await self._activate_event('select_menu_click', inter)
+                await self._activate_event('dropdown', inter)
     
     async def _fill_app_id(self):
         data = await self.client.http.application_info()

@@ -111,23 +111,69 @@ class ButtonStyle:
 
     link      = 5
 
-# Beta
-class MenuOption:
-    __slots__ = ("label", "value")
 
-    def __init__(self, label: str, value):
+class SelectOption:
+    """
+    This class represents an option in a select menu.
+
+    Parameters
+    ----------
+    label : :class:`str`
+        the user-facing name of the option, max 25 characters
+    value :class:`str`
+        the dev-define value of the option, max 100 characters
+    description :class:`str`
+        an additional description of the option, max 50 characters
+    emoji :class:`str`
+        well add an emoji to the option
+    default :class:`bool`
+        will render this option as selected by default
+    """
+
+    __slots__ = ("label", "value", "description", "emoji", "default")
+
+    def __init__(self, label: str, value: str, description: str=None, emoji: str=None, default: bool=False):
+        if isinstance(emoji, str):
+            emoji = _partial_emoji_converter(emoji)
+        
         self.label = label
         self.value = value
+        self.description = description
+        self.emoji = emoji
+        self.default = default
     
     def __repr__(self):
-        return "<OptionSelect label='{0.label}' value={0.value}>".format(self)
+        return (
+            "<OptionSelect label='{0.label}' value={0.value} "
+            "description={0.description} emoji={0.emoji} default={0.default}>"
+        ).format(self)
 
     @classmethod
     def from_dict(cls, data: dict):
-        return MenuOption(label=data.get("label"), value=data.get("value"))
+        if "emoji" in data:
+            emoji = discord.PartialEmoji.from_dict(data["emoji"])
+        else:
+            emoji = None
+        return SelectOption(
+            label=data.get("label"),
+            value=data.get("value"),
+            description=data.get("description"),
+            emoji=emoji,
+            default=data.get("default", False)
+        )
     
     def to_dict(self):
-        return {"label": self.label, "value": self.value}
+        data = {
+            "label": self.label,
+            "value": self.value
+        }
+        if self.description:
+            data["description"] = self.description
+        if self.emoji:
+            data["emoji"] = self.emoji.to_dict()
+        if self.default:
+            data["default"] = self.default
+        return data
 
 
 class Component:
@@ -137,8 +183,25 @@ class Component:
     def __init__(self, type: int):
         self.type = type
 
-# Beta
+
 class SelectMenu(Component):
+    """
+    This class represents a select menu.
+
+    Parameters
+    ----------
+    custom_id : :class:`str`
+        a developer-defined identifier for the button, max 100 characters
+    placeholder : :class:`str`
+        custom placeholder text if nothing is selected, max 100 characters
+    min_values : :class:`int`
+        the minimum number of items that must be chosen; default 1, min 0, max 25
+    max_values : :class:`int`
+        the maximum number of items that can be chosen; default 1, max 25
+    options : List[:class:`SelectOption`]
+        the choices in the select, max 25
+    """
+
     def __init__(self, *, custom_id: str, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
         super().__init__(3)
         self.custom_id = custom_id
@@ -146,14 +209,21 @@ class SelectMenu(Component):
         self.min_values = min_values
         self.max_values = max_values
         self.options = options or []
+        self.selected_options = []
     
     def __repr__(self):
         desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
         return f"<SelectMenu {desc}>"
 
+    def _select_options(self, values: list):
+        self.selected_options = []
+        for option in self.options:
+            if option.value in values:
+                self.selected_options.append(option)
+
     def add_option(self, *, label: str, value):
         self.options.append(
-            MenuOption(label=label, value=value)
+            SelectOption(label=label, value=value)
         )
 
     @classmethod
@@ -164,7 +234,7 @@ class SelectMenu(Component):
             placeholder=data.get("placeholder"),
             min_values=data.get("min_values", 1),
             max_values=data.get("max_values", 1),
-            options=[MenuOption.from_dict(o) for o in options]
+            options=[SelectOption.from_dict(o) for o in options]
         )
 
     def to_dict(self):
@@ -363,3 +433,6 @@ class ActionRow(Component):
                 options=options
             )
         )
+
+
+MenuOption = SelectOption

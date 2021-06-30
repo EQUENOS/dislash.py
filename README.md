@@ -68,8 +68,7 @@ This example shows how to send a message with buttons.
 
 ```python
 from discord.ext import commands
-from dislash.slash_commands import *
-from dislash.interactions import *
+from dislash import SlashClient, ActionRow, Button
 
 client = commands.Bot(command_prefix="!")
 slash = SlashClient(client)
@@ -106,6 +105,42 @@ client.run("BOT_TOKEN")
 ```
 
 
+## Creating buttons
+
+This example shows how to send a message with buttons.
+
+```python
+from discord.ext import commands
+from dislash import SlashClient, SelectMenu, SelectOption
+
+bot = commands.Bot(command_prefix="!")
+slash = SlashClient(bot)
+
+@bot.command()
+async def test(ctx):
+    msg = await ctx.send(
+        "This message has a select menu!",
+        components=[
+            SelectMenu(
+                custom_id="test",
+                placeholder="Choose up to 2 options",
+                max_values=2,
+                options=[
+                    SelectOption("Option 1", "value 1"),
+                    SelectOption("Option 2", "value 2"),
+                    SelectOption("Option 3", "value 3")
+                ]
+            )
+        ]
+    )
+    # Wait for someone to click on it
+    inter = await msg.wait_for_dropdown(check)
+    # Send what you received
+    labels = [option.label for option in inter.select_menu.selected_options]
+    await inter.reply(f"Options: {', '.join(labels)}")
+
+bot.run("BOT_TOKEN")
+
 
 # Links
 - **[Documentation](https://dislashpy.readthedocs.io/en/latest)**
@@ -118,4 +153,4 @@ client.run("BOT_TOKEN")
 
 [![Downloads](https://pepy.tech/badge/dislash.py)](https://pepy.tech/project/dislash.py)
 [![Downloads](https://pepy.tech/badge/dislash.py/month)](https://pepy.tech/project/dislash.py)
-[![Downloads](https://pepy.tech/badge/dislash.py/week)]
+[![Downloads](https://pepy.tech/badge/dislash.py/week)

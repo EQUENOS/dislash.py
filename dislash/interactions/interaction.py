@@ -257,9 +257,13 @@ class BaseInteraction:
         if components is not None:
             if len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 elements")
-            if not all(isinstance(comp, ActionRow) for comp in components):
-                raise discord.InvalidArgument("components must be a list of ActionRow")
-            data["components"] = [comp.to_dict() for comp in components]
+            wrapped = []
+            for comp in components:
+                if isinstance(comp, ActionRow):
+                    wrapped.append(comp)
+                else:
+                    wrapped.append(ActionRow(comp))
+            data["components"] = [comp.to_dict() for comp in wrapped]
         
         # Allowed mentions
         if content or embed or embeds:

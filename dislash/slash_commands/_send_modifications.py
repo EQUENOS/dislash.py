@@ -98,9 +98,13 @@ async def send_with_components(messageable, content=None, *,
     if components is not None:
         if len(components) > 5:
             raise InvalidArgument("components must be a list of up to 5 action rows")
-        if not all(isinstance(comp, ActionRow) for comp in components):
-            raise InvalidArgument("components must be a list of ActionRow")
-        components = [comp.to_dict() for comp in components]
+        wrapped = []
+        for comp in components:
+            if isinstance(comp, ActionRow):
+                wrapped.append(comp)
+            else:
+                wrapped.append(ActionRow(comp))
+        components = [comp.to_dict() for comp in wrapped]
 
     if allowed_mentions is not None:
         if state.allowed_mentions is not None:

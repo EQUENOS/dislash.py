@@ -50,24 +50,33 @@ class MessageInteraction(BaseInteraction):
                 data=msg_data
             )
         
-        custom_id = data.get("data", {}).get("custom_id")
+        component_data = data.get("data", {})
+        component_type = component_data.get("component_type", 1)
+        custom_id = component_data.get("custom_id")
         self.component = None
         for action_row in self.components:
             for component in action_row.components:
-                if component.custom_id == custom_id:
+                if component.custom_id == custom_id and component.type == component_type:
                     self.component = component
+                    if component_type == ComponentType.SelectMenu:
+                        self.component._select_options(component_data.get("values", []))
                     break
             if self.component is not None:
                 break
     
     @property
-    def clicked_button(self):
+    def clicked_button(self) -> Button:
         if self.component.type == ComponentType.Button:
             return self.component
 
     @property
-    def button(self):
+    def button(self) -> Button:
         return self.clicked_button
+    
+    @property
+    def select_menu(self) -> SelectMenu:
+        if self.component.type == ComponentType.SelectMenu:
+            return self.component
 
 
 ButtonInteraction = MessageInteraction
