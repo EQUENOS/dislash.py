@@ -105,9 +105,9 @@ client.run("BOT_TOKEN")
 ```
 
 
-## Creating buttons
+## Creating menus
 
-This example shows how to send a message with buttons.
+This example shows how to send a message with a menu.
 
 ```python
 from discord.ext import commands
