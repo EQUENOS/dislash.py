@@ -6,9 +6,7 @@
 [![PyPi](https://img.shields.io/pypi/v/dislash.py.svg)](https://pypi.org/project/dislash.py)
 [![Python](https://img.shields.io/pypi/pyversions/dislash.py.svg)](https://pypi.python.org/pypi/dislash.py)
 
-An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome slash-commands and message components.
-
-📄 Slash commands is a new discord API feature that allows to build user-friendly commands. Once "`/`" is pressed on keyboard, the entire list of slash-commands pops up. The list includes hints and short descriptions which make exploring your bot much easier.
+An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome message components and slash commands.
 
 
 # Installation
@@ -134,7 +132,7 @@ async def test(ctx):
         ]
     )
     # Wait for someone to click on it
-    inter = await msg.wait_for_dropdown(check)
+    inter = await msg.wait_for_dropdown()
     # Send what you received
     labels = [option.label for option in inter.select_menu.selected_options]
     await inter.reply(f"Options: {', '.join(labels)}")

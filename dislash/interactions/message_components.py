@@ -121,13 +121,13 @@ class SelectOption:
     ----------
     label : :class:`str`
         the user-facing name of the option, max 25 characters
-    value :class:`str`
+    value : :class:`str`
         the dev-define value of the option, max 100 characters
-    description :class:`str`
+    description : :class:`str`
         an additional description of the option, max 50 characters
-    emoji :class:`str`
+    emoji : :class:`str`
         well add an emoji to the option
-    default :class:`bool`
+    default : :class:`bool`
         will render this option as selected by default
     """
 

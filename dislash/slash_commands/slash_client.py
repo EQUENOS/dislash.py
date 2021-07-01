@@ -1150,6 +1150,8 @@ class SlashClient:
         elif _type == 3:
             inter = MessageInteraction(self.client, payload)
             self.dispatch('interaction', inter)
+            if inter.component is None:
+                return
             if inter.component.type == ComponentType.Button:
                 await self._activate_event('button_click', inter)
             elif inter.component.type == ComponentType.SelectMenu:
