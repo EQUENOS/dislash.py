@@ -12,6 +12,7 @@ __all__ = (
     "BaseInteraction"
 )
 
+DISCORD_EPOCH = 1420070400000
 
 class InteractionType:
     Ping               = 1
@@ -74,12 +75,12 @@ class BaseInteraction:
                 state=state,
                 data=data["user"]
             )
-        
+
         if "channel_id" in data:
             self.channel = client.get_channel(int(data["channel_id"]))
         else:
             self.channel = None
-        
+
         self._sent = False
         self._webhook = None
 
@@ -91,11 +92,11 @@ class BaseInteraction:
                 adapter=discord.AsyncWebhookAdapter(self.bot.http._HTTPClient__session)
             )
         return self._webhook
-    
+
     @property
     def created_at(self):
-        return snowflake_time(self.id)
-    
+        return datetime.datetime.utcfromtimestamp(((self.id >> 22) + DISCORD_EPOCH) / 1000)
+
     @property
     def expired(self):
         if self._sent:
@@ -193,10 +194,10 @@ class BaseInteraction:
         # Same for type-1 and type-2 messages
         if ephemeral or type in (1, 2):
             return None
-        
+
         if delete_after is not None:
             self.bot.loop.create_task(self.delete_after(delete_after))
-        
+
         if fetch_response_message:
             return await self.fetch_initial_response()
 
@@ -234,26 +235,26 @@ class BaseInteraction:
             Both ``embed`` and ``embeds`` are specified
         """
         type = type or 4
-        
+
         data = {}
         if content is not None:
             data['content'] = str(content)
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
-        
+
         elif embeds is not None:
             if len(embeds) > 10:
                 raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
                 raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
-        
+
         if components is not None:
             if len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 elements")
@@ -264,7 +265,7 @@ class BaseInteraction:
                 else:
                     wrapped.append(ActionRow(comp))
             data["components"] = [comp.to_dict() for comp in wrapped]
-        
+
         # Allowed mentions
         if content or embed or embeds:
             state = self.bot._connection
@@ -308,7 +309,7 @@ class BaseInteraction:
             a list of up to 5 action rows
         allowed_mentions : :class:`discord.AllowedMentions`
             controls the mentions being processed in this message.
-        
+
         Returns
         -------
         message : :class:`discord.Message`
@@ -321,7 +322,7 @@ class BaseInteraction:
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
@@ -361,7 +362,7 @@ class BaseInteraction:
             channel=self.channel,
             data=r
         )
-    
+
     async def delete(self):
         """
         Deletes the original interaction response.
@@ -372,7 +373,7 @@ class BaseInteraction:
                 app_id=self.application_id, token=self.token
             )
         )
-    
+
     async def delete_after(self, delay: float):
         await asyncio.sleep(delay)
         try:
