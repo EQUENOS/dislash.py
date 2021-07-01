@@ -40,6 +40,18 @@ async def on_button_click(interaction):
     pass
 
 
+async def on_dropdown(interaction):
+    """
+    An event which is called on any menu click of your application.
+
+    Parameters
+    ----------
+    interaction : :class:`MessageInteraction`
+        the interaction with the select menu
+    """
+    pass
+
+
 async def on_slash_command(interaction):
     """
     An event which is called every time a slash

@@ -154,4 +154,4 @@ bot.run("BOT_TOKEN")
 
 [![Downloads](https://pepy.tech/badge/dislash.py)](https://pepy.tech/project/dislash.py)
 [![Downloads](https://pepy.tech/badge/dislash.py/month)](https://pepy.tech/project/dislash.py)
-[![Downloads](https://pepy.tech/badge/dislash.py/week)
+![Downloads](https://pepy.tech/badge/dislash.py/week)

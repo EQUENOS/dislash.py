@@ -204,6 +204,24 @@ Button
 
 
 
+.. _select_menu:
+
+SelectOption
+------------
+
+.. autoclass:: SelectOption
+
+
+
+.. _select_menu:
+
+SelectMenu
+----------
+
+.. autoclass:: SelectMenu
+
+
+
 .. _action_row:
 
 ActionRow

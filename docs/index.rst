@@ -3,11 +3,7 @@
 Documentation: dislash.py
 =========================
 
-Slash commands is a new Discord feature that allows to build user-friendly commands.
-Once "**/**" is pressed on keyboard, the entire list of slash commands pops up.
-The list includes hints and short description for each command, which makes exploring your bot much easier.
-
-This Python library simplifies the process of building such commands.
+This library adds different interaction features to discord.py, such as buttons or slash commands.
 
 It's recommended to read :ref:`quickstart` first.
 
@@ -20,6 +16,7 @@ Sections
    quickstart
    examples
    buttons_guide
+   select_menus_guide
    slash_commands_guide
    cogs
    events

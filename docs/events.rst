@@ -64,6 +64,15 @@ on_button_click
 
 
 
+.. _on_dropdown:
+
+on_dropdown
+-----------
+
+.. autofunction:: on_dropdown
+
+
+
 .. _on_slash_command:
 
 on_slash_command
