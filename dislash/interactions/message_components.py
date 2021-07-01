@@ -9,6 +9,7 @@ __all__ = (
     "Component",
     "Button",
     "ActionRow",
+    "SelectOption",
     "MenuOption",
     "SelectMenu"
 )
@@ -202,9 +203,9 @@ class SelectMenu(Component):
         the choices in the select, max 25
     """
 
-    def __init__(self, *, custom_id: str, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
+    def __init__(self, *, custom_id: str=None, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
         super().__init__(3)
-        self.custom_id = custom_id
+        self.custom_id = custom_id or "0"
         self.placeholder = placeholder
         self.min_values = min_values
         self.max_values = max_values
