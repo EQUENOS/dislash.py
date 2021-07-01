@@ -98,10 +98,11 @@ class BaseInteraction:
     
     @property
     def expired(self):
+        utcnow = datetime.datetime.now(datetime.timezone.utc)
         if self._sent:
-            return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(minutes=15)
+            return utcnow  - self.created_at > datetime.timedelta(minutes=15)
         else:
-            return datetime.datetime.utcnow() - self.created_at > datetime.timedelta(seconds=3)
+            return utcnow  - self.created_at > datetime.timedelta(seconds=3)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
                                             components=None,
