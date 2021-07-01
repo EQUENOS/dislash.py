@@ -140,6 +140,7 @@ async def test(ctx):
     await inter.reply(f"Options: {', '.join(labels)}")
 
 bot.run("BOT_TOKEN")
+```
 
 
 # Links
