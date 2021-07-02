@@ -25,7 +25,7 @@ class SlashClient:
     client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
         The discord.py Bot instance
     show_warnings : :class:`bool`
-        Whether to show the warnings or not
+        Whether to show the warnings or not. Defaults to ``True``
     modify_send : :class:`bool`
         Whether to modify :class:`Messageable.send` and :class:`Message.edit`.
         Modified methods allow to specify the ``components`` parameter.
@@ -40,7 +40,7 @@ class SlashClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, show_warnings: bool=False, modify_send: bool=True):
+    def __init__(self, client, *, show_warnings: bool=True, modify_send: bool=True):
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.application_id = None
@@ -236,18 +236,8 @@ class SlashClient:
         def decorator(func):
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
-            name = kwargs.get('name', func.__name__)
-            new_func = CommandParent(
-                func,
-                name=name,
-                description=kwargs.get('description'),
-                options=kwargs.get('options'),
-                default_permission=kwargs.get("default_permission", True),
-                guild_ids=kwargs.get('guild_ids'),
-                connectors=kwargs.get("connectors"),
-                auto_sync=kwargs.get("auto_sync", True)
-            )
-            self.commands[name] = new_func
+            new_func = CommandParent(func, **kwargs)
+            self.commands[new_func.name] = new_func
             return new_func
         return decorator
     

@@ -58,7 +58,7 @@ def get_class(func):
 #         Core and checks           |
 #-----------------------------------+
 class BaseSlashCommand:
-    def __init__(self, func, *, name=None, connectors=None):
+    def __init__(self, func, *, name=None, connectors=None, **kwargs):
         self.func = func
         self.name = name or func.__name__
         self.connectors = connectors
@@ -86,6 +86,10 @@ class BaseSlashCommand:
                     self._buckets = None
         else:
             self._buckets = cooldown
+        # Add custom kwargs
+        for kw, value in kwargs.items():
+            if not hasattr(self, kw):
+                setattr(self, kw, value)
     
     async def __call__(self, *args, **kwargs):
         return await self.func(*args, **kwargs)
@@ -145,8 +149,8 @@ class BaseSlashCommand:
 
 
 class SubCommand(BaseSlashCommand):
-    def __init__(self, func, *, name=None, description=None, options=None, connectors=None):
-        super().__init__(func, name=name, connectors=connectors)
+    def __init__(self, func, *, name=None, description=None, options=None, connectors=None, **kwargs):
+        super().__init__(func, name=name, connectors=connectors, **kwargs)
         self.option = Option(
             name=self.name,
             description=description or "-",
@@ -156,8 +160,8 @@ class SubCommand(BaseSlashCommand):
 
 
 class SubCommandGroup(BaseSlashCommand):
-    def __init__(self, func, *, name=None):
-        super().__init__(func, name=name)
+    def __init__(self, func, *, name=None, **kwargs):
+        super().__init__(func, name=name, **kwargs)
         self.children = {}
         self.option = Option(
             name=self.name,
@@ -166,7 +170,7 @@ class SubCommandGroup(BaseSlashCommand):
             options=[]
         )
 
-    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None):
+    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None, **kwargs):
         """
         A decorator that creates a subcommand in the
         subcommand group.
@@ -179,7 +183,8 @@ class SubCommandGroup(BaseSlashCommand):
                 name=name,
                 description=description,
                 options=options,
-                connectors=connectors
+                connectors=connectors,
+                **kwargs
             )
             self.children[new_func.name] = new_func
             self.option.options.append(new_func.option)
@@ -189,15 +194,16 @@ class SubCommandGroup(BaseSlashCommand):
 
 class CommandParent(BaseSlashCommand):
     def __init__(self, func, *, name=None, description=None, options=None, default_permission=True,
-                                                             guild_ids=None, connectors=None, auto_sync=True):
-        super().__init__(func, name=name, connectors=connectors)
+                                                             guild_ids=None, connectors=None,
+                                                             auto_sync=True, **kwargs):
+        super().__init__(func, name=name, connectors=connectors, **kwargs)
         self.children = {}
         self.auto_sync = auto_sync
         self.registerable = SlashCommand(
             name=self.name,
             description=description or "-",
             options=options or [],
-            default_permission=default_permission
+            default_permission=default_permission,
         )
         self.guild_ids = guild_ids
         self.children_type = None
@@ -210,7 +216,7 @@ class CommandParent(BaseSlashCommand):
         self._cog = cog
         self._cog_name = cog.qualified_name
 
-    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None):
+    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None, **kwargs):
         """
         A decorator that creates a subcommand under the base command.
 
@@ -241,14 +247,15 @@ class CommandParent(BaseSlashCommand):
                 name=name,
                 description=description,
                 options=options,
-                connectors=connectors
+                connectors=connectors,
+                **kwargs
             )
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
         return decorator
     
-    def sub_command_group(self, name=None):
+    def sub_command_group(self, name=None, **kwargs):
         """
         A decorator that creates a subcommand group under the base command.
         Remember that the group must have at least one subcommand.
@@ -266,7 +273,7 @@ class CommandParent(BaseSlashCommand):
             elif self.children_type != Type.SUB_COMMAND_GROUP:
                 raise discord.InvalidArgument("don't nest sub_command_groups and sub_commands to the same parent")
             
-            new_func = SubCommandGroup(func, name=name)
+            new_func = SubCommandGroup(func, name=name, **kwargs)
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
@@ -361,18 +368,8 @@ def command(*args, **kwargs):
     def decorator(func):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
-        name = kwargs.get('name', func.__name__)
-        new_func = CommandParent(
-            func,
-            name=name,
-            description=kwargs.get('description'),
-            options=kwargs.get('options'),
-            default_permission=kwargs.get("default_permission", True),
-            guild_ids=kwargs.get('guild_ids'),
-            connectors=kwargs.get("connectors"),
-            auto_sync=kwargs.get("auto_sync", True)
-        )
-        _HANDLER.commands[name] = new_func
+        new_func = CommandParent(func, **kwargs)
+        _HANDLER.commands[new_func.name] = new_func
         return new_func
     return decorator
 

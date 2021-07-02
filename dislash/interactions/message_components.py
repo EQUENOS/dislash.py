@@ -201,6 +201,21 @@ class SelectMenu(Component):
         the maximum number of items that can be chosen; default 1, max 25
     options : List[:class:`SelectOption`]
         the choices in the select, max 25
+    
+    Attributes
+    ----------
+    custom_id : :class:`str`
+        a developer-defined identifier for the button, max 100 characters
+    placeholder : :class:`str`
+        custom placeholder text if nothing is selected, max 100 characters
+    min_values : :class:`int`
+        the minimum number of items that must be chosen; default 1, min 0, max 25
+    max_values : :class:`int`
+        the maximum number of items that can be chosen; default 1, max 25
+    options : List[:class:`SelectOption`]
+        the choices in the select, max 25
+    selected_options : List[:class:`SelectOption`]
+        the list of chosen options, max 25
     """
 
     def __init__(self, *, custom_id: str=None, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
@@ -222,9 +237,19 @@ class SelectMenu(Component):
             if option.value in values:
                 self.selected_options.append(option)
 
-    def add_option(self, *, label: str, value):
+    def add_option(self, label: str, value: str, description: str=None, emoji: str=None, default: bool=False):
+        """
+        Adds an option to the list of options of the menu.
+        Parameters are the same as in :class:`SelectOption`.
+        """
         self.options.append(
-            SelectOption(label=label, value=value)
+            SelectOption(
+                label=label,
+                value=value,
+                description=description,
+                emoji=emoji,
+                default=default
+            )
         )
 
     @classmethod
