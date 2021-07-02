@@ -1,4 +1,5 @@
 import discord
+import os
 import re
 
 
@@ -13,10 +14,6 @@ __all__ = (
     "MenuOption",
     "SelectMenu"
 )
-
-# I don't like this solution for default custom_ids...
-ID_SOURCE = 0
-MAX_ID = 25
 
 
 def _partial_emoji_converter(argument: str):
@@ -222,9 +219,9 @@ class SelectMenu(Component):
             if option.value in values:
                 self.selected_options.append(option)
 
-    def add_option(self, *, label: str, value):
+    def add_option(self, *, label: str, value, description: str, emoji: str, default: bool=False):
         self.options.append(
-            SelectOption(label=label, value=value)
+            SelectOption(label=label, value=value, description=description, emoji=emoji, default=default)
         )
 
     @classmethod
@@ -275,12 +272,9 @@ class Button(Component):
     """
     def __init__(self, *, style: ButtonStyle, label: str=None, emoji: discord.PartialEmoji=None,
                                     custom_id: str=None, url: str=None, disabled: bool=False):
-        global ID_SOURCE # Ugly as hell
-
         if custom_id is None:
             if url is None:
-                custom_id = str(ID_SOURCE)
-                ID_SOURCE = (ID_SOURCE + 1) % MAX_ID
+                custom_id = os.urandom(16).hex()
                 # raise discord.InvalidArgument("url or custom_id must be specified")
             elif style != ButtonStyle.link:
                 raise discord.InvalidArgument("if you specify url, the style must be ButtonStyle.link")
