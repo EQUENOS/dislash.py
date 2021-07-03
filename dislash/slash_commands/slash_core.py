@@ -95,7 +95,8 @@ class BaseSlashCommand:
         return await self.func(*args, **kwargs)
 
     def _uses_ui(self, from_cog: bool):
-        code = self.func.__code__
+        func = inspect.unwrap(self.func)
+        code = func.__code__
         argcount = code.co_argcount + code.co_kwonlyargcount
         if from_cog:
             return argcount > 2
