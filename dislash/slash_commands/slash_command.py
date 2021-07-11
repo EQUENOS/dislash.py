@@ -1,7 +1,6 @@
-import re
-
-from typing import Union, List
+from typing import Union, List, Any
 import discord
+import re
 
 
 __all__ = (
@@ -12,6 +11,7 @@ __all__ = (
     "SlashCommandPermissions",
     "RawCommandPermission"
 )
+
 
 class Type:
     """
@@ -48,7 +48,7 @@ class OptionChoice:
         the value of the option-choice
     """
 
-    def __init__(self, name: str, value: Union[str, int]):
+    def __init__(self, name: str, value: Any):
         self.name = name
         self.value = value
 
@@ -66,15 +66,22 @@ class Option:
     """
     Parameters
     ----------
-    name : str
+    name : :class:`str`
         option's name
-    description : str
+    description : :class:`str`
         option's description
-    type : Type
+    type : :class:`Type`
         the option type, e.g. ``Type.USER``, see :ref:`option_type`
-    choices : list
-        list of option choices, type :ref:`option_choice`
+    required : :class:`bool`
+        whether this option is required or not
+    choices : List[:class:`OptionChoice`]
+        the list of option choices, type :ref:`option_choice`
+    options : List[:class:`Option`]
+        the list of sub options. You can only specify this parameter if
+        the ``type`` is :class:`Type.SUB_COMMAND` or :class:`Type.SUB_COMMAND_GROUP`
     """
+
+    __slots__ = ("name", "description", "type", "required", "choices", "options", "_choice_connectors")
 
     def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
         assert name.islower(), f"Option name {name!r} must be lowercase"
@@ -93,6 +100,18 @@ class Option:
                     if option.type != 1:
                         raise ValueError('Expected sub_command in this sub_command_group')
         self.options = options or []
+        self._choice_connectors = {}
+        # Wrap choices
+        for i, choice in enumerate(self.choices):
+            if self.type == Type.INTEGER:
+                if not isinstance(choice.value, int):
+                    self._choice_connectors[i] = choice.value
+                    choice.value = i
+            elif self.type == Type.STRING:
+                if not isinstance(choice.value, str):
+                    valid_value = f"option_choice_{i}"
+                    self._choice_connectors[valid_value] = choice.value
+                    choice.value = valid_value
 
     def __repr__(self):
         string = "name='{0.name}' description='{0.description} type={0.type} required={0.required}".format(self)
@@ -120,35 +139,47 @@ class Option:
             payload['choices'] = [OptionChoice(**p) for p in payload['choices']]
         return Option(**payload)
 
-    def add_choice(self, choice: OptionChoice):
+    def add_choice(self, name: str, value: Any):
         '''
         Adds an OptionChoice to the list of current choices
 
-        Parameters
-        ----------
-
-        choice : OptionChoice
-            the choice you're going to add
+        Parameters are the same as for :class:`OptionChoice`
         '''
-        self.choices.append(choice)
+        # Wrap the value
+        true_value = value
+        if self.type == Type.STRING:
+            if not isinstance(value, str):
+                true_value = f"option_choice_{len(self._choice_connectors)}"
+                self._choice_connectors[true_value] = value
+        elif self.type == Type.INTEGER:
+            if not isinstance(value, int):
+                true_value = len(self._choice_connectors)
+                self._choice_connectors[true_value] = value
+        # Add an option choice
+        self.choices.append(OptionChoice(name=name, value=true_value))
 
-    def add_option(self, option):
+    def add_option(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
         '''
         Adds an option to the current list of options
 
-        Parameters
-        ----------
-
-        option : Option
-            the option you're going to add
+        Parameters are the same as for :class:`Option`
         '''
         if self.type == 1:
-            if option.type < 3:
-                raise ValueError('sub_command can only be folded in a sub_command_group')
+            if type < 3:
+                raise ValueError('sub_command can only be nested in a sub_command_group')
         elif self.type == 2:
-            if option.type != 1:
+            if type != 1:
                 raise ValueError('Expected sub_command in this sub_command_group')
-        self.options.append(option)
+        self.options.append(
+            Option(
+                name=name,
+                description=description,
+                type=type,
+                required=required,
+                choices=choices,
+                options=options
+            )
+        )
 
     def to_dict(self):
         payload = {
@@ -189,6 +220,7 @@ class SlashCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
+        
         assert re.match(r"^[\w-]{1,32}$", name) is not None and name.islower(),\
             f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
 
@@ -214,17 +246,22 @@ class SlashCommand:
             payload['options'] = [Option.from_dict(p) for p in payload['options']]
         return SlashCommand(**payload)
 
-    def add_option(self, option: Option):
-        """
+    def add_option(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+        '''
         Adds an option to the current list of options
 
-        Parameters
-        ----------
-
-        option : Option
-            the option you're going to add
-        """
-        self.options.append(option)
+        Parameters are the same as for :class:`Option`
+        '''
+        self.options.append(
+            Option(
+                name=name,
+                description=description,
+                type=type,
+                required=required,
+                choices=choices,
+                options=options
+            )
+        )
 
     def to_dict(self, *, hide_name=False):
         res = {

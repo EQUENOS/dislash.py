@@ -331,6 +331,7 @@ class CommandParent(BaseSlashCommand):
                 raise err
 
     async def invoke(self, interaction):
+        interaction._wrap_choices(self.registerable)
         try:
             self._prepare_cooldowns(interaction)
             await self._run_checks(interaction)

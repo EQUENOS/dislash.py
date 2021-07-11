@@ -219,6 +219,20 @@ class InteractionData:
                 out[new_kw] = val._to_dict_values(connectors)
         return out
 
+    def _wrap_choices(self, slash_command):
+        def recursive_wrapper(wrapped_data, parent):
+            for option in parent.options:
+                data_option = wrapped_data.get_option(option.name)
+                if data_option is None:
+                    continue
+                if len(option._choice_connectors) > 0:
+                    data_option.value = option._choice_connectors.get(
+                        data_option.value,
+                        data_option.value
+                    )
+                recursive_wrapper(data_option, option)
+        recursive_wrapper(self, slash_command)
+
     @property
     def sub_command(self):
         opt = self.option_at(0)
@@ -326,6 +340,9 @@ class SlashInteraction(BaseInteraction):
 
     def __getitem__(self, key):
         return self.data[key]
+
+    def _wrap_choices(self, slash_command):
+        self.data._wrap_choices(slash_command)
 
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
