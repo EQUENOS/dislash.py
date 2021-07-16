@@ -55,7 +55,7 @@ class Resolved:
 
 
 class InteractionDataOption:
-    '''
+    """
     Represents user's input for a specific option
 
     Attributes
@@ -67,7 +67,7 @@ class InteractionDataOption:
     options : dict
         | Represents options of a sub-slash-command.
         | {``name``: :class:`InteractionDataOption`, ...}
-    '''
+    """
     def __init__(self, *, data, resolved: Resolved):
         self.name = data['name']
         self.value = data.get('value')
@@ -128,22 +128,22 @@ class InteractionDataOption:
             return opt
     
     def get_option(self, name: str):
-        '''
+        """
         Get the raw :class:`InteractionDataOption` matching the specified name
 
         Parameters
         ----------
         name : str
             The name of the option you want to get
-        
+
         Returns
         -------
         option : InteractionDataOption | ``None``
-        '''
+        """
         return self.options.get(name)
     
     def get(self, name: str, default=None):
-        '''
+        """
         Get the value of an option with the specified name
 
         Parameters
@@ -152,14 +152,14 @@ class InteractionDataOption:
             the name of the option you want to get
         default : any
             what to return in case nothing was found
-        
+
         Returns
         -------
         option_value : any
             The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
         option: InteractionDataOption | ``default``
             Otherwise
-        '''
+        """
         for n, o in self.options.items():
             if n == name:
                 return o.value if o.type > 2 else o
@@ -171,7 +171,7 @@ class InteractionDataOption:
 
 
 class InteractionData:
-    '''
+    """
     Attributes
     ----------
     id : int
@@ -180,7 +180,7 @@ class InteractionData:
     options : dict
         | Represents options of the slash-command.
         | {``name``: :class:`InteractionDataOption`, ...}
-    '''
+    """
     def __init__(self, *, data, guild, state):
         resolved = Resolved(
             payload=data.get('resolved', {}),
@@ -246,22 +246,22 @@ class InteractionData:
             return opt
 
     def get_option(self, name: str):
-        '''
+        """
         Get the raw :class:`InteractionDataOption` matching the specified name
 
         Parameters
         ----------
         name : str
             The name of the option you want to get
-        
+
         Returns
         -------
         option : :class:`InteractionDataOption` | ``None``
-        '''
+        """
         return self.options.get(name)
     
     def get(self, name: str, default=None):
-        '''
+        """
         Get the value of an option with the specified name
 
         Parameters
@@ -270,14 +270,14 @@ class InteractionData:
             the name of the option you want to get
         default : any
             what to return in case nothing was found
-        
+
         Returns
         -------
         option_value : any
             The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
         option: :class:`InteractionDataOption` | ``default``
             Otherwise
-        '''
+        """
         opt = self.options.get(name)
         if opt is None:
             return default
@@ -301,7 +301,7 @@ class InteractionData:
 
 
 class SlashInteraction(BaseInteraction):
-    '''
+    """
     Every interaction with slash-commands is represented by instances of this class
 
     Attributes
@@ -318,7 +318,7 @@ class SlashInteraction(BaseInteraction):
         Then interaction was created
     expired : :class:`bool`:
         Whether the interaction token is still valid
-    '''
+    """
     def __init__(self, client, payload):
         super().__init__(client, payload)
 
