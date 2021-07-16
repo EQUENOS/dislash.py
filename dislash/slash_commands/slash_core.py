@@ -13,7 +13,6 @@ from .errors import *
 from .slash_command import SlashCommand, Option, Type
 from ._decohub import _HANDLER
 
-
 __all__ = (
     "BucketType",
     "SubCommand",
@@ -38,9 +37,9 @@ __all__ = (
 )
 
 
-#-----------------------------------+
-#              Utils                |
-#-----------------------------------+
+# -----------------------------------+
+# |             Utils                |
+# -----------------------------------+
 def class_name(func):
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
@@ -54,9 +53,9 @@ def get_class(func):
             return getattr(mod, class_name(func), None)
 
 
-#-----------------------------------+
-#         Core and checks           |
-#-----------------------------------+
+# -----------------------------------+
+# |        Core and checks           |
+# -----------------------------------+
 class BaseSlashCommand:
     def __init__(self, func, *, name=None, connectors=None, **kwargs):
         self.func = func
@@ -77,11 +76,11 @@ class BaseSlashCommand:
             try:
                 # Assuming that it's discord.py 1.7.0+
                 self._buckets = CooldownMapping(cooldown)
-            except:
+            except Exception:
                 # discord.py <= 1.6.x
                 try:
                     self._buckets = CooldownMapping(cooldown)
-                except:
+                except Exception:
                     # Hopefully we never reach this
                     self._buckets = None
         else:
@@ -90,7 +89,7 @@ class BaseSlashCommand:
         for kw, value in kwargs.items():
             if not hasattr(self, kw):
                 setattr(self, kw, value)
-    
+
     async def __call__(self, *args, **kwargs):
         return await self.func(*args, **kwargs)
 
@@ -171,13 +170,15 @@ class SubCommandGroup(BaseSlashCommand):
             options=[]
         )
 
-    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None, **kwargs):
+    def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None,
+                    **kwargs):
         """
         A decorator that creates a subcommand in the
         subcommand group.
 
         Parameters are the same as in :class:`CommandParent.sub_command`
         """
+
         def decorator(func):
             new_func = SubCommand(
                 func,
@@ -190,13 +191,14 @@ class SubCommandGroup(BaseSlashCommand):
             self.children[new_func.name] = new_func
             self.option.options.append(new_func.option)
             return new_func
+
         return decorator
 
 
 class CommandParent(BaseSlashCommand):
     def __init__(self, func, *, name=None, description=None, options=None, default_permission=True,
-                                                             guild_ids=None, connectors=None,
-                                                             auto_sync=True, **kwargs):
+                 guild_ids=None, connectors=None,
+                 auto_sync=True, **kwargs):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
         self.children = {}
         self.auto_sync = auto_sync
@@ -217,7 +219,8 @@ class CommandParent(BaseSlashCommand):
         self._cog = cog
         self._cog_name = cog.qualified_name
 
-    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None, **kwargs):
+    def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None,
+                    **kwargs):
         """
         A decorator that creates a subcommand under the base command.
 
@@ -235,6 +238,7 @@ class CommandParent(BaseSlashCommand):
             you don't have to specify the connectors. Connectors template: 
             ``{"option-name": "param_name", ...}``
         """
+
         def decorator(func):
             if self.children_type is None:
                 if len(self.registerable.options) > 0:
@@ -242,7 +246,7 @@ class CommandParent(BaseSlashCommand):
                 self.children_type = Type.SUB_COMMAND
             elif self.children_type != Type.SUB_COMMAND:
                 raise discord.InvalidArgument(f"do not nest sub_commands and sub_command_groups to the same parent")
-            
+
             new_func = SubCommand(
                 func,
                 name=name,
@@ -254,8 +258,9 @@ class CommandParent(BaseSlashCommand):
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
+
         return decorator
-    
+
     def sub_command_group(self, name=None, **kwargs):
         """
         A decorator that creates a subcommand group under the base command.
@@ -266,6 +271,7 @@ class CommandParent(BaseSlashCommand):
         name : :class:`str`
             the name of the subcommand group. Defaults to the function name
         """
+
         def decorator(func):
             if self.children_type is None:
                 if len(self.registerable.options) > 0:
@@ -273,11 +279,12 @@ class CommandParent(BaseSlashCommand):
                 self.children_type = Type.SUB_COMMAND_GROUP
             elif self.children_type != Type.SUB_COMMAND_GROUP:
                 raise discord.InvalidArgument("don't nest sub_command_groups and sub_commands to the same parent")
-            
+
             new_func = SubCommandGroup(func, name=name, **kwargs)
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
+
         return decorator
 
     async def invoke_children(self, interaction):
@@ -309,7 +316,7 @@ class CommandParent(BaseSlashCommand):
         else:
             group = None
             subcmd = None
-        
+
         if group is not None:
             interaction.invoked_with += f" {group.name}"
             try:
@@ -319,7 +326,7 @@ class CommandParent(BaseSlashCommand):
             except Exception as err:
                 group._dispatch_error(self._cog, interaction, err)
                 raise err
-        
+
         if subcmd is not None:
             interaction.invoked_with += f" {subcmd.name}"
             try:
@@ -342,7 +349,7 @@ class CommandParent(BaseSlashCommand):
             raise err
 
 
-def command(*args, **kwargs):
+def command(**kwargs):
     """
     A decorator that allows to build a slash command.
 
@@ -367,12 +374,14 @@ def command(*args, **kwargs):
         you don't have to specify the connectors. Connectors template: 
         ``{"option-name": "param_name", ...}``
     """
+
     def decorator(func):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         new_func = CommandParent(func, **kwargs)
         _HANDLER.commands[new_func.name] = new_func
         return new_func
+
     return decorator
 
 
@@ -406,6 +415,7 @@ def check(predicate):
     else:
         async def wrapper(ctx):
             return predicate(ctx)
+
     def decorator(func):
         if isinstance(func, CommandParent):
             func.checks.append(wrapper)
@@ -414,6 +424,7 @@ def check(predicate):
                 func.__slash_checks__ = []
             func.__slash_checks__.append(wrapper)
         return func
+
     decorator.predicate = wrapper
     return decorator
 
@@ -466,12 +477,14 @@ def has_role(item):
 
 def has_any_role(*items):
     """Similar to ``commands.has_any_role``"""
+
     def predicate(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
         getter = functools.partial(discord.utils.get, ctx.author.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in
+               items):
             return True
         raise MissingAnyRole(items)
 
@@ -494,11 +507,13 @@ def bot_has_role(item):
         if role is None:
             raise BotMissingRole(item)
         return True
+
     return check(predicate)
 
 
 def bot_has_any_role(*items):
     """Similar to ``commands.bot_has_any_role``"""
+
     def predicate(ctx):
         ch = ctx.channel
         if not isinstance(ch, discord.abc.GuildChannel):
@@ -506,9 +521,11 @@ def bot_has_any_role(*items):
 
         me = ch.guild.me
         getter = functools.partial(discord.utils.get, me.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in
+               items):
             return True
         raise BotMissingAnyRole(items)
+
     return check(predicate)
 
 
@@ -634,11 +651,13 @@ def is_owner():
 
 def is_nsfw():
     """Similar to ``commands.is_nsfw``"""
+
     def pred(ctx):
         ch = ctx.channel
         if ctx.guild is None or (isinstance(ch, discord.TextChannel) and ch.is_nsfw()):
             return True
         raise NSFWChannelRequired(ch)
+
     return check(pred)
 
 
@@ -666,11 +685,12 @@ def cooldown(rate, per, type=BucketType.default):
     type : BucketType
         The type of cooldown to have.
     '''
+
     def decorator(func):
         if isinstance(func, BaseSlashCommand):
             func._buckets = CooldownMapping(Cooldown(rate, per, type))
         else:
             func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))
         return func
-    return decorator
 
+    return decorator
