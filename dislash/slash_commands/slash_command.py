@@ -140,11 +140,11 @@ class Option:
         return Option(**payload)
 
     def add_choice(self, name: str, value: Any):
-        '''
+        """
         Adds an OptionChoice to the list of current choices
 
         Parameters are the same as for :class:`OptionChoice`
-        '''
+        """
         # Wrap the value
         true_value = value
         if self.type == Type.STRING:
@@ -160,11 +160,11 @@ class Option:
 
     def add_option(self, name: str, description: str = None, type: int = None, required: bool = False,
                    choices: List[OptionChoice] = None, options: list = None):
-        '''
+        """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
-        '''
+        """
         if self.type == 1:
             if type < 3:
                 raise ValueError('sub_command can only be nested in a sub_command_group')
@@ -249,11 +249,11 @@ class SlashCommand:
 
     def add_option(self, name: str, description: str = None, type: int = None, required: bool = False,
                    choices: List[OptionChoice] = None, options: list = None):
-        '''
+        """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
-        '''
+        """
         self.options.append(
             Option(
                 name=name,
