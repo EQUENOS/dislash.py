@@ -177,7 +177,7 @@ class SlashClient:
         discord.Guild.delete_commands = delete_commands
 
     def teardown(self):
-        '''Cleanup the client by removing all registered listeners and caches.'''
+        """Cleanup the client by removing all registered listeners and caches."""
         self.client.remove_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.remove_listener(self._on_socket_response, 'on_socket_response')
         if isinstance(self.client, discord.AutoShardedClient):
