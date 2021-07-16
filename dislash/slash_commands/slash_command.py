@@ -2,7 +2,6 @@ from typing import Union, List, Any
 import discord
 import re
 
-
 __all__ = (
     "Type",
     "OptionChoice",
@@ -27,15 +26,15 @@ class Type:
     ROLE = 8
     MENTIONABLE = 9
     """
-    SUB_COMMAND       = 1
+    SUB_COMMAND = 1
     SUB_COMMAND_GROUP = 2
-    STRING            = 3
-    INTEGER           = 4
-    BOOLEAN           = 5
-    USER              = 6
-    CHANNEL           = 7
-    ROLE              = 8
-    MENTIONABLE       = 9
+    STRING = 3
+    INTEGER = 4
+    BOOLEAN = 5
+    USER = 6
+    CHANNEL = 7
+    ROLE = 8
+    MENTIONABLE = 9
 
 
 class OptionChoice:
@@ -57,8 +56,8 @@ class OptionChoice:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.value == other.value
+                self.name == other.name and
+                self.value == other.value
         )
 
 
@@ -83,7 +82,8 @@ class Option:
 
     __slots__ = ("name", "description", "type", "required", "choices", "options", "_choice_connectors")
 
-    def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def __init__(self, name: str, description: str = None, type: int = None, required: bool = False,
+                 choices: List[OptionChoice] = None, options: list = None):
         assert name.islower(), f"Option name {name!r} must be lowercase"
         self.name = name
         self.description = description
@@ -123,12 +123,12 @@ class Option:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.description == other.description and
-            self.type == other.type and
-            self.required == other.required and
-            self.choices == other.choices and
-            self.options == other.options
+                self.name == other.name and
+                self.description == other.description and
+                self.type == other.type and
+                self.required == other.required and
+                self.choices == other.choices and
+                self.options == other.options
         )
 
     @classmethod
@@ -158,7 +158,8 @@ class Option:
         # Add an option choice
         self.choices.append(OptionChoice(name=name, value=true_value))
 
-    def add_option(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def add_option(self, name: str, description: str = None, type: int = None, required: bool = False,
+                   choices: List[OptionChoice] = None, options: list = None):
         '''
         Adds an option to the current list of options
 
@@ -212,16 +213,16 @@ class SlashCommand:
         Whether the command is enabled by default when the app is added to a guild
     """
 
-    def __init__(self, name: str, description: str, options: list=None,
-                                default_permission: bool=True, **kwargs):
+    def __init__(self, name: str, description: str, options: list = None,
+                 default_permission: bool = True, **kwargs):
         self.id = kwargs.pop('id', None)
         if self.id is not None:
             self.id = int(self.id)
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
-        
-        assert re.match(r"^[\w-]{1,32}$", name) is not None and name.islower(),\
+
+        assert re.match(r"^[\w-]{1,32}$", name) is not None and name.islower(), \
             f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
 
         self.name = name
@@ -235,9 +236,9 @@ class SlashCommand:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.description == other.description and
-            self.options == other.options
+                self.name == other.name and
+                self.description == other.description and
+                self.options == other.options
         )
 
     @classmethod
@@ -246,7 +247,8 @@ class SlashCommand:
             payload['options'] = [Option.from_dict(p) for p in payload['options']]
         return SlashCommand(**payload)
 
-    def add_option(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def add_option(self, name: str, description: str = None, type: int = None, required: bool = False,
+                   choices: List[OptionChoice] = None, options: list = None):
         '''
         Adds an option to the current list of options
 
@@ -294,7 +296,7 @@ class SlashCommandPermissions:
         might be more convenient.
     """
 
-    def __init__(self, raw_permissions: list=None):
+    def __init__(self, raw_permissions: list = None):
         self.permissions = raw_permissions or []
 
     def __repr__(self):
@@ -317,7 +319,7 @@ class SlashCommandPermissions:
         return SlashCommandPermissions(raw_perms)
 
     @classmethod
-    def from_ids(cls, role_perms: dict=None, user_perms: dict=None):
+    def from_ids(cls, role_perms: dict = None, user_perms: dict = None):
         """
         Creates :class:`SlashCommandPermissions` from
         2 dictionaries of IDs and permissions.
