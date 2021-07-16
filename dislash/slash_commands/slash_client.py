@@ -12,7 +12,6 @@ from ._send_modifications import *
 
 from ..interactions import ComponentType, BaseInteraction, SlashInteraction, MessageInteraction
 
-
 __all__ = ("SlashClient",)
 
 
@@ -40,7 +39,8 @@ class SlashClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, show_warnings: bool=True, modify_send: bool=True):
+
+    def __init__(self, client, *, show_warnings: bool = True, modify_send: bool = True):
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.application_id = None
@@ -63,7 +63,7 @@ class SlashClient:
         # Inject cogs that are already loaded
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)
-    
+
     def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.add_listener(self._on_socket_response, 'on_socket_response')
@@ -78,47 +78,62 @@ class SlashClient:
     def _modify_discord(self):
         # Modify cog loader
         _add_cog = self.client.add_cog
+
         def add_cog_2(cog):
             self._inject_cogs(cog)
             _add_cog(cog)
+
         self.client.add_cog = add_cog_2
         # Modify cog unloader
         _rem_cog = self.client.remove_cog
+
         def rem_cog_2(name):
             self._eject_cogs(name)
             _rem_cog(name)
+
         self.client.remove_cog = rem_cog_2
+
         # Change other class methods
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
-        
+
         async def message_wait_for_button_click(message, check=None, timeout=None):
             if check is None:
-                check = lambda inter: True
+                def check(inter):
+                    if message.id != inter.message.id:
+                        return False
+                    else:
+                        return True
+
             def auto_check(inter):
-                if message.id != inter.message.id:
-                    return False
                 return check(inter)
+
             return await self.wait_for_button_click(auto_check, timeout)
 
         async def message_wait_for_dropdown(message, check=None, timeout=None):
             if check is None:
-                check = lambda inter: True
+                def check(inter):
+                    if message.id != inter.message.id:
+                        return False
+                    else:
+                        return True
+
             def auto_check(inter):
                 if message.id != inter.message.id:
                     return False
                 return check(inter)
+
             return await self.wait_for_dropdown(auto_check, timeout)
 
         async def fetch_commands(guild):
             return await self.fetch_guild_commands(guild.id)
-        
+
         async def fetch_command(guild, command_id):
             return await self.fetch_guild_command(guild.id, command_id)
-        
+
         async def edit_command(guild, command_id, slash_command):
             return await self.edit_guild_slash_command(guild.id, command_id, slash_command)
-        
+
         async def edit_command_permissions(guild, command_id, permissions):
             return await self.edit_guild_command_permissions(guild.id, command_id, permissions)
 
@@ -127,19 +142,19 @@ class SlashClient:
 
         async def delete_command(guild, command_id):
             return await self.delete_guild_command(guild.id, command_id)
-        
+
         async def delete_commands(guild):
             return await self.delete_guild_commands(guild.id)
 
         def get_commands(guild):
             return self.get_guild_commands(guild.id)
-        
+
         def get_command(guild, command_id):
             return self.get_guild_command(guild.id, command_id)
-        
+
         def get_command_named(guild, name):
             return self.get_guild_command_named(guild.id, name)
-        
+
         def create_click_listener(message, timeout=None):
             return ClickListener(message.id, timeout)
 
@@ -182,7 +197,7 @@ class SlashClient:
     @property
     def commands(self):
         return _HANDLER.commands
-    
+
     @property
     def global_commands(self):
         return [sc for sc in self._global_commands.values()]
@@ -233,14 +248,16 @@ class SlashClient:
             you don't have to specify the connectors. Connectors template: 
             ``{"option-name": "param_name", ...}``
         """
+
         def decorator(func):
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             new_func = CommandParent(func, **kwargs)
             self.commands[new_func.name] = new_func
             return new_func
+
         return decorator
-    
+
     # Getters
     def get_global_command(self, command_id: int):
         """
@@ -258,7 +275,7 @@ class SlashClient:
         slash_command : SlashCommand | None
         """
         return self._global_commands.get(command_id)
-    
+
     def get_global_command_named(self, name: str):
         """
         Get a cached global command matching the specified name
@@ -383,7 +400,7 @@ class SlashClient:
             )
         )
         return [SlashCommand.from_dict(dat) for dat in data]
-    
+
     async def fetch_global_command(self, command_id: int):
         """
         Requests a registered global slash-command
@@ -459,7 +476,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._global_commands[sc.id] = sc
         return sc
-    
+
     async def register_guild_slash_command(self, guild_id: int, slash_command: SlashCommand):
         """
         Registers a local slash-command
@@ -488,7 +505,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._add_guild_command(guild_id, sc)
         return sc
-    
+
     async def overwrite_global_commands(self, slash_commands: list):
         """
         Bulk overwrites all global commands
@@ -566,7 +583,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._global_commands[sc.id] = sc
         return sc
-    
+
     async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand, **kwargs):
         """
         Edits a local command
@@ -595,7 +612,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._add_guild_command(guild_id, sc)
         return sc
-    
+
     async def delete_global_slash_command(self, command_id: int):
         """
         Deletes a global command
@@ -615,7 +632,7 @@ class SlashClient:
         )
         # Update cache
         self._remove_global_command(command_id)
-    
+
     async def delete_guild_slash_command(self, guild_id: int, command_id: int):
         """
         Deletes a local command
@@ -701,7 +718,8 @@ class SlashClient:
         )
         return {int(obj["id"]): SlashCommandPermissions.from_dict(obj) for obj in array}
 
-    async def edit_guild_command_permissions(self, guild_id: int, command_id: int, permissions: SlashCommandPermissions):
+    async def edit_guild_command_permissions(self, guild_id: int, command_id: int,
+                                             permissions: SlashCommandPermissions):
         """
         Edits command permissions for a specific command in a guild.
 
@@ -731,7 +749,7 @@ class SlashClient:
         )
         # Update cache
         self._set_permissions(guild_id, command_id, permissions)
-    
+
     async def batch_edit_guild_command_permissions(self, guild_id: int, permissions: dict):
         """
         Batch edits permissions for all commands in a guild.
@@ -895,11 +913,11 @@ class SlashClient:
 
     def _error_handler_exists(self):
         return not (
-            len(self._cogs_with_err_listeners) == 0 and
-            not hasattr(self.client, "on_slash_command_error") and
-            "slash_command_error" not in self.client._listeners and
-            "slash_command_error" not in self._listeners and
-            "slash_command_error" not in self.events
+                len(self._cogs_with_err_listeners) == 0 and
+                not hasattr(self.client, "on_slash_command_error") and
+                "slash_command_error" not in self.client._listeners and
+                "slash_command_error" not in self._listeners and
+                "slash_command_error" not in self.events
         )
 
     def _inject_cogs(self, cog):
@@ -914,7 +932,7 @@ class SlashClient:
             if name == "on_slash_command_error":
                 self._cogs_with_err_listeners.append(cog.qualified_name)
                 break
-    
+
     def _eject_cogs(self, name):
         try:
             self._cogs_with_err_listeners.remove(name)
@@ -1025,7 +1043,11 @@ class SlashClient:
     # Special waiter
     async def wait_for_button_click(self, check=None, timeout=None):
         if check is None:
-            check = lambda ctx: True
+            def check(inter):
+                if message.id != inter.message.id:
+                    return False
+                else:
+                    return True
         future = self.client.loop.create_future()
         if "button_click" not in self._listeners:
             self._listeners["button_click"] = []
@@ -1035,7 +1057,11 @@ class SlashClient:
 
     async def wait_for_dropdown(self, check=None, timeout=None):
         if check is None:
-            check = lambda ctx: True
+            def check(inter):
+                if message.id != inter.message.id:
+                    return False
+                else:
+                    return True
         future = self.client.loop.create_future()
         if "dropdown" not in self._listeners:
             self._listeners["dropdown"] = []
@@ -1056,7 +1082,7 @@ class SlashClient:
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
-    
+
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
             await self._fill_app_id()
@@ -1065,7 +1091,7 @@ class SlashClient:
             await self._auto_register_or_patch()
             self.is_ready = True
             await self._activate_event('ready')
-    
+
     async def _on_ready(self):
         if isinstance(self.client, discord.AutoShardedClient):
             self.is_ready = True
@@ -1146,14 +1172,14 @@ class SlashClient:
                 await self._activate_event('button_click', inter)
             elif inter.component.type == ComponentType.SelectMenu:
                 await self._activate_event('dropdown', inter)
-    
+
     async def _fill_app_id(self):
         data = await self.client.http.application_info()
         self.application_id = int(data["id"])
 
     # Aliases
     register_global_command = register_global_slash_command
-    
+
     register_guild_command = register_guild_slash_command
 
     edit_global_command = edit_global_slash_command
