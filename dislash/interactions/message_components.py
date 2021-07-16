@@ -24,7 +24,7 @@ def _partial_emoji_converter(argument: str):
         # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
     
-    match = re.match(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$', argument)
+    match = re.match(r'<(a?):([a-zA-Z0-9\\_]+):([0-9]+)>$', argument)
 
     if match:
         emoji_animated = bool(match.group(1))
