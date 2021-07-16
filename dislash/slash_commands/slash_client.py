@@ -94,7 +94,7 @@ class SlashClient:
         self.client.remove_cog = rem_cog_2
 
         # Change other class methods
-        async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
+        async def ctx_wait_for_button_click(check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
 
         async def message_wait_for_button_click(message, check=None, timeout=None):
@@ -223,7 +223,7 @@ class SlashClient:
             self.events[name] = func
         return func
 
-    def command(self, *args, **kwargs):
+    def command(self, **kwargs):
         """
         A decorator that allows to build a slash command.
 
@@ -1075,7 +1075,7 @@ class SlashClient:
             return
         await self._process_interaction(payload["d"])
 
-    async def _on_shard_connect(self, shard_id):
+    async def _on_shard_connect(self):
         self.active_shard_count += 1
         if self.active_shard_count == 1:
             await self._fill_app_id()
@@ -1101,7 +1101,7 @@ class SlashClient:
         if guild.id in self._guild_commands:
             del self._guild_commands[guild.id]
 
-    async def _toggle_listeners(self, event, *args, **kwargs):
+    async def _toggle_listeners(self, event, *args):
         listeners = self._listeners.get(event)
         if listeners:
             removed = []
@@ -1135,7 +1135,7 @@ class SlashClient:
                     del listeners[idx]
 
     async def _activate_event(self, event_name, *args, **kwargs):
-        await self._toggle_listeners(event_name, *args, **kwargs)
+        await self._toggle_listeners(event_name, *args)
         if event_name != "ready":
             self.client.dispatch(event_name, *args, **kwargs)
         func = self.events.get(event_name)
