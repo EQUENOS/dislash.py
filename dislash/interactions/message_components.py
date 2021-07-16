@@ -1,7 +1,6 @@
 import discord
 import re
 
-
 __all__ = (
     "auto_rows",
     "ComponentType",
@@ -23,7 +22,7 @@ def _partial_emoji_converter(argument: str):
     if len(argument) < 5:
         # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
-    
+
     match = re.match(r'<(a?):([a-zA-Z0-9\\_]+):([0-9]+)>$', argument)
 
     if match:
@@ -46,7 +45,7 @@ def _component_factory(data: dict):
         return SelectMenu.from_dict(data)
 
 
-def auto_rows(*buttons, max_in_row: int=5):
+def auto_rows(*buttons, max_in_row: int = 5):
     """
     Distributes buttons across multiple rows
     and returns the list of rows.
@@ -97,20 +96,20 @@ class ButtonStyle:
     red     = 4
     link    = 5
     """
-    primary   = 1
-    blurple   = 1
+    primary = 1
+    blurple = 1
 
     secondary = 2
-    grey      = 2
-    gray      = 2
+    grey = 2
+    gray = 2
 
-    success   = 3
-    green     = 3
+    success = 3
+    green = 3
 
-    danger    = 4
-    red       = 4
+    danger = 4
+    red = 4
 
-    link      = 5
+    link = 5
 
 
 class SelectOption:
@@ -133,16 +132,16 @@ class SelectOption:
 
     __slots__ = ("label", "value", "description", "emoji", "default")
 
-    def __init__(self, label: str, value: str, description: str=None, emoji: str=None, default: bool=False):
+    def __init__(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
-        
+
         self.label = label
         self.value = value
         self.description = description
         self.emoji = emoji
         self.default = default
-    
+
     def __repr__(self):
         return (
             "<OptionSelect label='{0.label}' value={0.value} "
@@ -162,7 +161,7 @@ class SelectOption:
             emoji=emoji,
             default=data.get("default", False)
         )
-    
+
     def to_dict(self):
         data = {
             "label": self.label,
@@ -181,6 +180,7 @@ class Component:
     """
     The base class for message components
     """
+
     def __init__(self, type: int):
         self.type = type
 
@@ -218,7 +218,8 @@ class SelectMenu(Component):
         the list of chosen options, max 25
     """
 
-    def __init__(self, *, custom_id: str=None, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
+    def __init__(self, *, custom_id: str = None, placeholder: str = None, min_values: int = 1, max_values: int = 1,
+                 options: list = None):
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
@@ -226,7 +227,7 @@ class SelectMenu(Component):
         self.max_values = max_values
         self.options = options or []
         self.selected_options = []
-    
+
     def __repr__(self):
         desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
         return f"<SelectMenu {desc}>"
@@ -237,7 +238,7 @@ class SelectMenu(Component):
             if option.value in values:
                 self.selected_options.append(option)
 
-    def add_option(self, label: str, value: str, description: str=None, emoji: str=None, default: bool=False):
+    def add_option(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
         """
         Adds an option to the list of options of the menu.
         Parameters are the same as in :class:`SelectOption`.
@@ -298,9 +299,10 @@ class Button(Component):
     disabled : :class:`bool`
         Whether the button is disabled or not. Defaults to false.
     """
-    def __init__(self, *, style: ButtonStyle, label: str=None, emoji: discord.PartialEmoji=None,
-                                    custom_id: str=None, url: str=None, disabled: bool=False):
-        global ID_SOURCE # Ugly as hell
+
+    def __init__(self, *, style: ButtonStyle, label: str = None, emoji: discord.PartialEmoji = None,
+                 custom_id: str = None, url: str = None, disabled: bool = False):
+        global ID_SOURCE  # Ugly as hell
 
         if custom_id is None:
             if url is None:
@@ -313,7 +315,7 @@ class Button(Component):
             raise discord.InvalidArgument("you can't specify both url and custom_id")
         elif style == ButtonStyle.link:
             raise discord.InvalidArgument("style 'link' expects url to be specified")
-        
+
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
 
@@ -324,7 +326,7 @@ class Button(Component):
         self.custom_id = custom_id
         self.url = url
         self.disabled = disabled
-    
+
     def __repr__(self):
         desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
         return f"<Button {desc}>"
@@ -376,23 +378,24 @@ class ActionRow(Component):
     components : :class:`List[Button]`
         a list of up to 5 buttons to place in a row
     """
+
     def __init__(self, *components):
         self._limit = 5
         if len(components) > self._limit:
             raise discord.InvalidArgument(f"components must be a list of up to {self._limit} elements")
         if not all(isinstance(comp, Component) for comp in components):
             raise discord.InvalidArgument("components must be a list of Component")
-        
+
         super().__init__(1)
         self.components = list(components)
-    
+
     def __repr__(self):
         return "<ActionRow components={0.components!r}>".format(self)
 
     @property
     def buttons(self):
         return self.components
-    
+
     @classmethod
     def from_dict(cls, data: dict):
         buttons = [_component_factory(elem) for elem in data.get("components", [])]
@@ -418,8 +421,6 @@ class ActionRow(Component):
                 if component.type == ComponentType.Button:
                     component.disabled = True
 
-
-
     def enable_buttons(self, *positions: int):
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
@@ -434,10 +435,8 @@ class ActionRow(Component):
                 if component.type == ComponentType.Button:
                     component.disabled = False
 
-
-
-    def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
-                        custom_id: str=None, url: str=None, disabled: bool=False):
+    def add_button(self, *, style: ButtonStyle, label: str = None, emoji: str = None,
+                   custom_id: str = None, url: str = None, disabled: bool = False):
         self.components.append(
             Button(
                 style=style,
@@ -448,8 +447,9 @@ class ActionRow(Component):
                 disabled=disabled
             )
         )
-    
-    def add_menu(self, *, custom_id: str, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
+
+    def add_menu(self, *, custom_id: str, placeholder: str = None, min_values: int = 1, max_values: int = 1,
+                 options: list = None):
         self.components.append(
             SelectMenu(
                 custom_id=custom_id,
