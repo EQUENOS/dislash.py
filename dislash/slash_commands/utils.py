@@ -178,7 +178,7 @@ class ClickListener:
         there's no ``check``.
         """
 
-        def always(inter):
+        def always():
             return True
 
         return self.matching_condition(
