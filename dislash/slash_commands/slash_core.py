@@ -76,7 +76,7 @@ class BaseSlashCommand:
         if cooldown is None:
             try:
                 # Assuming that it's discord.py 1.7.0+
-                self._buckets = CooldownMapping(cooldown, BucketType.default)
+                self._buckets = CooldownMapping(cooldown)
             except:
                 # discord.py <= 1.6.x
                 try:
