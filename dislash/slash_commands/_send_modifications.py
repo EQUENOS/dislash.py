@@ -4,7 +4,6 @@ from discord.flags import MessageFlags
 
 from ..interactions import ActionRow
 
-
 __all__ = (
     "send_with_components",
     "edit_with_components"
@@ -12,8 +11,8 @@ __all__ = (
 
 
 def send_message(self, channel_id, content, *, tts=False, embed=None, nonce=None,
-                                    allowed_mentions=None, message_reference=None,
-                                    components=None):
+                 allowed_mentions=None, message_reference=None,
+                 components=None):
     r = Route('POST', '/channels/{channel_id}/messages', channel_id=channel_id)
     payload = {}
 
@@ -34,7 +33,7 @@ def send_message(self, channel_id, content, *, tts=False, embed=None, nonce=None
 
     if message_reference:
         payload['message_reference'] = message_reference
-    
+
     if components:
         payload['components'] = components
 
@@ -42,8 +41,8 @@ def send_message(self, channel_id, content, *, tts=False, embed=None, nonce=None
 
 
 def send_files(self, channel_id, *, files, content=None, tts=False, embed=None, nonce=None,
-                                            allowed_mentions=None, message_reference=None,
-                                            components=None):
+               allowed_mentions=None, message_reference=None,
+               components=None):
     r = Route('POST', '/channels/{channel_id}/messages', channel_id=channel_id)
     form = []
 
@@ -83,18 +82,18 @@ def send_files(self, channel_id, *, files, content=None, tts=False, embed=None, 
 
 
 async def send_with_components(messageable, content=None, *,
-                                            tts=False, embed=None,
-                                            components=None,
-                                            file=None, files=None,
-                                            delete_after=None, nonce=None,
-                                            allowed_mentions=None, reference=None,
-                                            mention_author=None):
+                               tts=False, embed=None,
+                               components=None,
+                               file=None, files=None,
+                               delete_after=None, nonce=None,
+                               allowed_mentions=None, reference=None,
+                               mention_author=None):
     channel = await messageable._get_channel()
     state = messageable._state
     content = str(content) if content is not None else None
     if embed is not None:
         embed = embed.to_dict()
-    
+
     if components is not None:
         if len(components) > 5:
             raise InvalidArgument("components must be a list of up to 5 action rows")
@@ -133,8 +132,8 @@ async def send_with_components(messageable, content=None, *,
 
         try:
             data = await send_files(state.http, channel.id, files=[file], allowed_mentions=allowed_mentions,
-                                                content=content, tts=tts, embed=embed, nonce=nonce,
-                                                message_reference=reference, components=components)
+                                    content=content, tts=tts, embed=embed, nonce=nonce,
+                                    message_reference=reference, components=components)
         finally:
             file.close()
 
@@ -146,15 +145,15 @@ async def send_with_components(messageable, content=None, *,
 
         try:
             data = await send_files(state.http, channel.id, files=files, content=content, tts=tts,
-                                                embed=embed, nonce=nonce, allowed_mentions=allowed_mentions,
-                                                message_reference=reference, components=components)
+                                    embed=embed, nonce=nonce, allowed_mentions=allowed_mentions,
+                                    message_reference=reference, components=components)
         finally:
             for f in files:
                 f.close()
     else:
         data = await send_message(state.http, channel.id, content, tts=tts, embed=embed,
-                                                        nonce=nonce, allowed_mentions=allowed_mentions,
-                                                        message_reference=reference, components=components)
+                                  nonce=nonce, allowed_mentions=allowed_mentions,
+                                  message_reference=reference, components=components)
 
     ret = state.create_message(channel=channel, data=data)
     if delete_after is not None:
@@ -178,7 +177,7 @@ async def edit_with_components(message, **fields):
     else:
         if embed is not None:
             fields['embed'] = embed.to_dict()
-    
+
     try:
         components = fields['components']
     except KeyError:
@@ -192,9 +191,9 @@ async def edit_with_components(message, **fields):
     except KeyError:
         pass
     else:
-            flags = MessageFlags._from_value(message.flags.value)
-            flags.suppress_embeds = suppress
-            fields['flags'] = flags.value
+        flags = MessageFlags._from_value(message.flags.value)
+        flags.suppress_embeds = suppress
+        fields['flags'] = flags.value
 
     delete_after = fields.pop('delete_after', None)
 
