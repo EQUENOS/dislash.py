@@ -1,7 +1,6 @@
 import discord
 from .interaction import *
 
-
 __all__ = (
     "ResponseType",
     "InteractionDataOption",
@@ -68,6 +67,7 @@ class InteractionDataOption:
         | Represents options of a sub-slash-command.
         | {``name``: :class:`InteractionDataOption`, ...}
     """
+
     def __init__(self, *, data, resolved: Resolved):
         self.name = data['name']
         self.value = data.get('value')
@@ -106,11 +106,11 @@ class InteractionDataOption:
             o['name']: InteractionDataOption(data=o, resolved=resolved)
             for o in data.get('options', [])
         }
-    
+
     def __repr__(self):
         return "<InteractionDataOption name='{0.name}' value={0.value} options={0.options}>".format(self)
 
-    def _to_dict_values(self, connectors: dict=None):
+    def _to_dict_values(self, connectors: dict = None):
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
@@ -126,7 +126,7 @@ class InteractionDataOption:
         opt = self.option_at(0)
         if opt is not None and opt.type == 1:
             return opt
-    
+
     def get_option(self, name: str):
         """
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -141,7 +141,7 @@ class InteractionDataOption:
         option : InteractionDataOption | ``None``
         """
         return self.options.get(name)
-    
+
     def get(self, name: str, default=None):
         """
         Get the value of an option with the specified name
@@ -181,6 +181,7 @@ class InteractionData:
         | Represents options of the slash-command.
         | {``name``: :class:`InteractionDataOption`, ...}
     """
+
     def __init__(self, *, data, guild, state):
         resolved = Resolved(
             payload=data.get('resolved', {}),
@@ -193,7 +194,7 @@ class InteractionData:
             o['name']: InteractionDataOption(data=o, resolved=resolved)
             for o in data.get('options', [])
         }
-    
+
     def __repr__(self):
         return "<InteractionData id={0.id} name='{0.name}' options={0.options}>".format(self)
 
@@ -208,7 +209,7 @@ class InteractionData:
             return None
         return opt.value if opt.type > 2 else opt
 
-    def _to_dict_values(self, connectors: dict=None):
+    def _to_dict_values(self, connectors: dict = None):
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
@@ -231,6 +232,7 @@ class InteractionData:
                         data_option.value
                     )
                 recursive_wrapper(data_option, option)
+
         recursive_wrapper(self, slash_command)
 
     @property
@@ -238,7 +240,7 @@ class InteractionData:
         opt = self.option_at(0)
         if opt is not None and opt.type == 1:
             return opt
-    
+
     @property
     def sub_command_group(self):
         opt = self.option_at(0)
@@ -259,7 +261,7 @@ class InteractionData:
         option : :class:`InteractionDataOption` | ``None``
         """
         return self.options.get(name)
-    
+
     def get(self, name: str, default=None):
         """
         Get the value of an option with the specified name
@@ -319,18 +321,19 @@ class SlashInteraction(BaseInteraction):
     expired : :class:`bool`:
         Whether the interaction token is still valid
     """
+
     def __init__(self, client, payload):
         super().__init__(client, payload)
 
         state = client._connection
-        self.prefix = "/" # Just in case
+        self.prefix = "/"  # Just in case
         self.data = InteractionData(
             data=payload.get('data', {}),
             guild=self.guild,
             state=state
         )
         self.invoked_with = self.data.name
-    
+
     def __repr__(self):
         return (
             "<SlashInteraction id={0.id} version={0.version} type={0.type} "
@@ -347,7 +350,7 @@ class SlashInteraction(BaseInteraction):
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
         return self.data.get(name, default)
-    
+
     def get_option(self, name: str):
         """Equivalent to :class:`InteractionData.get_option`"""
         return self.data.get_option(name)
