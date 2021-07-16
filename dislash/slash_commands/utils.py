@@ -4,9 +4,7 @@ import discord
 
 from ._decohub import _HANDLER
 
-
 __all__ = ("ClickListener", "ClickManager")
-
 
 PER_MESSAGE_LISTENERS = {}
 
@@ -38,7 +36,7 @@ class ClickListener:
 
     __slots__ = ("id", "_listeners", "_timeout_waiter", "_timeout", "_ends_at")
 
-    def __init__(self, message_id: int, timeout: float=None):
+    def __init__(self, message_id: int, timeout: float = None):
         self.id = message_id
         self._listeners = []
         self._timeout_waiter = None
@@ -50,7 +48,7 @@ class ClickListener:
             _HANDLER.client.loop.create_task(self._wait_and_finish())
         else:
             self._ends_at = None
-    
+
     async def _wait_and_finish(self):
         delay = self._timeout
         while True:
@@ -85,7 +83,7 @@ class ClickListener:
         Kills the click manager. Only useful if the ``timeout``
         param was specified as ``None``.
         """
-        self._timeout_waiter = None # Also kills the timeout waiter
+        self._timeout_waiter = None  # Also kills the timeout waiter
         PER_MESSAGE_LISTENERS.pop(self.id, None)
 
     def timeout(self, func):
@@ -95,12 +93,13 @@ class ClickListener:
         if not asyncio.iscoroutinefunction(func):
             async def wrapper(*args, **kwargs):
                 return func(*args, **kwargs)
+
             new_func = wrapper
         else:
             new_func = func
         self._timeout_waiter = new_func
 
-    def matching_condition(self, check, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def matching_condition(self, check, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         matching the specified conditions.
@@ -121,18 +120,21 @@ class ClickListener:
             defaults to ``True``. Specifies whether to restart the timer or not.
             By restarting the timer, you extend the lifespan of all local listeners.
         """
+
         def deco(func):
             if not asyncio.iscoroutinefunction(func):
                 async def wrapper(*args, **kwargs):
                     return func(*args, **kwargs)
+
                 new_func = wrapper
             else:
                 new_func = func
             self._listeners.append((new_func, check, cancel_others, reset_timeout))
             return func
+
         return deco
 
-    def from_user(self, user: discord.User, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def from_user(self, user: discord.User, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         from the specified user.
@@ -140,15 +142,17 @@ class ClickListener:
         Parameters are the same as in :meth:`matching_condition`, except
         ``check`` parameter is replaced with a ``user`` to compare with.
         """
+
         def is_user(inter):
             return inter.author == user
+
         return self.matching_condition(
             is_user,
             cancel_others=cancel_others,
             reset_timeout=reset_timeout
         )
 
-    def not_from_user(self, user: discord.User, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def not_from_user(self, user: discord.User, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         from a user not maching the specified one.
@@ -156,30 +160,34 @@ class ClickListener:
         Parameters are the same as in :meth:`matching_condition`, except
         ``check`` parameter is replaced with a ``user`` to compare with.
         """
+
         def is_not_user(inter):
             return inter.author != user
+
         return self.matching_condition(
             is_not_user,
             cancel_others=cancel_others,
             reset_timeout=reset_timeout
         )
 
-    def no_checks(self, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def no_checks(self, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for any click.
 
         Parameters are the same as in :meth:`matching_condition`, except
         there's no ``check``.
         """
+
         def always(inter):
             return True
+
         return self.matching_condition(
             always,
             cancel_others=cancel_others,
             reset_timeout=reset_timeout
         )
 
-    def matching_id(self, custom_id: str, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def matching_id(self, custom_id: str, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         of the button matching the specified custom_id.
@@ -187,7 +195,8 @@ class ClickListener:
         Parameters are the same as in :meth:`matching_condition`, except
         ``check`` parameter is replaced with ``custom_id``.
         """
-        check = lambda inter: inter.component.custom_id == custom_id
+        def check(inter):
+            return inter.component.custom_id == custom_id
         return self.matching_condition(
             check,
             cancel_others=cancel_others,
