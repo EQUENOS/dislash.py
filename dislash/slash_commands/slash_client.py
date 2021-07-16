@@ -946,14 +946,16 @@ class SlashClient:
         for key in bad_keys:
             del _HANDLER.commands[key]
 
-    def _guilds_with_commands(self):
+    @staticmethod
+    def _guilds_with_commands():
         guilds = set()
         for cmd in _HANDLER.commands.values():
             if cmd.guild_ids is not None:
                 guilds = guilds.union(set(cmd.guild_ids))
         return list(guilds)
 
-    def _per_guild_commands(self):
+    @staticmethod
+    def _per_guild_commands():
         global_cmds = []
         guilds = {}
         for cmd in _HANDLER.commands.values():
