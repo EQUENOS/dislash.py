@@ -54,9 +54,10 @@ def get_class(func):
             return getattr(mod, class_name(func), None)
 
 
-# -----------------------------------+
-# |        Core and checks           |
-# -----------------------------------+
+# +-----------------------------------+
+# |         Core and checks           |
+# +-----------------------------------+
+
 class BaseSlashCommand:
     def __init__(self, func, *, name=None, connectors=None, **kwargs):
         self.func = func
