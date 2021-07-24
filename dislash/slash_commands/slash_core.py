@@ -523,8 +523,8 @@ def bot_has_any_role(*items):
 
         me = ch.guild.me
         getter = functools.partial(discord.utils.get, me.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in
-               items):
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None
+        for item in items):
             return True
         raise BotMissingAnyRole(items)
 
