@@ -372,7 +372,6 @@ class ActionRow(Component):
     """
     Represents an action row. Action rows are basically
     shelves for buttons.
-
     Parameters
     ----------
     components : :class:`List[Button]`
