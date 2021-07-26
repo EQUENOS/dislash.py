@@ -14,7 +14,6 @@ __all__ = (
     "_component_factory"
 )
 
-
 ID_SOURCE = 0
 MAX_ID = 25
 
@@ -60,14 +59,14 @@ def auto_rows(*buttons, max_in_row: int = 5):
             max_in_row=1
         )
         await ctx.send("Buttons", components=rows)
-    
+
     Parameters
     ----------
     buttons : List[:class:`Button`]
         a list of buttons to distribute
     max_in_row : :class:`int`
         limit of buttons in a single row. Must be between 1 and 5.
-    
+
     Returns
     -------
     List[:class:`ActionRow`]
@@ -204,7 +203,7 @@ class SelectMenu(Component):
         the choices in the select, max 25
     disabled : :class:`bool`
         disable the menu, defaults to false
-    
+
     Attributes
     ----------
     custom_id : :class:`str`
@@ -223,7 +222,8 @@ class SelectMenu(Component):
         the list of chosen options, max 25
     """
 
-    def __init__(self, *, custom_id: str=None, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None, disabled: bool=False):
+    def __init__(self, *, custom_id: str = None, placeholder: str = None, min_values: int = 1, max_values: int = 1,
+                 options: list = None, disabled: bool = False):
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
