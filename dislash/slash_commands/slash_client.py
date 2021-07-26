@@ -119,8 +119,6 @@ class SlashClient:
                         return True
 
             def auto_check(inter):
-                if message.id != inter.message.id:
-                    return False
                 return check(inter)
 
             return await self.wait_for_dropdown(auto_check, timeout)

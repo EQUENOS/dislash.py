@@ -37,9 +37,10 @@ __all__ = (
 )
 
 
-# -----------------------------------+
-# |             Utils                |
-# -----------------------------------+
+# +-----------------------------------+
+# |              Utils                |
+# +-----------------------------------+
+
 def class_name(func):
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
@@ -53,9 +54,10 @@ def get_class(func):
             return getattr(mod, class_name(func), None)
 
 
-# -----------------------------------+
-# |        Core and checks           |
-# -----------------------------------+
+# +-----------------------------------+
+# |         Core and checks           |
+# +-----------------------------------+
+
 class BaseSlashCommand:
     def __init__(self, func, *, name=None, connectors=None, **kwargs):
         self.func = func
@@ -75,7 +77,7 @@ class BaseSlashCommand:
         if cooldown is None:
             try:
                 # Assuming that it's discord.py 1.7.0+
-                self._buckets = CooldownMapping(cooldown)
+                self._buckets = CooldownMapping(cooldown, BucketType.default)
             except Exception:
                 # discord.py <= 1.6.x
                 try:
@@ -521,8 +523,8 @@ def bot_has_any_role(*items):
 
         me = ch.guild.me
         getter = functools.partial(discord.utils.get, me.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in
-               items):
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None
+        for item in items):
             return True
         raise BotMissingAnyRole(items)
 

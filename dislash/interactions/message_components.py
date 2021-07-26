@@ -10,10 +10,11 @@ __all__ = (
     "ActionRow",
     "SelectOption",
     "MenuOption",
-    "SelectMenu"
+    "SelectMenu",
+    "_component_factory"
 )
 
-# I don't like this solution for default custom_ids...
+
 ID_SOURCE = 0
 MAX_ID = 25
 
@@ -201,6 +202,8 @@ class SelectMenu(Component):
         the maximum number of items that can be chosen; default 1, max 25
     options : List[:class:`SelectOption`]
         the choices in the select, max 25
+    disabled : :class:`bool`
+        disable the menu, defaults to false
     
     Attributes
     ----------
@@ -214,18 +217,20 @@ class SelectMenu(Component):
         the maximum number of items that can be chosen; default 1, max 25
     options : List[:class:`SelectOption`]
         the choices in the select, max 25
+    disabled : :class:`bool`
+        disable the menu, defaults to false
     selected_options : List[:class:`SelectOption`]
         the list of chosen options, max 25
     """
 
-    def __init__(self, *, custom_id: str = None, placeholder: str = None, min_values: int = 1, max_values: int = 1,
-                 options: list = None):
+    def __init__(self, *, custom_id: str=None, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None, disabled: bool=False):
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
         self.min_values = min_values
         self.max_values = max_values
         self.options = options or []
+        self.disabled = disabled
         self.selected_options = []
 
     def __repr__(self):
@@ -261,7 +266,8 @@ class SelectMenu(Component):
             placeholder=data.get("placeholder"),
             min_values=data.get("min_values", 1),
             max_values=data.get("max_values", 1),
-            options=[SelectOption.from_dict(o) for o in options]
+            options=[SelectOption.from_dict(o) for o in options],
+            disabled=data.get("disabled", False)
         )
 
     def to_dict(self):
@@ -274,6 +280,8 @@ class SelectMenu(Component):
         }
         if self.placeholder:
             payload["placeholder"] = self.placeholder
+        if self.disabled:
+            payload["disabled"] = True
         return payload
 
 
@@ -372,6 +380,7 @@ class ActionRow(Component):
     """
     Represents an action row. Action rows are basically
     shelves for buttons.
+
     Parameters
     ----------
     components : :class:`List[Button]`
