@@ -40,7 +40,6 @@ __all__ = (
 # +-----------------------------------+
 # |              Utils                |
 # +-----------------------------------+
-
 def class_name(func):
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
