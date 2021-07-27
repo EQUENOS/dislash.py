@@ -56,7 +56,6 @@ def get_class(func):
 # +-----------------------------------+
 # |         Core and checks           |
 # +-----------------------------------+
-
 class BaseSlashCommand:
     def __init__(self, func, *, name=None, connectors=None, **kwargs):
         self.func = func
