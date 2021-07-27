@@ -691,5 +691,4 @@ def cooldown(rate, per, type=BucketType.default):
         else:
             func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))
         return func
-
     return decorator
