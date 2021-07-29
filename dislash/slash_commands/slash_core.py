@@ -40,7 +40,6 @@ __all__ = (
 # +-----------------------------------+
 # |              Utils                |
 # +-----------------------------------+
-
 def class_name(func):
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
@@ -57,7 +56,6 @@ def get_class(func):
 # +-----------------------------------+
 # |         Core and checks           |
 # +-----------------------------------+
-
 class BaseSlashCommand:
     def __init__(self, func, *, name=None, connectors=None, **kwargs):
         self.func = func
@@ -693,5 +691,4 @@ def cooldown(rate, per, type=BucketType.default):
         else:
             func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))
         return func
-
     return decorator
