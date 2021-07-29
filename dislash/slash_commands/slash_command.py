@@ -26,6 +26,7 @@ class Type:
     CHANNEL = 7
     ROLE = 8
     MENTIONABLE = 9
+    NUMBER = 10
     """
     SUB_COMMAND       = 1
     SUB_COMMAND_GROUP = 2
@@ -36,6 +37,7 @@ class Type:
     CHANNEL           = 7
     ROLE              = 8
     MENTIONABLE       = 9
+    NUMBER            = 10
 
 
 class OptionChoice:
