@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import discord
 from discord.http import Route
-from discord.utils import snowflake_time
+from discord.utils import DISCORD_EPOCH
 from .message_components import ActionRow
 
 
@@ -11,6 +11,10 @@ __all__ = (
     "ResponseType",
     "BaseInteraction"
 )
+
+
+def snowflake_time(ID):
+    return datetime.datetime.fromtimestamp(((ID >> 22) + DISCORD_EPOCH) / 1000)
 
 
 class InteractionType:

@@ -1,5 +1,3 @@
-# Should be named message_interaction.py
-
 import discord
 from .message_components import *
 from .interaction import *
@@ -9,6 +7,11 @@ __all__ = (
     "MessageInteraction",
     "ButtonInteraction"
 )
+
+
+class PartialTextChannel:
+    def __init__(self, channel_id):
+        self.id = channel_id
 
 
 class MessageInteraction(BaseInteraction):
@@ -43,10 +46,15 @@ class MessageInteraction(BaseInteraction):
         else:
             components = msg_data.pop("components", [])
             self.components = [ActionRow.from_dict(comp) for comp in components]
-            channel_id = int(msg_data["channel_id"])
+            # For some reason "channel_id" might not be included in message data
+            if "channel_id" in msg_data:
+                channel = client.get_channel(int(msg_data["channel_id"]))
+            else:
+                channel = None
+            # channel must not be None, because channel.id attr is needed in discord.Message.__init__
             self.message = discord.Message(
                 state=state,
-                channel=client.get_channel(channel_id),
+                channel=channel or PartialTextChannel(0),
                 data=msg_data
             )
         
