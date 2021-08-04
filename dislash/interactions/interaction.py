@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import discord
 from discord.http import Route
-from discord.utils import DISCORD_EPOCH
 from .message_components import ActionRow
 
 
@@ -11,10 +10,6 @@ __all__ = (
     "ResponseType",
     "BaseInteraction"
 )
-
-
-def snowflake_time(ID):
-    return datetime.datetime.utcfromtimestamp(((ID >> 22) + DISCORD_EPOCH) / 1000)
 
 
 class InteractionType:
@@ -58,6 +53,7 @@ class BaseInteraction:
     def __init__(self, client, data: dict):
         state = client._connection
 
+        self.received_at = datetime.datetime.utcnow()
         self.bot = client
         self.id = int(data["id"])
         self.application_id = int(data["application_id"])
@@ -98,15 +94,19 @@ class BaseInteraction:
     
     @property
     def created_at(self):
-        return snowflake_time(self.id)
+        return datetime.datetime.utcfromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
     
     @property
     def expired(self):
+        # In this method we're using self.received_at
+        # instead of self.created_at because the IDs of all interactions
+        # seem to always inherit from a timstamp which is
+        # 4 seconds older than it should be
         utcnow = datetime.datetime.utcnow()
         if self._sent:
-            return utcnow - self.created_at > datetime.timedelta(minutes=15)
+            return utcnow - self.received_at > datetime.timedelta(minutes=15)
         else:
-            return utcnow - self.created_at > datetime.timedelta(seconds=3)
+            return utcnow - self.received_at > datetime.timedelta(seconds=3)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
                                             components=None,
