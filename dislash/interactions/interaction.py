@@ -14,7 +14,7 @@ __all__ = (
 
 
 def snowflake_time(ID):
-    return datetime.datetime.fromtimestamp(((ID >> 22) + DISCORD_EPOCH) / 1000)
+    return datetime.datetime.utcfromtimestamp(((ID >> 22) + DISCORD_EPOCH) / 1000)
 
 
 class InteractionType:
