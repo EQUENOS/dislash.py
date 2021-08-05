@@ -20,7 +20,7 @@ setup(
     author='EQUENOS',
     author_email='equenos1@gmail.com',
     keywords='python, discord, slash, commands, api, discord-api, discord-py, slash-commands, message-components, buttons, select-menus',
-    packages=['dislash', 'dislash.slash_commands', 'dislash.interactions'],
+    packages=['dislash', 'dislash.slash_commands', 'dislash.interactions', 'dislash.slash_commands._modifications'],
     python_requires='>=3.8, <4',
     install_requires=requirements,
     project_urls={
