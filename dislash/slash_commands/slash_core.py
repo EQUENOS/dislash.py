@@ -207,7 +207,7 @@ class CommandParent(BaseSlashCommand):
             default_permission=default_permission,
         )
         self.guild_ids = guild_ids
-        self.children_type = None
+        self.child_type = None
         # Cog indication
         self._cog_class_name = class_name(func)
         self._cog_name = None
@@ -236,12 +236,10 @@ class CommandParent(BaseSlashCommand):
             ``{"option-name": "param_name", ...}``
         """
         def decorator(func):
-            if self.children_type is None:
+            if self.child_type is None:
                 if len(self.registerable.options) > 0:
                     self.registerable.options = []
-                self.children_type = Type.SUB_COMMAND
-            elif self.children_type != Type.SUB_COMMAND:
-                raise discord.InvalidArgument(f"do not nest sub_commands and sub_command_groups to the same parent")
+                self.child_type = Type.SUB_COMMAND
             
             new_func = SubCommand(
                 func,
@@ -267,48 +265,37 @@ class CommandParent(BaseSlashCommand):
             the name of the subcommand group. Defaults to the function name
         """
         def decorator(func):
-            if self.children_type is None:
+            if self.child_type is None:
                 if len(self.registerable.options) > 0:
                     self.registerable.options = []
-                self.children_type = Type.SUB_COMMAND_GROUP
-            elif self.children_type != Type.SUB_COMMAND_GROUP:
-                raise discord.InvalidArgument("don't nest sub_command_groups and sub_commands to the same parent")
+                self.child_type = Type.SUB_COMMAND_GROUP
             
             new_func = SubCommandGroup(func, name=name, **kwargs)
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
         return decorator
-
+    
     async def invoke_children(self, interaction):
         data = interaction.data
-        if self.children_type is None:
-            group = None
-            subcmd = None
-        elif self.children_type == Type.SUB_COMMAND:
-            group = None
-            option = data.option_at(0)
-            if option is None or option.type != Type.SUB_COMMAND:
+        
+        option = data.option_at(0)
+        if option is None:
+            return
+        
+        group = None
+        subcmd = None
+        if option.type == Type.SUB_COMMAND_GROUP:
+            group = self.children.get(option.name)
+        elif option.type == Type.SUB_COMMAND:
+            subcmd = self.children.get(option.name)
+        
+        if group is not None:
+            option = option.option_at(0)
+            if option is None:
                 subcmd = None
             else:
-                subcmd = self.children.get(option.name)
-        elif self.children_type == Type.SUB_COMMAND_GROUP:
-            option = data.option_at(0)
-            if option is None or option.type != Type.SUB_COMMAND_GROUP:
-                group = None
-            else:
-                group = self.children.get(option.name)
-            if group is None:
-                subcmd = None
-            else:
-                option = option.option_at(0)
-                if option is None:
-                    subcmd = None
-                else:
-                    subcmd = group.children.get(option.name)
-        else:
-            group = None
-            subcmd = None
+                subcmd = group.children.get(option.name)
         
         if group is not None:
             interaction.invoked_with += f" {group.name}"

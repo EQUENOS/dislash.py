@@ -8,7 +8,6 @@ from .slash_core import CommandParent
 from .slash_command import SlashCommand, SlashCommandPermissions
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
-from ._send_modifications import *
 
 from ..interactions import ComponentType, BaseInteraction, SlashInteraction, MessageInteraction
 
@@ -41,6 +40,7 @@ class SlashClient:
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
     def __init__(self, client, *, show_warnings: bool=True, modify_send: bool=True):
+        self._uses_discord_2 = hasattr(client, "add_view")
         _HANDLER.client = client
         self.client = _HANDLER.client
         self.application_id = None
@@ -144,6 +144,13 @@ class SlashClient:
             return ClickListener(message.id, timeout)
 
         if self._modify_send:
+            if self._uses_discord_2:
+                from ._modifications.new import (
+                    send as send_with_components,
+                    edit as edit_with_components
+                )
+            else:
+                from ._modifications.old import send_with_components, edit_with_components
             Messageable.send = send_with_components
             discord.Message.edit = edit_with_components
         Context.wait_for_button_click = ctx_wait_for_button_click
@@ -951,6 +958,17 @@ class SlashClient:
                         guilds[guild_id].append(cmd.registerable)
         return global_cmds, guilds
 
+    def _modify_parser(self, parsers, event, func):
+        def empty_func(data):
+            pass
+        old_func = parsers.get(event, empty_func)
+        original_func = getattr(old_func, "__original_parser__", empty_func)
+        def new_func(data):
+            func(data)
+            return original_func(data)
+        new_func.__original_parser__ = original_func
+        parsers[event] = new_func
+
     # Automatically register commands
     async def _auto_register_or_patch(self):
         """
@@ -1044,6 +1062,9 @@ class SlashClient:
         return await asyncio.wait_for(future, timeout)
 
     # Adding relevant listeners
+    def _on_raw_interaction(self, data):
+        self.client.loop.create_task(self._process_interaction(data))
+
     async def _on_socket_response(self, payload):
         if payload.get("t") != "INTERACTION_CREATE":
             return
@@ -1056,9 +1077,21 @@ class SlashClient:
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
+        if self._uses_discord_2:
+            self._modify_parser(
+                self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers,
+                "INTERACTION_CREATE",
+                self._on_raw_interaction
+            )
     
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
+            if self._uses_discord_2:
+                self._modify_parser(
+                    self.client.ws._discord_parsers,
+                    "INTERACTION_CREATE",
+                    self._on_raw_interaction
+                )
             await self._fill_app_id()
             await self._cache_global_commands()
             await self._cache_guild_commands()
