@@ -496,8 +496,7 @@ async def edit(
         else:
             _components = _components or []
     
-    if _components:
-        payload["components"] = _components
+    payload["components"] = _components or []
 
     if payload:
         data = await self._state.http.edit_message(self.channel.id, self.id, **payload)

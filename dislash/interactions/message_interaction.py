@@ -44,13 +44,17 @@ class MessageInteraction(BaseInteraction):
             self.message = None
             self.components = []
         else:
-            components = msg_data.pop("components", [])
+            components = msg_data.get("components", [])
             self.components = [ActionRow.from_dict(comp) for comp in components]
             # For some reason "channel_id" might not be included in message data
             if "channel_id" in msg_data:
                 channel = client.get_channel(int(msg_data["channel_id"]))
             else:
+                msg_data["channel_id"] = self.channel_id
                 channel = self.channel
+            # For some reason "channel_id" in message reference might not be included
+            if "channel_id" not in msg_data["message_reference"]:
+                msg_data["message_reference"]["channel_id"] = None if channel is None else channel.id
             # channel must not be None, because channel.id attr is needed in discord.Message.__init__
             self.message = discord.Message(
                 state=state,
