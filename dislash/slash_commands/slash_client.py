@@ -962,7 +962,7 @@ class SlashClient:
         def empty_func(data):
             pass
         old_func = parsers.get(event, empty_func)
-        original_func = getattr(old_func, "__original_parser__", empty_func)
+        original_func = getattr(old_func, "__original_parser__", old_func)
         def new_func(data):
             func(data)
             return original_func(data)

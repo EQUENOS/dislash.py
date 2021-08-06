@@ -26,7 +26,7 @@ python -m pip install dislash.py
 * Supports automatic registration of slash-commands
 * Supports manual and automatic sharding
 * Convenient decorator-based interface
-* OOP-based slash-command and button constructor
+* Works with discord.py <=1.7.3, >=2.0.0a
 
 
 
@@ -40,11 +40,10 @@ If you want to register slash-commands separately, see docs.
 
 ```python
 from discord.ext import commands
-from dislash import slash_commands
-from dislash.interactions import *
+from dislash import SlashClient
 
-client = commands.Bot(command_prefix="!")
-slash = slash_commands.SlashClient(client)
+bot = commands.Bot(command_prefix="!")
+slash = SlashClient(client)
 test_guilds = [12345, 98765]
 
 @slash.command(
@@ -56,7 +55,7 @@ test_guilds = [12345, 98765]
 async def hello(inter):
     await inter.reply("Hello!")
 
-client.run("BOT_TOKEN")
+bot.run("BOT_TOKEN")
 ```
 
 
@@ -68,10 +67,10 @@ This example shows how to send a message with buttons.
 from discord.ext import commands
 from dislash import SlashClient, ActionRow, Button
 
-client = commands.Bot(command_prefix="!")
-slash = SlashClient(client)
+bot = commands.Bot(command_prefix="!")
+slash = SlashClient(bot)
 
-@client.command()
+@bot.command()
 async def test(ctx):
     # Make a row of buttons
     row_of_buttons = ActionRow(
@@ -99,7 +98,7 @@ async def test(ctx):
     button_text = inter.clicked_button.label
     await inter.reply(f"Button: {button_text}")
 
-client.run("BOT_TOKEN")
+bot.run("BOT_TOKEN")
 ```
 
 
