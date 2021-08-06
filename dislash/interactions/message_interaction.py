@@ -50,7 +50,7 @@ class MessageInteraction(BaseInteraction):
             if "channel_id" in msg_data:
                 channel = client.get_channel(int(msg_data["channel_id"]))
             else:
-                channel = None
+                channel = self.channel
             # channel must not be None, because channel.id attr is needed in discord.Message.__init__
             self.message = discord.Message(
                 state=state,

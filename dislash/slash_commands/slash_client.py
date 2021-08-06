@@ -1150,16 +1150,20 @@ class SlashClient:
             await func(*args, **kwargs)
 
     async def _process_interaction(self, payload):
+        if self._uses_discord_2:
+            event_name = "dislash_interaction"
+        else:
+            event_name = "interaction"
         _type = payload.get("type", 1)
         # Received a ping
         if _type == 1:
             inter = BaseInteraction(self.client, payload)
-            self.dispatch('interaction', inter)
+            self.dispatch(event_name, inter)
             await inter.create_response(type=1)
         # Slash command invoked
         elif _type == 2:
             inter = SlashInteraction(self.client, payload)
-            self.dispatch('interaction', inter)
+            self.dispatch(event_name, inter)
             self.dispatch('slash_command', inter)
             slash_parent = self.commands.get(inter.data.name)
             if slash_parent:
@@ -1172,13 +1176,13 @@ class SlashClient:
         # Message component clicked
         elif _type == 3:
             inter = MessageInteraction(self.client, payload)
-            self.dispatch('interaction', inter)
+            self.dispatch(event_name, inter)
             if inter.component is None:
                 return
             if inter.component.type == ComponentType.Button:
-                await self._activate_event('button_click', inter)
+                self.dispatch('button_click', inter)
             elif inter.component.type == ComponentType.SelectMenu:
-                await self._activate_event('dropdown', inter)
+                self.dispatch('dropdown', inter)
     
     async def _fill_app_id(self):
         data = await self.client.http.application_info()

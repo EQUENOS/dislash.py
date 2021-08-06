@@ -62,13 +62,15 @@ class BaseInteraction:
         self.version = data["version"]
 
         if "guild_id" in data:
-            self.guild = client.get_guild(int(data["guild_id"]))
+            self.guild_id = int(data["guild_id"])
+            self.guild = client.get_guild(self.guild_id)
             self.author = discord.Member(
                 data=data["member"],
                 guild=self.guild,
                 state=state
             )
         else:
+            self.guild_id = None
             self.guild = None
             self.author = discord.User(
                 state=state,
@@ -76,8 +78,10 @@ class BaseInteraction:
             )
         
         if "channel_id" in data:
-            self.channel = client.get_channel(int(data["channel_id"]))
+            self.channel_id = int(data["channel_id"])
+            self.channel = client.get_channel(self.channel_id)
         else:
+            self.channel_id = None
             self.channel = None
         
         self._sent = False
