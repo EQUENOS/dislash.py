@@ -1,8 +1,9 @@
+import asyncio
+import discord
 from discord.abc import Messageable
 from discord.http import Route
 from discord.ext.commands import Context
-import asyncio
-import discord
+from typing import Any, Dict, Union
 
 from .slash_core import CommandParent
 from .slash_command import SlashCommand, SlashCommandPermissions
@@ -88,6 +89,8 @@ class SlashClient:
             self._eject_cogs(name)
             _rem_cog(name)
         self.client.remove_cog = rem_cog_2
+        # Multiple wait for
+        self.client.multiple_wait_for = self.multiple_wait_for
         # Change other class methods
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
@@ -1060,6 +1063,67 @@ class SlashClient:
         listeners = self._listeners["dropdown"]
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
+
+    async def multiple_wait_for(self, events_and_checks: Dict[str, Any], timeout: float=None):
+        """
+        Waits until one of the given events toggles and matches the relevant check.
+
+        Example:
+
+        ::
+
+            result = None
+            try:
+                result = await client.multiple_wait_for(
+                    {
+                        "message": lambda msg: msg.author == ctx.author,
+                        "reaction_add": lambda react, user: user == ctx.author
+                    },
+                    timeout=60
+                )
+            except asyncio.TimeoutError:
+                await ctx.send("It took too long")
+            if isinstance(result, discord.Message):
+                # on_message was toggled
+                await ctx.send(f"You said '{result.content}'")
+            else:
+                # on_reaction_add was toggled
+                reaction, user = result
+                await ctx.send(f"Your reaction: {reaction.emoji}")
+
+        Parameters
+        ----------
+        events_and_checks : Dict[:class:`str`, :class:`function | None`]
+            a dictionary of event names and relevant checks, e.g.
+            ``{"message": lambda m: m.author == ctx.author, "button_click": None}``
+        timeout : :class:`float` | :class:`None`
+            the amount of seconds the bot should wait for any of the given events
+        """
+
+        coros_and_events = {}
+        waiters = []
+        for event, check in events_and_checks.items():
+            coro = self.client.wait_for(event, check=check, timeout=timeout)
+            coros_and_events[id(coro)] = event
+            waiters.append(coro)
+        # Wait for some of the waiters to toggle
+        done, pending = await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
+        # Get the result or catch an exception
+        try:
+            stuff = done.pop().result()
+            err = None
+        except Exception as error:
+            stuff = None
+            err = error
+        # Clean other waiters
+        for future in done:
+            future.exception()
+        for future in pending:
+            future.cancel()
+        # Error or result
+        if err is not None:
+            raise err
+        return stuff
 
     # Adding relevant listeners
     def _on_raw_interaction(self, data):
