@@ -135,6 +135,10 @@ class BaseInteraction:
         else:
             return utcnow - self.received_at > datetime.timedelta(seconds=3)
 
+    @property
+    def client(self):
+        return self.bot
+
     def _cache_ephemeral_message(self, message):
         try:
             cached = self.bot.cached_ephemeral_messages
