@@ -65,7 +65,7 @@ This example shows how to send a message with buttons.
 
 ```python
 from discord.ext import commands
-from dislash import SlashClient, ActionRow, Button
+from dislash import SlashClient, ActionRow, Button, ButtonStyle
 
 bot = commands.Bot(command_prefix="!")
 slash = SlashClient(bot)

@@ -12,6 +12,27 @@ __all__ = (
 )
 
 
+
+class MessageWithComponents(discord.Message):
+    def __init__(self, *, state, channel, data):
+        super().__init__(state=state, channel=channel, data=data)
+        if not hasattr(self, "components"):
+            # Bypasses discord.py 2.0 Message object
+            self._from_dpy_2 = False
+            self.components = [ActionRow.from_dict(comp) for comp in data.get("components", [])]
+        else:
+            self._from_dpy_2 = True
+    
+    def _overwrite_components(self, components):
+        # This method is necessary for ephemeral messages
+        self.components = []
+        for comp in components:
+            if isinstance(comp, ActionRow):
+                self.components.append(comp)
+            else:
+                self.components.append(ActionRow(comp))
+
+
 class InteractionType:
     Ping               = 1
     ApplicationCommand = 2
@@ -112,6 +133,16 @@ class BaseInteraction:
         else:
             return utcnow - self.received_at > datetime.timedelta(seconds=3)
 
+    def _cache_ephemeral_message(self, message):
+        try:
+            cached = self.bot.cached_ephemeral_messages
+        except AttributeError:
+            self.bot.cached_ephemeral_messages = []
+            cached = self.bot.cached_ephemeral_messages
+        cached.append(message)
+        if len(cached) > 1000:
+            cached.pop(0)
+
     async def reply(self, content=None, *,  embed=None, embeds=None,
                                             components=None,
                                             file=None, files=None,
@@ -198,16 +229,20 @@ class BaseInteraction:
 
         if type == 5:
             return None
-        # Ephemeral messages aren't stored and can't be deleted or edited
-        # Same for type-1 and type-2 messages
-        if ephemeral or type in (1, 2):
-            return None
         
         if delete_after is not None:
             self.bot.loop.create_task(self.delete_after(delete_after))
         
         if fetch_response_message:
-            return await self.fetch_initial_response()
+            if ephemeral:
+                msg = await self.edit(content=content)
+                msg._overwrite_components(components)
+                self._cache_ephemeral_message(msg)
+                return msg
+            try:
+                return await self.fetch_initial_response()
+            except Exception:
+                pass
 
     async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
                                                     components=None,
@@ -365,7 +400,7 @@ class BaseInteraction:
             ),
             json=data
         )
-        return discord.Message(
+        return MessageWithComponents(
             state=state,
             channel=self.channel,
             data=r
@@ -399,7 +434,7 @@ class BaseInteraction:
                 app_id=self.application_id, token=self.token
             )
         )
-        return discord.Message(
+        return MessageWithComponents(
             state=self.bot._connection,
             channel=self.channel,
             data=data
