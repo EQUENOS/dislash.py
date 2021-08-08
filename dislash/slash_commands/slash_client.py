@@ -61,6 +61,8 @@ class SlashClient:
         # Link the slash ext to client if doesn't already exist
         if not hasattr(self.client, "slash"):
             self.client.slash = self
+        if not hasattr(self.client, "cached_ephemeral_messages"):
+            self.client.cached_ephemeral_messages = []
         # Inject cogs that are already loaded
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)

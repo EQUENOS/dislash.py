@@ -25,6 +25,8 @@ class MessageWithComponents(discord.Message):
     
     def _overwrite_components(self, components):
         # This method is necessary for ephemeral messages
+        if components is None:
+            return
         self.components = []
         for comp in components:
             if isinstance(comp, ActionRow):
