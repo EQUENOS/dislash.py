@@ -148,6 +148,64 @@ class BaseSlashCommand:
         self._error_handler = func
         return func
 
+    def is_on_cooldown(self, inter):
+        """
+        Checks whether the slash command is currently on cooldown.
+
+        Parameters
+        -----------
+        inter: :class:`SlashInteraction`
+            The interaction to use when checking the commands cooldown status.
+
+        Returns
+        --------
+        :class:`bool`
+            A boolean indicating if the slash command is on cooldown.
+        """
+        if not self._buckets.valid:
+            return False
+        
+        bucket = self._buckets.get_bucket(inter)
+        dt = inter.created_at
+        current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
+        return bucket.get_tokens(current) == 0
+
+    def reset_cooldown(self, inter):
+        """
+        Resets the cooldown on this slash command.
+
+        Parameters
+        -----------
+        inter: :class:`SlashInteraction`
+            The interaction to reset the cooldown under.
+        """
+        if self._buckets.valid:
+            bucket = self._buckets.get_bucket(inter)
+            bucket.reset()
+
+    def get_cooldown_retry_after(self, inter):
+        """
+        Retrieves the amount of seconds before this slash command can be tried again.
+
+        Parameters
+        -----------
+        inter: :class:`SlashInteraction`
+            The interaction to retrieve the cooldown from.
+
+        Returns
+        --------
+        :class:`float`
+            The amount of time left on this slash command's cooldown in seconds.
+            If this is ``0.0`` then the slash command isn't on cooldown.
+        """
+        if self._buckets.valid:
+            bucket = self._buckets.get_bucket(inter)
+            dt = inter.created_at
+            current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
+            return bucket.get_retry_after(current)
+
+        return 0.0
+
 
 class SubCommand(BaseSlashCommand):
     def __init__(self, func, *, name=None, description=None, options=None, connectors=None, **kwargs):
@@ -299,6 +357,7 @@ class CommandParent(BaseSlashCommand):
         
         if group is not None:
             interaction.invoked_with += f" {group.name}"
+            interaction.sub_command_group = group
             try:
                 group._prepare_cooldowns(interaction)
                 await group._run_checks(interaction)
@@ -309,6 +368,7 @@ class CommandParent(BaseSlashCommand):
         
         if subcmd is not None:
             interaction.invoked_with += f" {subcmd.name}"
+            interaction.sub_command = subcmd
             try:
                 subcmd._prepare_cooldowns(interaction)
                 await subcmd._run_checks(interaction)
@@ -319,6 +379,7 @@ class CommandParent(BaseSlashCommand):
 
     async def invoke(self, interaction):
         interaction._wrap_choices(self.registerable)
+        interaction.slash_command = self
         try:
             self._prepare_cooldowns(interaction)
             await self._run_checks(interaction)
@@ -654,10 +715,20 @@ def cooldown(rate, per, type=BucketType.default):
         The type of cooldown to have.
     '''
     def decorator(func):
+        try:
+            cooldown_obj = Cooldown(rate, per, type)
+        except Exception:
+            cooldown_obj = Cooldown(rate, per)
+        
+        try:
+            mapping = CooldownMapping(cooldown_obj)
+        except Exception:
+            mapping = CooldownMapping(cooldown_obj, type)
+        
         if isinstance(func, BaseSlashCommand):
-            func._buckets = CooldownMapping(Cooldown(rate, per, type))
+            func._buckets = mapping
         else:
-            func.__slash_cooldown__ = CooldownMapping(Cooldown(rate, per, type))
+            func.__slash_cooldown__ = mapping
+        
         return func
     return decorator
-

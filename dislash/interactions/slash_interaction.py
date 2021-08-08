@@ -330,7 +330,10 @@ class SlashInteraction(BaseInteraction):
             state=state
         )
         self.invoked_with = self.data.name
-    
+        self.slash_command = None
+        self.sub_command_group = None
+        self.sub_command = None
+
     def __repr__(self):
         return (
             "<SlashInteraction id={0.id} version={0.version} type={0.type} "
