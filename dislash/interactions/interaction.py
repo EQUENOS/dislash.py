@@ -230,6 +230,9 @@ class BaseInteraction:
         )
         self._sent = True
 
+        if view and not view.is_finished():
+            self.bot._connection.store_view(view, None)
+
         if type == 5:
             return None
         
@@ -593,7 +596,13 @@ class BaseInteraction:
                 for f in files:
                     f.close()
         
-        return state.create_message(channel=self.channel, data=data)
+        msg = state.create_message(channel=self.channel, data=data)
+
+        if view and not view.is_finished():
+            message_id = None if msg is None else msg.id
+            self.bot._connection.store_view(view, message_id)
+        
+        return msg
 
     send = reply
 
