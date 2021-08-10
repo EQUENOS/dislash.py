@@ -141,12 +141,12 @@ class BaseInteraction:
             cached.pop(0)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
-                                            components=None, view=None,
-                                            file=None, files=None,
-                                            tts=False, hide_user_input=False,
-                                            ephemeral=False, delete_after=None,
-                                            allowed_mentions=None, type=None,
-                                            fetch_response_message=True):
+                    components=None, view=None,
+                    file=None, files=None,
+                    tts=False, hide_user_input=False,
+                    ephemeral=False, delete_after=None,
+                    allowed_mentions=None, type=None,
+                    fetch_response_message=True):
         """
         Creates an interaction response. What's the difference between this method and
         :meth:`create_response`? If the token is no longer valid, this method sends a usual
@@ -257,9 +257,9 @@ class BaseInteraction:
                 pass
 
     async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
-                                                    components=None, view=None,
-                                                    ephemeral=False, tts=False,
-                                                    allowed_mentions=None):
+                              components=None, view=None,
+                              ephemeral=False, tts=False,
+                              allowed_mentions=None):
         """
         Creates an interaction response.
 
