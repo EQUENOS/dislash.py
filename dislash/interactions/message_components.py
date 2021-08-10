@@ -47,7 +47,7 @@ def _component_factory(data: dict):
         return SelectMenu.from_dict(data)
 
 
-def auto_rows(*buttons, max_in_row: int=5):
+def auto_rows(*buttons, max_in_row: int = 5):
     """
     Distributes buttons across multiple rows
     and returns the list of rows.
