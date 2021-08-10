@@ -21,7 +21,7 @@ class MessageWithComponents(discord.Message):
             self.components = [ActionRow.from_dict(comp) for comp in data.get("components", [])]
         else:
             self._from_dpy_2 = True
-    
+
     def _overwrite_components(self, components):
         # This method is necessary for ephemeral messages
         if components is None:
@@ -98,14 +98,14 @@ class BaseInteraction:
                 state=state,
                 data=data["user"]
             )
-        
+
         if "channel_id" in data:
             self.channel_id = int(data["channel_id"])
             self.channel = client.get_channel(self.channel_id)
         else:
             self.channel_id = None
             self.channel = None
-        
+
         self._sent = False
         self._webhook = None
 
@@ -117,11 +117,11 @@ class BaseInteraction:
                 adapter=discord.AsyncWebhookAdapter(self.bot.http._HTTPClient__session)
             )
         return self._webhook
-    
+
     @property
     def created_at(self):
         return datetime.datetime.utcfromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
-    
+
     @property
     def expired(self):
         # In this method we're using self.received_at
@@ -233,10 +233,10 @@ class BaseInteraction:
 
         if type == 5:
             return None
-        
+
         if delete_after is not None:
             self.bot.loop.create_task(self.delete_after(delete_after))
-        
+
         if fetch_response_message:
             if ephemeral:
                 msg = await self.edit(content=content)
@@ -355,7 +355,7 @@ class BaseInteraction:
             a list of up to 5 action rows
         allowed_mentions : :class:`discord.AllowedMentions`
             controls the mentions being processed in this message.
-        
+
         Returns
         -------
         message : :class:`discord.Message`
@@ -368,7 +368,7 @@ class BaseInteraction:
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
@@ -408,7 +408,7 @@ class BaseInteraction:
             channel=self.channel,
             data=r
         )
-    
+
     async def delete(self):
         """
         Deletes the original interaction response.
@@ -419,7 +419,7 @@ class BaseInteraction:
                 app_id=self.application_id, token=self.token
             )
         )
-    
+
     async def delete_after(self, delay: float):
         await asyncio.sleep(delay)
         try:
