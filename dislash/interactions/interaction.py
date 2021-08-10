@@ -22,7 +22,7 @@ class MessageWithComponents(discord.Message):
             self.components = [ActionRow.from_dict(comp) for comp in data.get("components", [])]
         else:
             self._from_dpy_2 = True
-    
+
     def _overwrite_components(self, components):
         # This method is necessary for ephemeral messages
         if components is None:
@@ -99,21 +99,21 @@ class BaseInteraction:
                 state=state,
                 data=data["user"]
             )
-        
+
         if "channel_id" in data:
             self.channel_id = int(data["channel_id"])
             self.channel = client.get_channel(self.channel_id)
         else:
             self.channel_id = None
             self.channel = None
-        
+
         self._sent = False
         self._webhook = None
 
     @property
     def created_at(self):
         return datetime.datetime.utcfromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
-    
+
     @property
     def expired(self):
         # In this method we're using self.received_at
@@ -241,10 +241,10 @@ class BaseInteraction:
 
         if type == 5:
             return None
-        
+
         if delete_after is not None:
             self.bot.loop.create_task(self.delete_after(delete_after))
-        
+
         if fetch_response_message:
             if ephemeral:
                 msg = await self.edit(content=content, embed=embed, embeds=embeds)
@@ -293,26 +293,26 @@ class BaseInteraction:
             Both ``embed`` and ``embeds`` are specified
         """
         type = type or 4
-        
+
         data = {}
         if content is not None:
             data['content'] = str(content)
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
-        
+
         elif embeds is not None:
             if len(embeds) > 10:
                 raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
                 raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
-        
+
         if view:
             if not hasattr(view, '__discord_ui_view__'):
                 raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
@@ -320,7 +320,7 @@ class BaseInteraction:
             _components = view.to_components()
         else:
             _components = None
-        
+
         if components:
             if len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 action rows")
@@ -330,10 +330,10 @@ class BaseInteraction:
                     _components.append(comp.to_dict())
                 else:
                     _components.append(ActionRow(comp).to_dict())
-        
+
         if _components:
             data["components"] = _components
-        
+
         # Allowed mentions
         if content or embed or embeds:
             state = self.bot._connection
@@ -377,7 +377,7 @@ class BaseInteraction:
             a list of up to 5 action rows
         allowed_mentions : :class:`discord.AllowedMentions`
             controls the mentions being processed in this message.
-        
+
         Returns
         -------
         message : :class:`discord.Message`
@@ -390,7 +390,7 @@ class BaseInteraction:
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
@@ -430,7 +430,7 @@ class BaseInteraction:
             channel=self.channel,
             data=r
         )
-    
+
     async def delete(self):
         """
         Deletes the original interaction response.
@@ -441,7 +441,7 @@ class BaseInteraction:
                 app_id=self.application_id, token=self.token
             )
         )
-    
+
     async def delete_after(self, delay: float):
         await asyncio.sleep(delay)
         try:
@@ -511,22 +511,22 @@ class BaseInteraction:
 
         if content:
             data["content"] = str(content)
-        
+
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument('cannot pass both embed and embeds parameter to followup()')
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
-        
+
         elif embeds is not None:
             if len(embeds) > 10:
                 raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
                 raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
-        
+
         if view:
             if not hasattr(view, '__discord_ui_view__'):
                 raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
@@ -534,7 +534,7 @@ class BaseInteraction:
             _components = view.to_components()
         else:
             _components = None
-        
+
         if components:
             if len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 action rows")
@@ -544,7 +544,7 @@ class BaseInteraction:
                     _components.append(comp.to_dict())
                 else:
                     _components.append(ActionRow(comp).to_dict())
-        
+
         if _components:
             data["components"] = _components
 
@@ -567,10 +567,10 @@ class BaseInteraction:
 
         if file is not None and files is not None:
             raise discord.InvalidArgument('cannot pass both file and files parameter to followup()')
-        
+
         if file is not None:
             files = [file]
-        
+
         if files is None:
             data = await self.bot.http.request(route, json=data)
         else:
@@ -601,13 +601,13 @@ class BaseInteraction:
             finally:
                 for f in files:
                     f.close()
-        
+
         msg = state.create_message(channel=self.channel, data=data)
 
         if view and not view.is_finished():
             message_id = None if msg is None else msg.id
             self.bot._connection.store_view(view, message_id)
-        
+
         return msg
 
     send = reply
