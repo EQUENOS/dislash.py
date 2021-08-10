@@ -81,12 +81,14 @@ class SlashClient:
     def _modify_discord(self):
         # Modify cog loader
         _add_cog = self.client.add_cog
+
         def add_cog_2(cog):
             self._inject_cogs(cog)
             _add_cog(cog)
         self.client.add_cog = add_cog_2
         # Modify cog unloader
         _rem_cog = self.client.remove_cog
+
         def rem_cog_2(name):
             self._eject_cogs(name)
             _rem_cog(name)
@@ -94,12 +96,14 @@ class SlashClient:
         # Multiple wait for
         self.client.multiple_wait_for = self.multiple_wait_for
         # Change other class methods
+
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
         
         async def message_wait_for_button_click(message, check=None, timeout=None):
             if check is None:
                 check = lambda inter: True
+            
             def auto_check(inter):
                 if message.id != inter.message.id:
                     return False
@@ -109,6 +113,7 @@ class SlashClient:
         async def message_wait_for_dropdown(message, check=None, timeout=None):
             if check is None:
                 check = lambda inter: True
+            
             def auto_check(inter):
                 if message.id != inter.message.id:
                     return False
@@ -968,6 +973,7 @@ class SlashClient:
             pass
         old_func = parsers.get(event, empty_func)
         original_func = getattr(old_func, "__original_parser__", old_func)
+
         def new_func(data):
             func(data)
             return original_func(data)
