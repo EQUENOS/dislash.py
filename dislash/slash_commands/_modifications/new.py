@@ -49,6 +49,7 @@ async def send(
 ) -> Message:
     ...
 
+
 @overload
 async def send(
     self,
@@ -67,6 +68,7 @@ async def send(
     components: list = ...,
 ) -> Message:
     ...
+
 
 @overload
 async def send(
@@ -87,6 +89,7 @@ async def send(
 ) -> Message:
     ...
 
+
 @overload
 async def send(
     self,
@@ -105,6 +108,7 @@ async def send(
     components: list = ...,
 ) -> Message:
     ...
+
 
 async def send(
     self,
@@ -358,6 +362,7 @@ async def edit(
 ) -> None:
     ...
 
+
 @overload
 async def edit(
     self,
@@ -372,6 +377,7 @@ async def edit(
     components: Optional[list] = ...,
 ) -> None:
     ...
+
 
 async def edit(
     self,

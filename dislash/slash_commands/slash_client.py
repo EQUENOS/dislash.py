@@ -938,10 +938,10 @@ class SlashClient:
         except Exception:
             pass
         # Remove the commands from cache
-        bad_keys = []
-        for kw, cmd in _HANDLER.commands.items():
-            if cmd._cog_name == name:
-                bad_keys.append(kw)
+        bad_keys = [
+            kw for kw, cmd in _HANDLER.commands.items() if cmd._cog_name == name
+        ]
+
         for key in bad_keys:
             del _HANDLER.commands[key]
 
@@ -995,7 +995,7 @@ class SlashClient:
         else:
             for cmd in global_cmds:
                 old_cmd = self.get_global_command_named(cmd.name)
-                if old_cmd is None or not cmd == old_cmd:
+                if old_cmd is None or cmd != old_cmd:
                     update_required = True
                     break
         if update_required:
@@ -1203,10 +1203,6 @@ class SlashClient:
                         else:
                             future.set_result(args)
                         removed.append(i)
-                    else:
-                        # Add on_check_fail in the future
-                        pass
-
             if len(removed) == len(listeners):
                 self._listeners.pop(event)
             else:
@@ -1222,10 +1218,7 @@ class SlashClient:
             await func(*args, **kwargs)
 
     async def _process_interaction(self, payload):
-        if self._uses_discord_2:
-            event_name = "dislash_interaction"
-        else:
-            event_name = "interaction"
+        event_name = "dislash_interaction" if self._uses_discord_2 else "interaction"
         _type = payload.get("type", 1)
         # Received a ping
         if _type == 1:
