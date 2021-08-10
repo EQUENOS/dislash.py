@@ -121,10 +121,7 @@ class BaseSlashCommand:
                 raise SlashCheckFailure(f"command <{self.name}> has failed")
 
     async def _maybe_cog_call(self, cog, inter, data):
-        if self._uses_ui(cog):
-            params = data._to_dict_values(self.connectors)
-        else:
-            params = {}
+        params = data._to_dict_values(self.connectors) if self._uses_ui(cog) else {}
         if cog:
             return await self(cog, inter, **params)
         else:
@@ -350,11 +347,7 @@ class CommandParent(BaseSlashCommand):
 
         if group is not None:
             option = option.option_at(0)
-            if option is None:
-                subcmd = None
-            else:
-                subcmd = group.children.get(option.name)
-
+            subcmd = None if option is None else group.children.get(option.name)
         if group is not None:
             interaction.invoked_with += f" {group.name}"
             interaction.sub_command_group = group
