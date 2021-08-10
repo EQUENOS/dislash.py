@@ -3,7 +3,7 @@ import discord
 from discord.abc import Messageable
 from discord.http import Route
 from discord.ext.commands import Context
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 from .slash_core import CommandParent
 from .slash_command import SlashCommand, SlashCommandPermissions
