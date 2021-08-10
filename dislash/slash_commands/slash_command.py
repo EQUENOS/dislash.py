@@ -215,7 +215,7 @@ class SlashCommand:
     """
 
     def __init__(self, name: str, description: str, options: list = None,
-                                default_permission: bool = True, **kwargs):
+                 default_permission: bool = True, **kwargs):
         self.id = kwargs.pop('id', None)
         if self.id is not None:
             self.id = int(self.id)
