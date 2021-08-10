@@ -222,7 +222,7 @@ class SlashCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id is not None:
             self.application_id = int(self.application_id)
-        
+
         assert re.match(r"^[\w-]{1,32}$", name) is not None and name.islower(),\
             f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
 
@@ -313,9 +313,11 @@ class SlashCommandPermissions:
         permissions : :class:`dict`
             a dictionary of {:class:`Role | User`: :class:`bool`}
         """
-        raw_perms = []
-        for target, perm in permissions.items():
-            raw_perms.append(RawCommandPermission.from_pair(target, perm))
+        raw_perms = [
+            RawCommandPermission.from_pair(target, perm)
+            for target, perm in permissions.items()
+        ]
+
         return SlashCommandPermissions(raw_perms)
 
     @classmethod
@@ -333,9 +335,11 @@ class SlashCommandPermissions:
         """
         role_perms = role_perms or {}
         user_perms = user_perms or {}
-        raw_perms = []
-        for role_id, perm in role_perms.items():
-            raw_perms.append(RawCommandPermission(role_id, 1, perm))
+        raw_perms = [
+            RawCommandPermission(role_id, 1, perm)
+            for role_id, perm in role_perms.items()
+        ]
+
         for user_id, perm in user_perms.items():
             raw_perms.append(RawCommandPermission(user_id, 2, perm))
         return SlashCommandPermissions(raw_perms)
