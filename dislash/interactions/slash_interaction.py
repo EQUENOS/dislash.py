@@ -110,7 +110,7 @@ class InteractionDataOption:
     def __repr__(self):
         return "<InteractionDataOption name='{0.name}' value={0.value} options={0.options}>".format(self)
 
-    def _to_dict_values(self, connectors: dict=None):
+    def _to_dict_values(self, connectors: dict = None):
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
@@ -208,7 +208,7 @@ class InteractionData:
             return None
         return opt.value if opt.type > 2 else opt
 
-    def _to_dict_values(self, connectors: dict=None):
+    def _to_dict_values(self, connectors: dict = None):
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
