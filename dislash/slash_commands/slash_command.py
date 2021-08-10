@@ -85,7 +85,7 @@ class Option:
 
     __slots__ = ("name", "description", "type", "required", "choices", "options", "_choice_connectors")
 
-    def __init__(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def __init__(self, name: str, description: str = None, type: int = None, required: bool = False, choices: List[OptionChoice] = None, options: list = None):
         assert name.islower(), f"Option name {name!r} must be lowercase"
         self.name = name
         self.description = description
@@ -160,7 +160,7 @@ class Option:
         # Add an option choice
         self.choices.append(OptionChoice(name=name, value=true_value))
 
-    def add_option(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def add_option(self, name: str, description: str = None, type: int = None, required: bool = False, choices: List[OptionChoice] = None, options: list = None):
         '''
         Adds an option to the current list of options
 
@@ -214,8 +214,8 @@ class SlashCommand:
         Whether the command is enabled by default when the app is added to a guild
     """
 
-    def __init__(self, name: str, description: str, options: list=None,
-                                default_permission: bool=True, **kwargs):
+    def __init__(self, name: str, description: str, options: list = None,
+                                default_permission: bool = True, **kwargs):
         self.id = kwargs.pop('id', None)
         if self.id is not None:
             self.id = int(self.id)
