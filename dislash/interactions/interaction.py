@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import discord
+import json
 from discord.http import Route
 from .message_components import ActionRow
 
@@ -111,15 +112,6 @@ class BaseInteraction:
         self._webhook = None
 
     @property
-    def webhook(self):
-        if self._webhook is None:
-            self._webhook = discord.Webhook(
-                {"id": self.application_id, "type": 1, "token": self.token},
-                adapter=discord.AsyncWebhookAdapter(self.bot.http._HTTPClient__session)
-            )
-        return self._webhook
-    
-    @property
     def created_at(self):
         return datetime.datetime.utcfromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
     
@@ -150,16 +142,17 @@ class BaseInteraction:
             cached.pop(0)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
-                                            components=None,
+                                            components=None, view=None,
                                             file=None, files=None,
                                             tts=False, hide_user_input=False,
                                             ephemeral=False, delete_after=None,
                                             allowed_mentions=None, type=None,
                                             fetch_response_message=True):
         """
-        Creates an interaction response. This method is a bit "smarter" than
-        :meth:`create_response`. If the token is no longer valid, it sends a usual
-        channel message instead of creating an interaction response.
+        Creates an interaction response. What's the difference between this method and
+        :meth:`create_response`? If the token is no longer valid, this method sends a usual
+        channel message instead of creating an interaction response. Also, this method
+        fetches the interaction response message and returns it, unlike :meth:`create_response`.
 
         Parameters
         ----------
@@ -171,6 +164,9 @@ class BaseInteraction:
             a list of up to 10 embeds to attach
         components : :class:`List[ActionRow]`
             a list of up to 5 action rows
+        view : :class:`discord.ui.View`
+            only usable with discord.py 2.0. Read more about ``View`` in
+            discord.py 2.0 official documentation
         file : :class:`discord.File`
             if it's the first interaction reply, the file will be ignored due to API limitations.
             Everything else is the same as in :class:`discord.TextChannel.send()` method.
@@ -218,7 +214,7 @@ class BaseInteraction:
                 file=file, files=files,
                 tts=tts, delete_after=delete_after,
                 allowed_mentions=allowed_mentions,
-                components=components
+                components=components, view=view
             )
         # Create response
         await self.create_response(
@@ -227,6 +223,7 @@ class BaseInteraction:
             embed=embed,
             embeds=embeds,
             components=components,
+            view=view,
             ephemeral=ephemeral,
             tts=tts,
             allowed_mentions=allowed_mentions
@@ -241,7 +238,7 @@ class BaseInteraction:
         
         if fetch_response_message:
             if ephemeral:
-                msg = await self.edit(content=content)
+                msg = await self.edit(content=content, embed=embed, embeds=embeds)
                 msg._overwrite_components(components)
                 self._cache_ephemeral_message(msg)
                 return msg
@@ -251,7 +248,7 @@ class BaseInteraction:
                 pass
 
     async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
-                                                    components=None,
+                                                    components=None, view=None,
                                                     ephemeral=False, tts=False,
                                                     allowed_mentions=None):
         """
@@ -269,6 +266,9 @@ class BaseInteraction:
             a list of up to 10 embeds to attach
         components : :class:`List[ActionRow]`
             a list of up to 5 action rows
+        view : :class:`discord.ui.View`
+            only usable with discord.py 2.0. Read more about ``View`` in
+            discord.py 2.0 official documentation
         ephemeral : :class:`bool`
             if set to ``True``, your response will only be visible to the command author
         tts : :class:`bool`
@@ -304,16 +304,26 @@ class BaseInteraction:
                 raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
         
-        if components is not None:
+        if view:
+            if not hasattr(view, '__discord_ui_view__'):
+                raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
+
+            _components = view.to_components()
+        else:
+            _components = None
+        
+        if components:
             if len(components) > 5:
-                raise discord.InvalidArgument("components must be a list of up to 5 elements")
-            wrapped = []
+                raise discord.InvalidArgument("components must be a list of up to 5 action rows")
+            _components = _components or []
             for comp in components:
                 if isinstance(comp, ActionRow):
-                    wrapped.append(comp)
+                    _components.append(comp.to_dict())
                 else:
-                    wrapped.append(ActionRow(comp))
-            data["components"] = [comp.to_dict() for comp in wrapped]
+                    _components.append(ActionRow(comp).to_dict())
+        
+        if _components:
+            data["components"] = _components
         
         # Allowed mentions
         if content or embed or embeds:
@@ -448,24 +458,142 @@ class BaseInteraction:
 
     async def followup(self, content=None, *,   embed=None, embeds=None,
                                                 file=None, files=None,
-                                                tts=None, allowed_mentions=None):
+                                                components=None, view=None,
+                                                tts=False, ephemeral=False,
+                                                allowed_mentions=None,
+                                                username=None, avatar_url=None):
         """
-        Sends a followup message, which is basically a channel message
-        referencing the original interaction response.
+        Sends a followup message.
 
-        Parameters are similar to :class:`discord.TextChannel.send()`
+        Parameters
+        ----------
+        content : :class:`str`
+            the followup message content
+        embed : :class:`discord.Embed`
+            the followup message embed
+        embeds : :class:`List[discord.Embed]`
+            a list of up to 10 embeds to attach
+        file : :class:`discord.File`
+            a file to attach to the message
+        files : List[:class:`discord.File`]
+            a list of files to attach to the message
+        components : :class:`List[ActionRow]`
+            a list of up to 5 action rows
+        view : :class:`discord.ui.View`
+            only usable with discord.py 2.0. Read more about ``View`` in
+            discord.py 2.0 official documentation
+        ephemeral : :class:`bool`
+            if set to ``True``, your message will only be visible to the command author
+        tts : :class:`bool`
+            whether the message is text-to-speech or not
+        allowed_mentions : :class:`discord.AllowedMentions`
+            controls the mentions being processed in this message
+        username : :class:`str`
+            override the default bot name
+        avatar_url : :class:`str`
+            override the default avatar of the bot
         """
-        r = await self.webhook.send(
-            content=content, tts=tts,
-            file=file, files=files,
-            embed=embed, embeds=embeds,
-            allowed_mentions=allowed_mentions
+        route = Route(
+            'POST', '/webhooks/{application_id}/{interaction_token}',
+            application_id=self.application_id,
+            interaction_token=self.token
         )
-        return discord.Message(
-            state=self.bot._connection,
-            channel=self.channel,
-            data=r
-        )
+        data = {}
+
+        if content:
+            data["content"] = str(content)
+        
+        if embed is not None and embeds is not None:
+            raise discord.InvalidArgument('cannot pass both embed and embeds parameter to followup()')
+        
+        if embed is not None:
+            if not isinstance(embed, discord.Embed):
+                raise discord.InvalidArgument('embed parameter must be discord.Embed')
+            data['embeds'] = [embed.to_dict()]
+        
+        elif embeds is not None:
+            if len(embeds) > 10:
+                raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
+            elif not all(isinstance(embed, discord.Embed) for embed in embeds):
+                raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
+            data['embeds'] = [embed.to_dict() for embed in embeds]
+        
+        if view:
+            if not hasattr(view, '__discord_ui_view__'):
+                raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
+
+            _components = view.to_components()
+        else:
+            _components = None
+        
+        if components:
+            if len(components) > 5:
+                raise discord.InvalidArgument("components must be a list of up to 5 action rows")
+            _components = _components or []
+            for comp in components:
+                if isinstance(comp, ActionRow):
+                    _components.append(comp.to_dict())
+                else:
+                    _components.append(ActionRow(comp).to_dict())
+        
+        if _components:
+            data["components"] = _components
+
+        state = self.bot._connection
+        if allowed_mentions is not None:
+            if state.allowed_mentions is not None:
+                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+            else:
+                allowed_mentions = allowed_mentions.to_dict()
+            data['allowed_mentions'] = allowed_mentions
+
+        if ephemeral:
+            data["flags"] = 64
+        if tts:
+            data["tts"] = True
+        if username:
+            data["username"] = username
+        if avatar_url:
+            data["avatar_url"] = avatar_url
+
+        if file is not None and files is not None:
+            raise discord.InvalidArgument('cannot pass both file and files parameter to followup()')
+        
+        if file is not None:
+            files = [file]
+        
+        if files is None:
+            data = await self.bot.http.request(route, json=data)
+        else:
+            # Send with files
+            form = []
+            form.append({
+                'name': 'payload_json',
+                'value': json.dumps(data, separators=(',', ':'), ensure_ascii=True)
+            })
+            if len(files) == 1:
+                file = files[0]
+                form.append({
+                    'name': 'file',
+                    'value': file.fp,
+                    'filename': file.filename,
+                    'content_type': 'application/octet-stream'
+                })
+            else:
+                for index, file in enumerate(files):
+                    form.append({
+                        'name': 'file%s' % index,
+                        'value': file.fp,
+                        'filename': file.filename,
+                        'content_type': 'application/octet-stream'
+                    })
+            try:
+                data = await self.bot.http.request(route, form=form, files=files)
+            finally:
+                for f in files:
+                    f.close()
+        
+        return state.create_message(channel=self.channel, data=data)
 
     send = reply
 
