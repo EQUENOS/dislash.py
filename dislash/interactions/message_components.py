@@ -427,8 +427,6 @@ class ActionRow(Component):
                 if component.type == ComponentType.Button:
                     component.disabled = True
 
-
-
     def enable_buttons(self, *positions: int):
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
@@ -442,8 +440,6 @@ class ActionRow(Component):
                 component = self.components[i]
                 if component.type == ComponentType.Button:
                     component.disabled = False
-
-
 
     def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
                         custom_id: str=None, url: str=None, disabled: bool=False):
