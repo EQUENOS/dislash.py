@@ -149,12 +149,12 @@ class BaseInteraction:
             cached.pop(0)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
-                                            components=None,
-                                            file=None, files=None,
-                                            tts=False, hide_user_input=False,
-                                            ephemeral=False, delete_after=None,
-                                            allowed_mentions=None, type=None,
-                                            fetch_response_message=True):
+                    components=None,
+                    file=None, files=None,
+                    tts=False, hide_user_input=False,
+                    ephemeral=False, delete_after=None,
+                    allowed_mentions=None, type=None,
+                    fetch_response_message=True):
         """
         Creates an interaction response. This method is a bit "smarter" than
         :meth:`create_response`. If the token is no longer valid, it sends a usual
@@ -249,9 +249,9 @@ class BaseInteraction:
                 pass
 
     async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
-                                                    components=None,
-                                                    ephemeral=False, tts=False,
-                                                    allowed_mentions=None):
+                              components=None,
+                              ephemeral=False, tts=False,
+                              allowed_mentions=None):
         """
         Creates an interaction response.
 
@@ -444,8 +444,8 @@ class BaseInteraction:
         )
 
     async def followup(self, content=None, *,   embed=None, embeds=None,
-                                                file=None, files=None,
-                                                tts=None, allowed_mentions=None):
+                       file=None, files=None,
+                       tts=None, allowed_mentions=None):
         """
         Sends a followup message, which is basically a channel message
         referencing the original interaction response.
