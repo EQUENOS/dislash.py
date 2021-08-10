@@ -229,7 +229,7 @@ class SubCommandGroup(BaseSlashCommand):
             options=[]
         )
 
-    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None, **kwargs):
+    def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None, **kwargs):
         """
         A decorator that creates a subcommand in the
         subcommand group.
