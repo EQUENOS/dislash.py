@@ -90,7 +90,7 @@ class BaseSlashCommand:
         for kw, value in kwargs.items():
             if not hasattr(self, kw):
                 setattr(self, kw, value)
-    
+
     async def __call__(self, *args, **kwargs):
         return await self.func(*args, **kwargs)
 
@@ -164,7 +164,7 @@ class BaseSlashCommand:
         """
         if not self._buckets.valid:
             return False
-        
+
         bucket = self._buckets.get_bucket(inter)
         dt = inter.created_at
         current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
@@ -290,7 +290,7 @@ class CommandParent(BaseSlashCommand):
         connectors : :class:`dict`
             which function param states for each option. If the name
             of an option already matches the corresponding function param,
-            you don't have to specify the connectors. Connectors template: 
+            you don't have to specify the connectors. Connectors template:
             ``{"option-name": "param_name", ...}``
         """
         def decorator(func):
@@ -298,7 +298,7 @@ class CommandParent(BaseSlashCommand):
                 if len(self.registerable.options) > 0:
                     self.registerable.options = []
                 self.child_type = Type.SUB_COMMAND
-            
+
             new_func = SubCommand(
                 func,
                 name=name,
@@ -311,7 +311,7 @@ class CommandParent(BaseSlashCommand):
             self.registerable.options.append(new_func.option)
             return new_func
         return decorator
-    
+
     def sub_command_group(self, name=None, **kwargs):
         """
         A decorator that creates a subcommand group under the base command.
@@ -327,34 +327,34 @@ class CommandParent(BaseSlashCommand):
                 if len(self.registerable.options) > 0:
                     self.registerable.options = []
                 self.child_type = Type.SUB_COMMAND_GROUP
-            
+
             new_func = SubCommandGroup(func, name=name, **kwargs)
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
         return decorator
-    
+
     async def invoke_children(self, interaction):
         data = interaction.data
-        
+
         option = data.option_at(0)
         if option is None:
             return
-        
+
         group = None
         subcmd = None
         if option.type == Type.SUB_COMMAND_GROUP:
             group = self.children.get(option.name)
         elif option.type == Type.SUB_COMMAND:
             subcmd = self.children.get(option.name)
-        
+
         if group is not None:
             option = option.option_at(0)
             if option is None:
                 subcmd = None
             else:
                 subcmd = group.children.get(option.name)
-        
+
         if group is not None:
             interaction.invoked_with += f" {group.name}"
             interaction.sub_command_group = group
@@ -365,7 +365,7 @@ class CommandParent(BaseSlashCommand):
             except Exception as err:
                 group._dispatch_error(self._cog, interaction, err)
                 raise err
-        
+
         if subcmd is not None:
             interaction.invoked_with += f" {subcmd.name}"
             interaction.sub_command = subcmd
@@ -412,7 +412,7 @@ def command(*args, **kwargs):
     connectors : :class:`dict`
         which function param states for each option. If the name
         of an option already matches the corresponding function param,
-        you don't have to specify the connectors. Connectors template: 
+        you don't have to specify the connectors. Connectors template:
         ``{"option-name": "param_name", ...}``
     """
     def decorator(func):
@@ -437,17 +437,17 @@ def check(predicate):
             def predicate(inter):
                 return inter.author.id == inter.guild.owner_id
             return check(predicate)
-        
+
         @is_guild_owner()
         @slash.command(description="Says Hello if you own the guild")
         async def hello(inter):
             await inter.reply("Hello, Mr.Owner!")
-    
+
     .. note::
-        
+
         | In this example registration of slash-command is automatic.
         | See :ref:`slash-command_constructor` to learn more about manual registration
-    
+
     '''
     if inspect.iscoroutinefunction(predicate):
         wrapper = predicate
@@ -720,16 +720,16 @@ def cooldown(rate, per, type=BucketType.default):
             cooldown_obj = Cooldown(rate, per, type)
         except Exception:
             cooldown_obj = Cooldown(rate, per)
-        
+
         try:
             mapping = CooldownMapping(cooldown_obj)
         except Exception:
             mapping = CooldownMapping(cooldown_obj, type)
-        
+
         if isinstance(func, BaseSlashCommand):
             func._buckets = mapping
         else:
             func.__slash_cooldown__ = mapping
-        
+
         return func
     return decorator
