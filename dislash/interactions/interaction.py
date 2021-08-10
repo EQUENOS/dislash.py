@@ -466,11 +466,11 @@ class BaseInteraction:
         )
 
     async def followup(self, content=None, *,   embed=None, embeds=None,
-                                                file=None, files=None,
-                                                components=None, view=None,
-                                                tts=False, ephemeral=False,
-                                                allowed_mentions=None,
-                                                username=None, avatar_url=None):
+                       file=None, files=None,
+                       components=None, view=None,
+                       tts=False, ephemeral=False,
+                       allowed_mentions=None,
+                       username=None, avatar_url=None):
         """
         Sends a followup message.
 
