@@ -316,7 +316,6 @@ class Button(Component):
             if url is None:
                 custom_id = str(ID_SOURCE)
                 ID_SOURCE = (ID_SOURCE + 1) % MAX_ID
-                # raise discord.InvalidArgument("url or custom_id must be specified")
             elif style != ButtonStyle.link:
                 raise discord.InvalidArgument("if you specify url, the style must be ButtonStyle.link")
         elif url is not None:
