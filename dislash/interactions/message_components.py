@@ -441,8 +441,8 @@ class ActionRow(Component):
                 if component.type == ComponentType.Button:
                     component.disabled = False
 
-    def add_button(self, *, style: ButtonStyle, label: str=None, emoji: str=None,
-                        custom_id: str=None, url: str=None, disabled: bool=False):
+    def add_button(self, *, style: ButtonStyle, label: str = None, emoji: str = None,
+                   custom_id: str = None, url: str = None, disabled: bool = False):
         self.components.append(
             Button(
                 style=style,
@@ -454,7 +454,7 @@ class ActionRow(Component):
             )
         )
     
-    def add_menu(self, *, custom_id: str, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None):
+    def add_menu(self, *, custom_id: str, placeholder: str = None, min_values: int = 1, max_values: int = 1, options: list = None):
         self.components.append(
             SelectMenu(
                 custom_id=custom_id,
