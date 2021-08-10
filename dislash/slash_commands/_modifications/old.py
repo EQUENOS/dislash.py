@@ -34,7 +34,7 @@ def send_message(self, channel_id, content, *, tts=False, embed=None, nonce=None
 
     if message_reference:
         payload['message_reference'] = message_reference
-    
+
     if components:
         payload['components'] = components
 
@@ -94,7 +94,7 @@ async def send_with_components(messageable, content=None, *,
     content = str(content) if content is not None else None
     if embed is not None:
         embed = embed.to_dict()
-    
+
     if components is not None:
         if len(components) > 5:
             raise InvalidArgument("components must be a list of up to 5 action rows")
@@ -106,14 +106,13 @@ async def send_with_components(messageable, content=None, *,
                 wrapped.append(ActionRow(comp))
         components = [comp.to_dict() for comp in wrapped]
 
-    if allowed_mentions is not None:
-        if state.allowed_mentions is not None:
-            allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
-        else:
-            allowed_mentions = allowed_mentions.to_dict()
-    else:
+    if allowed_mentions is None:
         allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
 
+    elif state.allowed_mentions is not None:
+        allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+    else:
+        allowed_mentions = allowed_mentions.to_dict()
     if mention_author is not None:
         allowed_mentions = allowed_mentions or AllowedMentions().to_dict()
         allowed_mentions['replied_user'] = bool(mention_author)
@@ -178,7 +177,7 @@ async def edit_with_components(message, **fields):
     else:
         if embed is not None:
             fields['embed'] = embed.to_dict()
-    
+
     try:
         components = fields['components']
     except KeyError:
@@ -192,9 +191,9 @@ async def edit_with_components(message, **fields):
     except KeyError:
         pass
     else:
-            flags = MessageFlags._from_value(message.flags.value)
-            flags.suppress_embeds = suppress
-            fields['flags'] = flags.value
+        flags = MessageFlags._from_value(message.flags.value)
+        flags.suppress_embeds = suppress
+        fields['flags'] = flags.value
 
     delete_after = fields.pop('delete_after', None)
 
