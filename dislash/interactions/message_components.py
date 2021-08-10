@@ -244,7 +244,7 @@ class SelectMenu(Component):
             if option.value in values:
                 self.selected_options.append(option)
 
-    def add_option(self, label: str, value: str, description: str=None, emoji: str=None, default: bool=False):
+    def add_option(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
         """
         Adds an option to the list of options of the menu.
         Parameters are the same as in :class:`SelectOption`.
@@ -308,8 +308,8 @@ class Button(Component):
     disabled : :class:`bool`
         Whether the button is disabled or not. Defaults to false.
     """
-    def __init__(self, *, style: ButtonStyle, label: str=None, emoji: discord.PartialEmoji=None,
-                                    custom_id: str=None, url: str=None, disabled: bool=False):
+    def __init__(self, *, style: ButtonStyle, label: str = None, emoji: discord.PartialEmoji = None,
+                 custom_id: str = None, url: str = None, disabled: bool = False):
         global ID_SOURCE # Ugly as hell
 
         if custom_id is None:
