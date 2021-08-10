@@ -209,22 +209,20 @@ class BaseInteraction:
                 type = 3 if hide_user_input else 4
         # Sometimes we have to use TextChannel.send() instead
         if self._sent or self.expired or type == 3:
+            send_kwargs = dict(
+                content=content,
+                embed=embed,
+                file=file,
+                files=files,
+                tts=tts,
+                delete_after=delete_after,
+                allowed_mentions=allowed_mentions,
+            )
+            if self.bot.slash._uses_discord_2:
+                send_kwargs["view"] = view
             if self.bot.slash._modify_send:
-                return await self.channel.send(
-                    content=content, embed=embed,
-                    file=file, files=files,
-                    tts=tts, delete_after=delete_after,
-                    allowed_mentions=allowed_mentions,
-                    components=components, view=view
-                )
-            else:
-                return await self.channel.send(
-                    content=content, embed=embed,
-                    file=file, files=files,
-                    tts=tts, delete_after=delete_after,
-                    allowed_mentions=allowed_mentions,
-                    view=view
-                )
+                send_kwargs["components"] = components
+            return await self.channel.send(**send_kwargs)
         # Create response
         await self.create_response(
             content=content,
