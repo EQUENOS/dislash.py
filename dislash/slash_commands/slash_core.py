@@ -275,7 +275,7 @@ class CommandParent(BaseSlashCommand):
         self._cog = cog
         self._cog_name = cog.qualified_name
 
-    def sub_command(self, name: str=None, description: str=None, options: list=None, connectors: dict=None, **kwargs):
+    def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None, **kwargs):
         """
         A decorator that creates a subcommand under the base command.
 
@@ -454,6 +454,7 @@ def check(predicate):
     else:
         async def wrapper(ctx):
             return predicate(ctx)
+
     def decorator(func):
         if isinstance(func, CommandParent):
             func.checks.append(wrapper)
