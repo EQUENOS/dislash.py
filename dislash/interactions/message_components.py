@@ -134,7 +134,7 @@ class SelectOption:
 
     __slots__ = ("label", "value", "description", "emoji", "default")
 
-    def __init__(self, label: str, value: str, description: str=None, emoji: str=None, default: bool=False):
+    def __init__(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
         
@@ -223,7 +223,7 @@ class SelectMenu(Component):
         the list of chosen options, max 25
     """
 
-    def __init__(self, *, custom_id: str=None, placeholder: str=None, min_values: int=1, max_values: int=1, options: list=None, disabled: bool=False):
+    def __init__(self, *, custom_id: str = None, placeholder: str = None, min_values: int = 1, max_values: int = 1, options: list = None, disabled: bool = False):
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
