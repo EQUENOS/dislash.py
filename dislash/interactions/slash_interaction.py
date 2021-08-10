@@ -115,10 +115,7 @@ class InteractionDataOption:
         out = {}
         for kw, val in self.options.items():
             new_kw = connectors.get(kw, kw)
-            if val.type > 2:
-                out[new_kw] = val.value
-            else:
-                out[new_kw] = val
+            out[new_kw] = val.value if val.type > 2 else val
         return out
 
     @property
@@ -213,10 +210,7 @@ class InteractionData:
         out = {}
         for kw, val in self.options.items():
             new_kw = connectors.get(kw, kw)
-            if val.type > 2:
-                out[new_kw] = val.value
-            else:
-                out[new_kw] = val._to_dict_values(connectors)
+            out[new_kw] = val.value if val.type > 2 else val._to_dict_values(connectors)
         return out
 
     def _wrap_choices(self, slash_command):
