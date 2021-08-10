@@ -446,7 +446,7 @@ class BaseInteraction:
         await asyncio.sleep(delay)
         try:
             await self.delete()
-        except:
+        except Exception:
             pass
 
     async def fetch_initial_response(self):
