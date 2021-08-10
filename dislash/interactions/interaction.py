@@ -12,7 +12,6 @@ __all__ = (
 )
 
 
-
 class MessageWithComponents(discord.Message):
     def __init__(self, *, state, channel, data):
         super().__init__(state=state, channel=channel, data=data)
