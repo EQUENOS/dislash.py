@@ -40,7 +40,7 @@ class SlashClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, show_warnings: bool=True, modify_send: bool=True):
+    def __init__(self, client, *, show_warnings: bool = True, modify_send: bool = True):
         self._uses_discord_2 = hasattr(client, "add_view")
         _HANDLER.client = client
         self.client = _HANDLER.client
