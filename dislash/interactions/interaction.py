@@ -35,9 +35,9 @@ class MessageWithComponents(discord.Message):
 
 
 class InteractionType:
-    Ping               = 1
+    Ping = 1
     ApplicationCommand = 2
-    MessageComponent   = 3
+    MessageComponent = 3
 
 
 class ResponseType:
@@ -58,13 +58,13 @@ class ResponseType:
     UpdateMessage = 7
         For components, edit the message the component was attached to
     """
-    Pong                     = 1
-    Acknowledge              = 1
-    ChannelMessage           = 3
+    Pong = 1
+    Acknowledge = 1
+    ChannelMessage = 3
     ChannelMessageWithSource = 4
-    AcknowledgeWithSource    = 5
-    DeferredUpdateMessage    = 6
-    UpdateMessage            = 7
+    AcknowledgeWithSource = 5
+    DeferredUpdateMessage = 6
+    UpdateMessage = 7
 
 
 class BaseInteraction:
