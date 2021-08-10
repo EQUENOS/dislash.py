@@ -310,7 +310,7 @@ class Button(Component):
     """
     def __init__(self, *, style: ButtonStyle, label: str = None, emoji: discord.PartialEmoji = None,
                  custom_id: str = None, url: str = None, disabled: bool = False):
-        global ID_SOURCE # Ugly as hell
+        global ID_SOURCE  # Ugly as hell
 
         if custom_id is None:
             if url is None:
