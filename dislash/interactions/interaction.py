@@ -13,6 +13,7 @@ __all__ = (
 )
 
 
+
 class MessageWithComponents(discord.Message):
     def __init__(self, *, state, channel, data):
         super().__init__(state=state, channel=channel, data=data)
@@ -22,7 +23,7 @@ class MessageWithComponents(discord.Message):
             self.components = [ActionRow.from_dict(comp) for comp in data.get("components", [])]
         else:
             self._from_dpy_2 = True
-
+    
     def _overwrite_components(self, components):
         # This method is necessary for ephemeral messages
         if components is None:
@@ -36,9 +37,9 @@ class MessageWithComponents(discord.Message):
 
 
 class InteractionType:
-    Ping = 1
+    Ping               = 1
     ApplicationCommand = 2
-    MessageComponent = 3
+    MessageComponent   = 3
 
 
 class ResponseType:
@@ -59,13 +60,13 @@ class ResponseType:
     UpdateMessage = 7
         For components, edit the message the component was attached to
     """
-    Pong = 1
-    Acknowledge = 1
-    ChannelMessage = 3
+    Pong                     = 1
+    Acknowledge              = 1
+    ChannelMessage           = 3
     ChannelMessageWithSource = 4
-    AcknowledgeWithSource = 5
-    DeferredUpdateMessage = 6
-    UpdateMessage = 7
+    AcknowledgeWithSource    = 5
+    DeferredUpdateMessage    = 6
+    UpdateMessage            = 7
 
 
 class BaseInteraction:
@@ -99,30 +100,21 @@ class BaseInteraction:
                 state=state,
                 data=data["user"]
             )
-
+        
         if "channel_id" in data:
             self.channel_id = int(data["channel_id"])
             self.channel = client.get_channel(self.channel_id)
         else:
             self.channel_id = None
             self.channel = None
-
+        
         self._sent = False
         self._webhook = None
 
     @property
-    def webhook(self):
-        if self._webhook is None:
-            self._webhook = discord.Webhook(
-                {"id": self.application_id, "type": 1, "token": self.token},
-                adapter=discord.AsyncWebhookAdapter(self.bot.http._HTTPClient__session)
-            )
-        return self._webhook
-
-    @property
     def created_at(self):
         return datetime.datetime.utcfromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
-
+    
     @property
     def expired(self):
         # In this method we're using self.received_at
@@ -150,12 +142,12 @@ class BaseInteraction:
             cached.pop(0)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
-                    components=None,
-                    file=None, files=None,
-                    tts=False, hide_user_input=False,
-                    ephemeral=False, delete_after=None,
-                    allowed_mentions=None, type=None,
-                    fetch_response_message=True):
+                                            components=None, view=None,
+                                            file=None, files=None,
+                                            tts=False, hide_user_input=False,
+                                            ephemeral=False, delete_after=None,
+                                            allowed_mentions=None, type=None,
+                                            fetch_response_message=True):
         """
         Creates an interaction response. What's the difference between this method and
         :meth:`create_response`? If the token is no longer valid, this method sends a usual
@@ -208,21 +200,29 @@ class BaseInteraction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         """
+        is_empty_message = content is None and embed is None and embeds is None
         # Which callback type is it
         if type is None:
-            if content is None and embed is None and embeds is None:
+            if is_empty_message:
                 type = 1 if hide_user_input else 5
             else:
                 type = 3 if hide_user_input else 4
         # Sometimes we have to use TextChannel.send() instead
         if self._sent or self.expired or type == 3:
-            return await self.channel.send(
-                content=content, embed=embed,
-                file=file, files=files,
-                tts=tts, delete_after=delete_after,
+            send_kwargs = dict(
+                content=content,
+                embed=embed,
+                file=file,
+                files=files,
+                tts=tts,
+                delete_after=delete_after,
                 allowed_mentions=allowed_mentions,
-                components=components, view=view
             )
+            if self.bot.slash._uses_discord_2:
+                send_kwargs["view"] = view
+            if self.bot.slash._modify_send:
+                send_kwargs["components"] = components
+            return await self.channel.send(**send_kwargs)
         # Create response
         await self.create_response(
             content=content,
@@ -237,12 +237,15 @@ class BaseInteraction:
         )
         self._sent = True
 
+        if view and not view.is_finished():
+            self.bot._connection.store_view(view, None)
+
         if type == 5:
             return None
-
+        
         if delete_after is not None:
             self.bot.loop.create_task(self.delete_after(delete_after))
-
+        
         if fetch_response_message:
             if ephemeral:
                 msg = await self.edit(content=content, embed=embed, embeds=embeds)
@@ -255,9 +258,9 @@ class BaseInteraction:
                 pass
 
     async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
-                              components=None,
-                              ephemeral=False, tts=False,
-                              allowed_mentions=None):
+                                                    components=None, view=None,
+                                                    ephemeral=False, tts=False,
+                                                    allowed_mentions=None):
         """
         Creates an interaction response.
 
@@ -291,18 +294,19 @@ class BaseInteraction:
             Both ``embed`` and ``embeds`` are specified
         """
         type = type or 4
+        
         data = {}
         if content is not None:
             data['content'] = str(content)
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-
+        
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
-
+        
         elif embeds is not None:
             if len(embeds) > 10:
                 raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
@@ -347,7 +351,7 @@ class BaseInteraction:
             data["tts"] = True
         # Final JSON formation
         _json = {"type": type}
-        if data:
+        if len(data) > 0:
             _json["data"] = data
         # HTTP-request
         await self.bot.http.request(
@@ -374,7 +378,7 @@ class BaseInteraction:
             a list of up to 5 action rows
         allowed_mentions : :class:`discord.AllowedMentions`
             controls the mentions being processed in this message.
-
+        
         Returns
         -------
         message : :class:`discord.Message`
@@ -387,7 +391,7 @@ class BaseInteraction:
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-
+        
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
@@ -427,7 +431,7 @@ class BaseInteraction:
             channel=self.channel,
             data=r
         )
-
+    
     async def delete(self):
         """
         Deletes the original interaction response.
@@ -438,12 +442,12 @@ class BaseInteraction:
                 app_id=self.application_id, token=self.token
             )
         )
-
+    
     async def delete_after(self, delay: float):
         await asyncio.sleep(delay)
         try:
             await self.delete()
-        except Exception:
+        except:
             pass
 
     async def fetch_initial_response(self):
@@ -463,8 +467,11 @@ class BaseInteraction:
         )
 
     async def followup(self, content=None, *,   embed=None, embeds=None,
-                       file=None, files=None,
-                       tts=None, allowed_mentions=None):
+                                                file=None, files=None,
+                                                components=None, view=None,
+                                                tts=False, ephemeral=False,
+                                                allowed_mentions=None,
+                                                username=None, avatar_url=None):
         """
         Sends a followup message.
 
@@ -596,7 +603,13 @@ class BaseInteraction:
                 for f in files:
                     f.close()
         
-        return state.create_message(channel=self.channel, data=data)
+        msg = state.create_message(channel=self.channel, data=data)
+
+        if view and not view.is_finished():
+            message_id = None if msg is None else msg.id
+            self.bot._connection.store_view(view, message_id)
+        
+        return msg
 
     send = reply
 
