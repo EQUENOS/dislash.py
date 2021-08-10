@@ -253,8 +253,8 @@ class SubCommandGroup(BaseSlashCommand):
 
 class CommandParent(BaseSlashCommand):
     def __init__(self, func, *, name=None, description=None, options=None, default_permission=True,
-                                                             guild_ids=None, connectors=None,
-                                                             auto_sync=True, **kwargs):
+                 guild_ids=None, connectors=None,
+                 auto_sync=True, **kwargs):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
         self.children = {}
         self.auto_sync = auto_sync
