@@ -209,13 +209,22 @@ class BaseInteraction:
                 type = 3 if hide_user_input else 4
         # Sometimes we have to use TextChannel.send() instead
         if self._sent or self.expired or type == 3:
-            return await self.channel.send(
-                content=content, embed=embed,
-                file=file, files=files,
-                tts=tts, delete_after=delete_after,
-                allowed_mentions=allowed_mentions,
-                components=components, view=view
-            )
+            if self.bot.slash._modify_send:
+                return await self.channel.send(
+                    content=content, embed=embed,
+                    file=file, files=files,
+                    tts=tts, delete_after=delete_after,
+                    allowed_mentions=allowed_mentions,
+                    components=components, view=view
+                )
+            else:
+                return await self.channel.send(
+                    content=content, embed=embed,
+                    file=file, files=files,
+                    tts=tts, delete_after=delete_after,
+                    allowed_mentions=allowed_mentions,
+                    view=view
+                )
         # Create response
         await self.create_response(
             content=content,
@@ -229,6 +238,9 @@ class BaseInteraction:
             allowed_mentions=allowed_mentions
         )
         self._sent = True
+
+        if view and not view.is_finished():
+            self.bot._connection.store_view(view, None)
 
         if type == 5:
             return None
@@ -593,7 +605,13 @@ class BaseInteraction:
                 for f in files:
                     f.close()
         
-        return state.create_message(channel=self.channel, data=data)
+        msg = state.create_message(channel=self.channel, data=data)
+
+        if view and not view.is_finished():
+            message_id = None if msg is None else msg.id
+            self.bot._connection.store_view(view, message_id)
+        
+        return msg
 
     send = reply
 
