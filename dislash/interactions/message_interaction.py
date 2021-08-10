@@ -73,7 +73,7 @@ class MessageInteraction(BaseInteraction):
                     channel=channel or PartialTextChannel(0),
                     data=msg_data
                 )
-        
+
         component_data = data.get("data", {})
         component_type = component_data.get("component_type", 1)
         custom_id = component_data.get("custom_id")
@@ -87,7 +87,7 @@ class MessageInteraction(BaseInteraction):
                     break
             if self.component is not None:
                 break
-    
+
     @property
     def clicked_button(self) -> Button:
         if self.component.type == ComponentType.Button:
@@ -96,7 +96,7 @@ class MessageInteraction(BaseInteraction):
     @property
     def button(self) -> Button:
         return self.clicked_button
-    
+
     @property
     def select_menu(self) -> SelectMenu:
         if self.component.type == ComponentType.SelectMenu:
