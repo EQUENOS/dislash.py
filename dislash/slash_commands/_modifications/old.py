@@ -183,8 +183,14 @@ async def edit_with_components(message, **fields):
     except KeyError:
         pass
     else:
-        if components is not None:
-            fields['components'] = [comp.to_dict() for comp in components]
+        if components:
+            _components = []
+            for comp in components:
+                if isinstance(comp, ActionRow):
+                    _components.append(comp.to_dict())
+                else:
+                    _components.append(ActionRow(comp).to_dict())
+            fields['components'] = _components
 
     try:
         suppress = fields.pop('suppress')

@@ -485,7 +485,10 @@ async def edit(
         if components:
             _components = _components or []
             for comp in components:
-                _components.append(comp.to_dict())
+                if isinstance(comp, ActionRow):
+                    _components.append(comp.to_dict())
+                else:
+                    _components.append(ActionRow(comp).to_dict())
         else:
             _components = _components or []
 
