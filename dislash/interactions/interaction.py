@@ -199,9 +199,8 @@ class BaseInteraction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         """
-        is_empty_message = content is None and embed is None and embeds is None
-        # Which callback type is it
         if type is None:
+            is_empty_message = content is None and embed is None and embeds is None
             if is_empty_message:
                 type = 1 if hide_user_input else 5
             else:
@@ -350,7 +349,7 @@ class BaseInteraction:
             data["tts"] = True
         # Final JSON formation
         _json = {"type": type}
-        if len(data) > 0:
+        if data:
             _json["data"] = data
         # HTTP-request
         await self.bot.http.request(
@@ -575,11 +574,15 @@ class BaseInteraction:
             data = await self.bot.http.request(route, json=data)
         else:
             # Send with files
-            form = []
-            form.append({
-                'name': 'payload_json',
-                'value': json.dumps(data, separators=(',', ':'), ensure_ascii=True)
-            })
+            form = [
+                {
+                    'name': 'payload_json',
+                    'value': json.dumps(
+                        data, separators=(',', ':'), ensure_ascii=True
+                    ),
+                }
+            ]
+
             if len(files) == 1:
                 file = files[0]
                 form.append({
