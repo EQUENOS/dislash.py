@@ -283,26 +283,25 @@ class BaseInteraction:
             Both ``embed`` and ``embeds`` are specified
         """
         type = type or 4
-        
         data = {}
         if content is not None:
             data['content'] = str(content)
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
-        
+
         if embed is not None:
             if not isinstance(embed, discord.Embed):
                 raise discord.InvalidArgument('embed parameter must be discord.Embed')
             data['embeds'] = [embed.to_dict()]
-        
+
         elif embeds is not None:
             if len(embeds) > 10:
                 raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
                 raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
-        
+
         if components is not None:
             if len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 elements")
@@ -313,7 +312,7 @@ class BaseInteraction:
                 else:
                     wrapped.append(ActionRow(comp))
             data["components"] = [comp.to_dict() for comp in wrapped]
-        
+
         # Allowed mentions
         if content or embed or embeds:
             state = self.bot._connection
@@ -330,7 +329,7 @@ class BaseInteraction:
             data["tts"] = True
         # Final JSON formation
         _json = {"type": type}
-        if len(data) > 0:
+        if data:
             _json["data"] = data
         # HTTP-request
         await self.bot.http.request(
