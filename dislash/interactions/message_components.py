@@ -98,20 +98,20 @@ class ButtonStyle:
     red     = 4
     link    = 5
     """
-    primary   = 1
-    blurple   = 1
+    primary = 1
+    blurple = 1
 
     secondary = 2
-    grey      = 2
-    gray      = 2
+    grey = 2
+    gray = 2
 
-    success   = 3
-    green     = 3
+    success = 3
+    green = 3
 
-    danger    = 4
-    red       = 4
+    danger = 4
+    red = 4
 
-    link      = 5
+    link = 5
 
 
 class SelectOption:
