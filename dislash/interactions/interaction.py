@@ -204,10 +204,9 @@ class BaseInteraction:
         message : :class:`discord.Message` | ``None``
             The response message that has been sent or ``None`` if the message is ephemeral
         """
-        is_empty_message = content is None and embed is None and embeds is None
         # Which callback type is it
         if type is None:
-            if is_empty_message:
+            if content is None and embed is None and embeds is None:
                 type = 1 if hide_user_input else 5
             else:
                 type = 3 if hide_user_input else 4
@@ -427,7 +426,7 @@ class BaseInteraction:
         await asyncio.sleep(delay)
         try:
             await self.delete()
-        except:
+        except Exception:
             pass
 
     async def fetch_initial_response(self):
