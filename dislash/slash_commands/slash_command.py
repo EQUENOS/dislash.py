@@ -248,7 +248,7 @@ class SlashCommand:
             payload['options'] = [Option.from_dict(p) for p in payload['options']]
         return SlashCommand(**payload)
 
-    def add_option(self, name: str, description: str=None, type: int=None, required: bool=False, choices: List[OptionChoice]=None, options: list=None):
+    def add_option(self, name: str, description: str = None, type: int = None, required: bool = False, choices: List[OptionChoice] = None, options: list = None):
         '''
         Adds an option to the current list of options
 
@@ -296,7 +296,7 @@ class SlashCommandPermissions:
         might be more convenient.
     """
 
-    def __init__(self, raw_permissions: list=None):
+    def __init__(self, raw_permissions: list = None):
         self.permissions = raw_permissions or []
 
     def __repr__(self):
@@ -319,7 +319,7 @@ class SlashCommandPermissions:
         return SlashCommandPermissions(raw_perms)
 
     @classmethod
-    def from_ids(cls, role_perms: dict=None, user_perms: dict=None):
+    def from_ids(cls, role_perms: dict = None, user_perms: dict = None):
         """
         Creates :class:`SlashCommandPermissions` from
         2 dictionaries of IDs and permissions.
