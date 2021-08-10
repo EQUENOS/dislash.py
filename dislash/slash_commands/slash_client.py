@@ -66,7 +66,7 @@ class SlashClient:
         # Inject cogs that are already loaded
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)
-    
+
     def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.add_listener(self._on_socket_response, 'on_socket_response')
@@ -99,11 +99,11 @@ class SlashClient:
 
         async def ctx_wait_for_button_click(ctx, check=None, timeout=None):
             return await self.wait_for_button_click(check=check, timeout=timeout)
-        
+
         async def message_wait_for_button_click(message, check=None, timeout=None):
             if check is None:
                 check = lambda inter: True
-            
+
             def auto_check(inter):
                 if message.id != inter.message.id:
                     return False
@@ -113,7 +113,7 @@ class SlashClient:
         async def message_wait_for_dropdown(message, check=None, timeout=None):
             if check is None:
                 check = lambda inter: True
-            
+
             def auto_check(inter):
                 if message.id != inter.message.id:
                     return False
@@ -122,13 +122,13 @@ class SlashClient:
 
         async def fetch_commands(guild):
             return await self.fetch_guild_commands(guild.id)
-        
+
         async def fetch_command(guild, command_id):
             return await self.fetch_guild_command(guild.id, command_id)
-        
+
         async def edit_command(guild, command_id, slash_command):
             return await self.edit_guild_slash_command(guild.id, command_id, slash_command)
-        
+
         async def edit_command_permissions(guild, command_id, permissions):
             return await self.edit_guild_command_permissions(guild.id, command_id, permissions)
 
@@ -137,19 +137,19 @@ class SlashClient:
 
         async def delete_command(guild, command_id):
             return await self.delete_guild_command(guild.id, command_id)
-        
+
         async def delete_commands(guild):
             return await self.delete_guild_commands(guild.id)
 
         def get_commands(guild):
             return self.get_guild_commands(guild.id)
-        
+
         def get_command(guild, command_id):
             return self.get_guild_command(guild.id, command_id)
-        
+
         def get_command_named(guild, name):
             return self.get_guild_command_named(guild.id, name)
-        
+
         def create_click_listener(message, timeout=None):
             return ClickListener(message.id, timeout)
 
@@ -199,7 +199,7 @@ class SlashClient:
     @property
     def commands(self):
         return _HANDLER.commands
-    
+
     @property
     def global_commands(self):
         return [sc for sc in self._global_commands.values()]
@@ -208,11 +208,11 @@ class SlashClient:
         """
         Decorator
         ::
-        
+
             @slash.event
             async def on_ready():
                 print("SlashClient is ready")
-        
+
         | All possible events:
         | ``on_ready``, ``on_auto_register``,
         | ``on_slash_command``, ``on_slash_command_error``
@@ -247,7 +247,7 @@ class SlashClient:
         connectors : :class:`dict`
             which function param states for each option. If the name
             of an option already matches the corresponding function param,
-            you don't have to specify the connectors. Connectors template: 
+            you don't have to specify the connectors. Connectors template:
             ``{"option-name": "param_name", ...}``
         """
         def decorator(func):
@@ -257,7 +257,7 @@ class SlashClient:
             self.commands[new_func.name] = new_func
             return new_func
         return decorator
-    
+
     # Getters
     def get_global_command(self, command_id: int):
         """
@@ -268,14 +268,14 @@ class SlashClient:
 
         command_id : int
             the ID of the command
-        
+
         Returns
         -------
 
         slash_command : SlashCommand | None
         """
         return self._global_commands.get(command_id)
-    
+
     def get_global_command_named(self, name: str):
         """
         Get a cached global command matching the specified name
@@ -285,7 +285,7 @@ class SlashClient:
 
         name : str
             the name of the command
-        
+
         Returns
         -------
 
@@ -307,7 +307,7 @@ class SlashClient:
 
         command_id : int
             the ID of the command
-        
+
         Returns
         -------
 
@@ -329,7 +329,7 @@ class SlashClient:
 
         name : str
             the name of the command
-        
+
         Returns
         -------
 
@@ -350,7 +350,7 @@ class SlashClient:
 
         guild_id : int
             the ID of the guild
-        
+
         Returns
         -------
 
@@ -400,7 +400,7 @@ class SlashClient:
             )
         )
         return [SlashCommand.from_dict(dat) for dat in data]
-    
+
     async def fetch_global_command(self, command_id: int):
         """
         Requests a registered global slash-command
@@ -457,7 +457,7 @@ class SlashClient:
         Registers a global slash-command
 
         .. seealso:: :ref:`raw_slash_command`
-        
+
         Parameters
         ----------
 
@@ -476,13 +476,13 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._global_commands[sc.id] = sc
         return sc
-    
+
     async def register_guild_slash_command(self, guild_id: int, slash_command: SlashCommand):
         """
         Registers a local slash-command
-        
+
         .. seealso:: :ref:`raw_slash_command`
-        
+
         Parameters
         ----------
 
@@ -505,11 +505,11 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._add_guild_command(guild_id, sc)
         return sc
-    
+
     async def overwrite_global_commands(self, slash_commands: list):
         """
         Bulk overwrites all global commands
-        
+
         Parameters
         ----------
 
@@ -534,7 +534,7 @@ class SlashClient:
     async def overwrite_guild_commands(self, guild_id: int, slash_commands: list):
         """
         Bulk overwrites all guild commands
-        
+
         Parameters
         ----------
 
@@ -583,7 +583,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._global_commands[sc.id] = sc
         return sc
-    
+
     async def edit_guild_slash_command(self, guild_id: int, command_id: int, slash_command: SlashCommand, **kwargs):
         """
         Edits a local command
@@ -612,7 +612,7 @@ class SlashClient:
         sc = SlashCommand.from_dict(r)
         self._add_guild_command(guild_id, sc)
         return sc
-    
+
     async def delete_global_slash_command(self, command_id: int):
         """
         Deletes a global command
@@ -632,7 +632,7 @@ class SlashClient:
         )
         # Update cache
         self._remove_global_command(command_id)
-    
+
     async def delete_guild_slash_command(self, guild_id: int, command_id: int):
         """
         Deletes a local command
@@ -748,7 +748,7 @@ class SlashClient:
         )
         # Update cache
         self._set_permissions(guild_id, command_id, permissions)
-    
+
     async def batch_edit_guild_command_permissions(self, guild_id: int, permissions: dict):
         """
         Batch edits permissions for all commands in a guild.
@@ -822,7 +822,7 @@ class SlashClient:
 
         name : str
             the name of the command to edit
-        
+
         slash_command : SlashCommand
             replacement of the old data
         """
@@ -842,7 +842,7 @@ class SlashClient:
 
         name : str
             the name of the command to edit
-        
+
         slash_command : SlashCommand
             replacement of the old data
         """
@@ -931,7 +931,7 @@ class SlashClient:
             if name == "on_slash_command_error":
                 self._cogs_with_err_listeners.append(cog.qualified_name)
                 break
-    
+
     def _eject_cogs(self, name):
         try:
             self._cogs_with_err_listeners.remove(name)
@@ -1072,7 +1072,7 @@ class SlashClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
-    async def multiple_wait_for(self, events_and_checks: Dict[str, Any], timeout: float=None):
+    async def multiple_wait_for(self, events_and_checks: Dict[str, Any], timeout: float = None):
         """
         Waits until one of the given events toggles and matches the relevant check.
 
@@ -1155,7 +1155,7 @@ class SlashClient:
                 "INTERACTION_CREATE",
                 self._on_raw_interaction
             )
-    
+
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
             if self._uses_discord_2:
@@ -1170,7 +1170,7 @@ class SlashClient:
             await self._auto_register_or_patch()
             self.is_ready = True
             await self._activate_event('ready')
-    
+
     async def _on_ready(self):
         if isinstance(self.client, discord.AutoShardedClient):
             self.is_ready = True
@@ -1255,14 +1255,14 @@ class SlashClient:
                 self.dispatch('button_click', inter)
             elif inter.component.type == ComponentType.SelectMenu:
                 self.dispatch('dropdown', inter)
-    
+
     async def _fill_app_id(self):
         data = await self.client.http.application_info()
         self.application_id = int(data["id"])
 
     # Aliases
     register_global_command = register_global_slash_command
-    
+
     register_guild_command = register_guild_slash_command
 
     edit_global_command = edit_global_slash_command
