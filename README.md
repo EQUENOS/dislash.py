@@ -14,11 +14,12 @@ An extending library for [discord.py](https://github.com/Rapptz/discord.py) that
 1. [Installation](#installation)
 2. [Features](#features)
 3. [Examples](#examples)
-4. [Creating Buttons](#creating_buttons)
-5. [Creating Menus](#creating_menus)
-6. [Links](#links)
-7. [Downloads](#downloads)
-8. [Creating a slash-command](#creating_a_slash-command)
+4. [Creating a slash command](#creating-a-slash-command)
+5. [Creating Buttons](#creating-buttons)
+6. [Creating Menus](#creating-menus)
+7. [Creating context menus](#creating-context-menus)
+8. [Links](#links)
+9. [Downloads](#downloads)
 
 
 # Installation
@@ -46,16 +47,14 @@ python -m pip install dislash.py
 💡 This library requires **[discord.py](https://github.com/Rapptz/discord.py)**.
 
 
-## Creating_a_slash-command
-In this example registration is automatic.
-If you want to register slash-commands separately, see docs.
+## Creating a slash command
 
 ```python
 from discord.ext import commands
-from dislash import SlashClient
+from dislash import InteractionClient
 
 bot = commands.Bot(command_prefix="!")
-slash = SlashClient(client)
+slash = InteractionClient(client)
 test_guilds = [12345, 98765]
 
 @slash.command(
@@ -71,16 +70,16 @@ bot.run("BOT_TOKEN")
 ```
 
 
-## Creating_Buttons
+## Creating buttons
 
 This example shows how to send a message with buttons.
 
 ```python
 from discord.ext import commands
-from dislash import SlashClient, ActionRow, Button, ButtonStyle
+from dislash import InteractionClient, ActionRow, Button, ButtonStyle
 
 bot = commands.Bot(command_prefix="!")
-slash = SlashClient(bot)
+slash = InteractionClient(bot)
 
 @bot.command()
 async def test(ctx):
@@ -114,16 +113,16 @@ bot.run("BOT_TOKEN")
 ```
 
 
-## Creating_Menus
+## Creating menus
 
 This example shows how to send a message with a menu.
 
 ```python
 from discord.ext import commands
-from dislash import SlashClient, SelectMenu, SelectOption
+from dislash import InteractionClient, SelectMenu, SelectOption
 
 bot = commands.Bot(command_prefix="!")
-slash = SlashClient(bot)
+slash = InteractionClient(bot)
 
 @bot.command()
 async def test(ctx):
@@ -150,6 +149,34 @@ async def test(ctx):
 
 bot.run("BOT_TOKEN")
 ```
+
+
+## Creating context menus
+
+This example shows how to create context menus and interact with them.
+
+```python
+from discord.ext import commands
+from dislash import InteractionClient
+
+bot = commands.Bot(command_prefix="!")
+inter_client = InteractionClient(bot)
+
+@inter_client.user_command(name="Press me")
+async def press_me(inter):
+    # User commands are visible in user context menus
+    # They can be global or per guild, just like slash commands
+    await inter.respond("Hello there!")
+
+@inter_client.message_command(name="Resend")
+async def resend(inter):
+    # Message commands are visible in message context menus
+    # inter is instance of ContextMenuInteraction
+    await inter.respond(inter.message.content)
+
+bot.run("BOT_TOKEN")
+```
+
 
 
 # Links
