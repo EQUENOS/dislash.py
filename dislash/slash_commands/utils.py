@@ -38,7 +38,7 @@ class ClickListener:
 
     __slots__ = ("id", "_listeners", "_timeout_waiter", "_timeout", "_ends_at")
 
-    def __init__(self, message_id: int, timeout: float=None):
+    def __init__(self, message_id: int, timeout: float = None):
         self.id = message_id
         self._listeners = []
         self._timeout_waiter = None
@@ -50,7 +50,7 @@ class ClickListener:
             _HANDLER.client.loop.create_task(self._wait_and_finish())
         else:
             self._ends_at = None
-    
+
     async def _wait_and_finish(self):
         delay = self._timeout
         while True:
@@ -85,7 +85,7 @@ class ClickListener:
         Kills the click manager. Only useful if the ``timeout``
         param was specified as ``None``.
         """
-        self._timeout_waiter = None # Also kills the timeout waiter
+        self._timeout_waiter = None  # Also kills the timeout waiter
         PER_MESSAGE_LISTENERS.pop(self.id, None)
 
     def timeout(self, func):
@@ -100,7 +100,7 @@ class ClickListener:
             new_func = func
         self._timeout_waiter = new_func
 
-    def matching_condition(self, check, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def matching_condition(self, check, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         matching the specified conditions.
@@ -132,7 +132,7 @@ class ClickListener:
             return func
         return deco
 
-    def from_user(self, user: discord.User, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def from_user(self, user: discord.User, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         from the specified user.
@@ -148,7 +148,7 @@ class ClickListener:
             reset_timeout=reset_timeout
         )
 
-    def not_from_user(self, user: discord.User, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def not_from_user(self, user: discord.User, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         from a user not maching the specified one.
@@ -164,7 +164,7 @@ class ClickListener:
             reset_timeout=reset_timeout
         )
 
-    def no_checks(self, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def no_checks(self, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for any click.
 
@@ -179,7 +179,7 @@ class ClickListener:
             reset_timeout=reset_timeout
         )
 
-    def matching_id(self, custom_id: str, *, cancel_others: bool=False, reset_timeout: bool=True):
+    def matching_id(self, custom_id: str, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         of the button matching the specified custom_id.

@@ -106,19 +106,16 @@ class InteractionDataOption:
             o['name']: InteractionDataOption(data=o, resolved=resolved)
             for o in data.get('options', [])
         }
-    
+
     def __repr__(self):
         return "<InteractionDataOption name='{0.name}' value={0.value} options={0.options}>".format(self)
 
-    def _to_dict_values(self, connectors: dict=None):
+    def _to_dict_values(self, connectors: dict = None):
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
             new_kw = connectors.get(kw, kw)
-            if val.type > 2:
-                out[new_kw] = val.value
-            else:
-                out[new_kw] = val
+            out[new_kw] = val.value if val.type > 2 else val
         return out
 
     @property
@@ -126,7 +123,7 @@ class InteractionDataOption:
         opt = self.option_at(0)
         if opt is not None and opt.type == 1:
             return opt
-    
+
     def get_option(self, name: str):
         '''
         Get the raw :class:`InteractionDataOption` matching the specified name
@@ -135,13 +132,13 @@ class InteractionDataOption:
         ----------
         name : str
             The name of the option you want to get
-        
+
         Returns
         -------
         option : InteractionDataOption | ``None``
         '''
         return self.options.get(name)
-    
+
     def get(self, name: str, default=None):
         '''
         Get the value of an option with the specified name
@@ -152,7 +149,7 @@ class InteractionDataOption:
             the name of the option you want to get
         default : any
             what to return in case nothing was found
-        
+
         Returns
         -------
         option_value : any
@@ -193,7 +190,7 @@ class InteractionData:
             o['name']: InteractionDataOption(data=o, resolved=resolved)
             for o in data.get('options', [])
         }
-    
+
     def __repr__(self):
         return "<InteractionData id={0.id} name='{0.name}' options={0.options}>".format(self)
 
@@ -208,15 +205,12 @@ class InteractionData:
             return None
         return opt.value if opt.type > 2 else opt
 
-    def _to_dict_values(self, connectors: dict=None):
+    def _to_dict_values(self, connectors: dict = None):
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
             new_kw = connectors.get(kw, kw)
-            if val.type > 2:
-                out[new_kw] = val.value
-            else:
-                out[new_kw] = val._to_dict_values(connectors)
+            out[new_kw] = val.value if val.type > 2 else val._to_dict_values(connectors)
         return out
 
     def _wrap_choices(self, slash_command):
@@ -238,7 +232,7 @@ class InteractionData:
         opt = self.option_at(0)
         if opt is not None and opt.type == 1:
             return opt
-    
+
     @property
     def sub_command_group(self):
         opt = self.option_at(0)
@@ -253,13 +247,13 @@ class InteractionData:
         ----------
         name : str
             The name of the option you want to get
-        
+
         Returns
         -------
         option : :class:`InteractionDataOption` | ``None``
         '''
         return self.options.get(name)
-    
+
     def get(self, name: str, default=None):
         '''
         Get the value of an option with the specified name
@@ -270,7 +264,7 @@ class InteractionData:
             the name of the option you want to get
         default : any
             what to return in case nothing was found
-        
+
         Returns
         -------
         option_value : any
@@ -291,7 +285,7 @@ class InteractionData:
         ----------
         index : int
             the index of the option you want to get
-        
+
         Returns
         -------
         option : :class:`InteractionDataOption` | ``None``
@@ -323,7 +317,7 @@ class SlashInteraction(BaseInteraction):
         super().__init__(client, payload)
 
         state = client._connection
-        self.prefix = "/" # Just in case
+        self.prefix = "/"  # Just in case
         self.data = InteractionData(
             data=payload.get('data', {}),
             guild=self.guild,
@@ -350,7 +344,7 @@ class SlashInteraction(BaseInteraction):
     def get(self, name: str, default=None):
         """Equivalent to :class:`InteractionData.get`"""
         return self.data.get(name, default)
-    
+
     def get_option(self, name: str):
         """Equivalent to :class:`InteractionData.get_option`"""
         return self.data.get_option(name)

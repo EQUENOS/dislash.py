@@ -22,8 +22,8 @@ class SlashCommandError(DiscordException):
 
 class BadArgument(SlashCommandError):
     pass
-            
-            
+
+
 class SlashCheckFailure(SlashCommandError):
     pass
 
@@ -55,7 +55,7 @@ class CommandOnCooldown(SlashCommandError):
     This inherits from `SlashCommandError`
 
     ## Attributes
-    
+
     `cooldown`: `Cooldown` (a class with attributes `rate`, `per`, and `type`)
 
     `retry_after`: `float` (the amount of seconds to wait before you can retry again)

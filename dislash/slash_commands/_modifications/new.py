@@ -49,6 +49,7 @@ async def send(
 ) -> Message:
     ...
 
+
 @overload
 async def send(
     self,
@@ -67,6 +68,7 @@ async def send(
     components: list = ...,
 ) -> Message:
     ...
+
 
 @overload
 async def send(
@@ -87,6 +89,7 @@ async def send(
 ) -> Message:
     ...
 
+
 @overload
 async def send(
     self,
@@ -105,6 +108,7 @@ async def send(
     components: list = ...,
 ) -> Message:
     ...
+
 
 async def send(
     self,
@@ -232,14 +236,13 @@ async def send(
     if stickers is not None:
         stickers = [sticker.id for sticker in stickers]
 
-    if allowed_mentions is not None:
-        if state.allowed_mentions is not None:
-            allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
-        else:
-            allowed_mentions = allowed_mentions.to_dict()
-    else:
+    if allowed_mentions is None:
         allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
 
+    elif state.allowed_mentions is not None:
+        allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+    else:
+        allowed_mentions = allowed_mentions.to_dict()
     if mention_author is not None:
         allowed_mentions = allowed_mentions or AllowedMentions().to_dict()
         allowed_mentions['replied_user'] = bool(mention_author)
@@ -257,7 +260,7 @@ async def send(
         _components = view.to_components()
     else:
         _components = None
-    
+
     if components:
         # This is not needed, but some users still prefer
         # dislash style of sending components so yeah
@@ -358,6 +361,7 @@ async def edit(
 ) -> None:
     ...
 
+
 @overload
 async def edit(
     self,
@@ -372,6 +376,7 @@ async def edit(
     components: Optional[list] = ...,
 ) -> None:
     ...
+
 
 async def edit(
     self,
@@ -446,19 +451,12 @@ async def edit(
     _components = None
     payload: Dict[str, Any] = {}
     if content is not MISSING:
-        if content is not None:
-            payload['content'] = str(content)
-        else:
-            payload['content'] = None
-
+        payload['content'] = str(content) if content is not None else None
     if embed is not MISSING and embeds is not MISSING:
         raise InvalidArgument('cannot pass both embed and embeds parameter to edit()')
 
     if embed is not MISSING:
-        if embed is None:
-            payload['embeds'] = []
-        else:
-            payload['embeds'] = [embed.to_dict()]
+        payload['embeds'] = [] if embed is None else [embed.to_dict()]
     elif embeds is not MISSING:
         payload['embeds'] = [e.to_dict() for e in embeds]
 
@@ -470,23 +468,18 @@ async def edit(
     if allowed_mentions is MISSING:
         if self._state.allowed_mentions is not None and self.author.id == self._state.self_id:
             payload['allowed_mentions'] = self._state.allowed_mentions.to_dict()
-    else:
-        if allowed_mentions is not None:
-            if self._state.allowed_mentions is not None:
-                payload['allowed_mentions'] = self._state.allowed_mentions.merge(allowed_mentions).to_dict()
-            else:
-                payload['allowed_mentions'] = allowed_mentions.to_dict()
+    elif allowed_mentions is not None:
+        if self._state.allowed_mentions is not None:
+            payload['allowed_mentions'] = self._state.allowed_mentions.merge(allowed_mentions).to_dict()
+        else:
+            payload['allowed_mentions'] = allowed_mentions.to_dict()
 
     if attachments is not MISSING:
         payload['attachments'] = [a.to_dict() for a in attachments]
 
     if view is not MISSING:
         self._state.prevent_view_updates_for(self.id)
-        if view:
-            _components = view.to_components()
-        else:
-            _components = []
-    
+        _components = view.to_components() if view else []
     if components is not MISSING:
         # Once again, this is for those who prefer dislash.py style
         if components:
@@ -498,7 +491,7 @@ async def edit(
                     _components.append(ActionRow(comp).to_dict())
         else:
             _components = _components or []
-    
+
     payload["components"] = _components or []
 
     if payload:
