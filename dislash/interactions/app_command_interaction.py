@@ -25,9 +25,9 @@ class Resolved:
         members = data.get("members", {})
         for ID, data in users.items():
             user_id = int(ID)
-            if user_id in members:
+            if ID in members:
                 self.members[user_id] = discord.Member(
-                    data={**members[user_id], "user": data},
+                    data={**members[ID], "user": data},
                     guild=guild,
                     state=state
                 )
