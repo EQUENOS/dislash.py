@@ -22,10 +22,10 @@ from ..interactions import (
 )
 
 
-__all__ = ("SlashClient",)
+__all__ = ("InteractionClient", "SlashClient")
 
 
-class SlashClient:
+class InteractionClient:
     """
     The main purpose of this class is to track ``INTERACTION_CREATE`` API event.
 
@@ -210,8 +210,24 @@ class SlashClient:
         self.is_ready = False
 
     @property
-    def commands(self):
+    def slash_commands(self):
         return _HANDLER.commands
+
+    @property
+    def user_commands(self):
+        return _HANDLER.user_commands
+
+    @property
+    def message_commands(self):
+        return _HANDLER.message_commands
+
+    @property
+    def commands(self):
+        return {
+            **_HANDLER.commands,
+            **_HANDLER.user_commands,
+            **_HANDLER.message_commands
+        }
 
     @property
     def global_commands(self):
@@ -1299,3 +1315,6 @@ class SlashClient:
     async def _fill_app_id(self):
         data = await self.client.http.application_info()
         self.application_id = int(data["id"])
+
+
+SlashClient = InteractionClient
