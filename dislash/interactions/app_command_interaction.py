@@ -424,6 +424,8 @@ class ContextMenuInteraction(BaseInteraction):
             guild=self.guild,
             state=client._connection
         )
+        self.user_command = None
+        self.message_command = None
     
     def __repr__(self):
         return (
