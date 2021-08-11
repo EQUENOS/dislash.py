@@ -233,6 +233,9 @@ class ApplicationCommand:
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id:
             self.application_id = int(self.application_id)
+    
+    def __eq__(self, other):
+        return False
 
 
 class UserCommand(ApplicationCommand):
@@ -243,6 +246,12 @@ class UserCommand(ApplicationCommand):
     def __repr__(self):
         return f"<UserCommand name={self.name!r}>"
     
+    def __eq__(self, other):
+        return (
+            self.type == other.type and
+            self.name == other.name
+        )
+
     def to_dict(self, **kwargs):
         return {
             "type": self.type,
@@ -251,8 +260,8 @@ class UserCommand(ApplicationCommand):
     
     @classmethod
     def from_dict(cls, data: dict):
-        if data.pop("type", 0) == ApplicationCommandType.USER:
-            return UserCommand(data["name"])
+        if data.pop("type", 1) == ApplicationCommandType.USER:
+            return UserCommand(**data)
 
 
 class MessageCommand(ApplicationCommand):
@@ -263,6 +272,12 @@ class MessageCommand(ApplicationCommand):
     def __repr__(self):
         return f"<MessageCommand name={self.name!r}>"
     
+    def __eq__(self, other):
+        return (
+            self.type == other.type and
+            self.name == other.name
+        )
+
     def to_dict(self, **kwargs):
         return {
             "type": self.type,
@@ -272,7 +287,7 @@ class MessageCommand(ApplicationCommand):
     @classmethod
     def from_dict(cls, data: dict):
         if data.pop("type", 0) == ApplicationCommandType.MESSAGE:
-            return MessageCommand(data["name"])
+            return MessageCommand(**data)
 
 
 class SlashCommand(ApplicationCommand):
@@ -309,6 +324,7 @@ class SlashCommand(ApplicationCommand):
 
     def __eq__(self, other):
         return (
+            self.type == other.type and
             self.name == other.name and
             self.description == other.description and
             self.options == other.options
@@ -316,6 +332,8 @@ class SlashCommand(ApplicationCommand):
 
     @classmethod
     def from_dict(cls, payload: dict):
+        if payload.pop("type", 1) != ApplicationCommandType.CHAT_INPUT:
+            return None
         if 'options' in payload:
             payload['options'] = [Option.from_dict(p) for p in payload['options']]
         return SlashCommand(**payload)

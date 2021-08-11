@@ -39,6 +39,7 @@ class InvokableApplicationCommand:
         self.func = func
         self.name = name or func.__name__
         self._error_handler = None
+        self.auto_sync = True
         # Extract checks
         if hasattr(func, '__slash_checks__'):
             self.checks = func.__slash_checks__

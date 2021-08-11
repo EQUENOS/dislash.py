@@ -48,7 +48,7 @@ class Resolved:
         
         for ID, data in data.get("messages", {}).items():
             channel_id = int(data["channel_id"])
-            channel = guild.get_channel(channel_id)
+            channel = guild.get_channel(channel_id) if guild else None
             if channel is None:
                 channel = state.get_channel(channel_id)
             self.messages[int(ID)] = discord.Message(state=state, channel=channel, data=data)

@@ -5,7 +5,8 @@ from discord.http import Route
 from discord.ext.commands import Context
 from typing import Any, Dict
 
-from .slash_core import CommandParent
+from .slash_core import CommandParent, slash_command
+from .context_menus_core import user_command, message_command
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
 
@@ -270,6 +271,12 @@ class SlashClient:
             return new_func
         return decorator
 
+    def user_command(self, *args, **kwargs):
+        return user_command(*args, **kwargs)
+    
+    def message_command(self, *args, **kwargs):
+        return message_command(*args, **kwargs)
+
     # Getters
     def get_global_command(self, command_id: int):
         """
@@ -359,14 +366,12 @@ class SlashClient:
 
         Parameters
         ----------
-
         guild_id : int
             the ID of the guild
 
         Returns
         -------
-
-        slash_commands : List[SlashCommand]
+        ~:class:`List[ApplicationCommand]`
         """
         granula = self._guild_commands.get(guild_id, {})
         return [sc for sc in granula.values()]
@@ -956,7 +961,14 @@ class SlashClient:
     def _per_guild_commands(self):
         global_cmds = []
         guilds = {}
+        all_commands = []
         for cmd in _HANDLER.commands.values():
+            all_commands.append(cmd)
+        for cmd in _HANDLER.user_commands.values():
+            all_commands.append(cmd)
+        for cmd in _HANDLER.message_commands.values():
+            all_commands.append(cmd)
+        for cmd in all_commands:
             if not cmd.auto_sync:
                 continue
             if cmd.guild_ids is None:
