@@ -223,11 +223,11 @@ class InteractionClient:
 
     @property
     def commands(self):
-        return {
+        return dict(
             **_HANDLER.commands,
             **_HANDLER.user_commands,
             **_HANDLER.message_commands
-        }
+        )
 
     @property
     def global_commands(self):
@@ -254,7 +254,7 @@ class InteractionClient:
             self.events[name] = func
         return func
 
-    def command(self, *args, **kwargs):
+    def slash_command(self, *args, **kwargs):
         """
         A decorator that allows to build a slash command.
 
@@ -283,7 +283,7 @@ class InteractionClient:
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
             new_func = CommandParent(func, **kwargs)
-            self.commands[new_func.name] = new_func
+            self.slash_commands[new_func.name] = new_func
             return new_func
         return decorator
 
@@ -977,14 +977,7 @@ class InteractionClient:
     def _per_guild_commands(self):
         global_cmds = []
         guilds = {}
-        all_commands = []
-        for cmd in _HANDLER.commands.values():
-            all_commands.append(cmd)
-        for cmd in _HANDLER.user_commands.values():
-            all_commands.append(cmd)
-        for cmd in _HANDLER.message_commands.values():
-            all_commands.append(cmd)
-        for cmd in all_commands:
+        for cmd in self.commands.values():
             if not cmd.auto_sync:
                 continue
             if cmd.guild_ids is None:
@@ -1210,7 +1203,7 @@ class InteractionClient:
             del self._guild_commands[guild.id]
 
     async def _on_slash_command(self, inter: SlashInteraction):
-        slash_parent = self.commands.get(inter.data.name)
+        slash_parent = self.slash_commands.get(inter.data.name)
         if slash_parent:
             try:
                 await slash_parent.invoke(inter)
@@ -1315,6 +1308,8 @@ class InteractionClient:
     async def _fill_app_id(self):
         data = await self.client.http.application_info()
         self.application_id = int(data["id"])
+
+    command = slash_command
 
 
 SlashClient = InteractionClient

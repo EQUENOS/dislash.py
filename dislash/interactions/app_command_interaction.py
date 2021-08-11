@@ -42,7 +42,7 @@ class Resolved:
         
         for ID, data in data.get('channels', {}).items():
             data['position'] = 0
-            factory, ch_type = discord._channel_factory(data['type'])
+            factory, ch_type = discord.channel._channel_factory(data['type'])
             if factory:
                 self.channels[int(ID)] = factory(guild=guild, data=data, state=state)
         
