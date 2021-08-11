@@ -10,7 +10,13 @@ from .slash_command import SlashCommand, SlashCommandPermissions
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
 
-from ..interactions import ComponentType, BaseInteraction, SlashInteraction, MessageInteraction
+from ..interactions import (
+    ComponentType,
+    BaseInteraction,
+    SlashInteraction,
+    MessageInteraction,
+    ContextMenuInteraction
+)
 
 
 __all__ = ("SlashClient",)
@@ -1225,19 +1231,28 @@ class SlashClient:
             inter = BaseInteraction(self.client, payload)
             self.dispatch(event_name, inter)
             await inter.create_response(type=1)
-        # Slash command invoked
+        # Application command invoked
         elif _type == 2:
-            inter = SlashInteraction(self.client, payload)
-            self.dispatch(event_name, inter)
-            self.dispatch('slash_command', inter)
-            slash_parent = self.commands.get(inter.data.name)
-            if slash_parent:
-                try:
-                    await slash_parent.invoke(inter)
-                except Exception as err:
-                    if not self._error_handler_exists():
-                        raise err
-                    await self._activate_event('slash_command_error', inter, err)
+            data_type = payload.get("data", {}).get("type", 0)
+            if data_type == 1:
+                inter = SlashInteraction(self.client, payload)
+                self.dispatch(event_name, inter)
+                self.dispatch('slash_command', inter)
+                slash_parent = self.commands.get(inter.data.name)
+                if slash_parent:
+                    try:
+                        await slash_parent.invoke(inter)
+                    except Exception as err:
+                        if not self._error_handler_exists():
+                            raise err
+                        await self._activate_event('slash_command_error', inter, err)
+            elif data_type in (2, 3):
+                inter = ContextMenuInteraction(self.client, payload)
+                self.dispatch(event_name, inter)
+                if data_type == 2:
+                    self.dispatch('user_command', inter)
+                elif data_type == 3:
+                    self.dispatch('message_command', inter)
         # Message component clicked
         elif _type == 3:
             inter = MessageInteraction(self.client, payload)
