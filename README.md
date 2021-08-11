@@ -9,6 +9,18 @@
 An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome message components and slash commands.
 
 
+# Table Of Contents
+
+1. [Installation](#installation)
+2. [Features](#features)
+3. [Examples](#examples)
+4. [Creating Buttons](#creating_buttons)
+5. [Creating Menus](#creating_menus)
+6. [Links](#links)
+7. [Downloads](#downloads)
+8. [Creating a slash-command](#creating_a_slash-command)
+
+
 # Installation
 
 Run any of these commands in terminal:
@@ -34,7 +46,7 @@ python -m pip install dislash.py
 💡 This library requires **[discord.py](https://github.com/Rapptz/discord.py)**.
 
 
-## Creating a slash-command
+## Creating_a_slash-command
 In this example registration is automatic.
 If you want to register slash-commands separately, see docs.
 
@@ -59,7 +71,7 @@ bot.run("BOT_TOKEN")
 ```
 
 
-## Creating buttons
+## Creating_Buttons
 
 This example shows how to send a message with buttons.
 
@@ -102,7 +114,7 @@ bot.run("BOT_TOKEN")
 ```
 
 
-## Creating menus
+## Creating_Menus
 
 This example shows how to send a message with a menu.
 
