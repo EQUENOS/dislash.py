@@ -175,7 +175,7 @@ This example shows how to create context menu commands and interact with them.
 Context menu commands are actions that can be triggered from user and message context menus.
 
 ::
-.. code-block:: python
+
     from discord.ext import commands
     from dislash import InteractionClient
 
