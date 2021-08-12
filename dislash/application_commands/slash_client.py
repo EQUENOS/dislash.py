@@ -1012,11 +1012,14 @@ class InteractionClient:
         deletion_required = False
         for cmd in global_cmds:
             old_cmd = self.get_global_command_named(cmd.name)
-            if old_cmd.type != cmd.type:
+            if old_cmd is None:
+                update_required = True
+                break
+            elif old_cmd.type != cmd.type:
                 update_required = True
                 deletion_required = True
                 break
-            elif old_cmd is None or cmd != old_cmd:
+            elif cmd != old_cmd:
                 update_required = True
                 break
         if update_required or len(global_cmds) != len(self._global_commands):
@@ -1034,11 +1037,14 @@ class InteractionClient:
             deletion_required = False
             for cmd in cmds:
                 old_cmd = self.get_guild_command_named(guild_id, cmd.name)
-                if old_cmd.type != cmd.type:
+                if old_cmd is None:
+                    update_required = True
+                    break
+                elif old_cmd.type != cmd.type:
                     update_required = True
                     deletion_required = True
                     break
-                elif old_cmd is None or cmd != old_cmd:
+                elif cmd != old_cmd:
                     update_required = True
                     break
             if update_required or len(cmds) != len(self.get_guild_commands(guild_id)):
