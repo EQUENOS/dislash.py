@@ -175,6 +175,7 @@ This example shows how to create context menu commands and interact with them.
 Context menu commands are actions that can be triggered from user and message context menus.
 
 ::
+.. code-block:: python
     from discord.ext import commands
     from dislash import InteractionClient
 
@@ -185,7 +186,7 @@ Context menu commands are actions that can be triggered from user and message co
     async def press_me(inter):
         # User commands are visible in user context menus
         # They can be global or per guild, just like slash commands
-        await inter.respond("Hello there!")
+        await inter.respond(f"Hello {inter.author} and {inter.target}")
 
     @inter_client.message_command(name="Resend")
     async def resend(inter):
