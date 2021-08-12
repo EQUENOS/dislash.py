@@ -502,7 +502,7 @@ class InteractionClient:
         self._global_commands[sc.id] = sc
         return sc
 
-    async def register_guild_slash_command(self, guild_id: int, app_command: ApplicationCommand):
+    async def register_guild_command(self, guild_id: int, app_command: ApplicationCommand):
         """
         Registers a local application command
 
@@ -1006,24 +1006,23 @@ class InteractionClient:
         ---------------------------------------------
         """
         global_cmds, guild_cmds = self._per_guild_commands()
-        # This step is necessary in order to remove commands
-        # from guilds which are not mentioned in decorators
-        for guild_id in self._guild_commands:
-            if guild_id not in guild_cmds:
-                guild_cmds[guild_id] = []
         total_posts = 0
         # Update global commands first
         update_required = False
-        if len(global_cmds) != len(self._global_commands):
-            update_required = True
-        else:
-            for cmd in global_cmds:
-                old_cmd = self.get_global_command_named(cmd.name)
-                if old_cmd is None or cmd != old_cmd:
-                    update_required = True
-                    break
-        if update_required:
+        deletion_required = False
+        for cmd in global_cmds:
+            old_cmd = self.get_global_command_named(cmd.name)
+            if old_cmd.type != cmd.type:
+                update_required = True
+                deletion_required = True
+                break
+            elif old_cmd is None or cmd != old_cmd:
+                update_required = True
+                break
+        if update_required or len(global_cmds) != len(self._global_commands):
             try:
+                if deletion_required:
+                    await self.delete_global_commands()
                 await self.overwrite_global_commands(global_cmds)
                 total_posts += 1
             except Exception as e:
@@ -1032,16 +1031,20 @@ class InteractionClient:
         # Update guild commands
         for guild_id, cmds in guild_cmds.items():
             update_required = False
-            if len(cmds) != len(self.get_guild_commands(guild_id)):
-                update_required = True
-            else:
-                for cmd in cmds:
-                    old_cmd = self.get_guild_command_named(guild_id, cmd.name)
-                    if old_cmd is None or not (cmd == old_cmd):
-                        update_required = True
-                        break
-            if update_required:
+            deletion_required = False
+            for cmd in cmds:
+                old_cmd = self.get_guild_command_named(guild_id, cmd.name)
+                if old_cmd.type != cmd.type:
+                    update_required = True
+                    deletion_required = True
+                    break
+                elif old_cmd is None or cmd != old_cmd:
+                    update_required = True
+                    break
+            if update_required or len(cmds) != len(self.get_guild_commands(guild_id)):
                 try:
+                    if deletion_required:
+                        await self.delete_guild_commands(guild_id)
                     await self.overwrite_guild_commands(guild_id, cmds)
                     total_posts += 1
                 except Exception as e:
