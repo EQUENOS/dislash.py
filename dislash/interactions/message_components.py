@@ -146,8 +146,8 @@ class SelectOption:
 
     def __repr__(self):
         return (
-            "<OptionSelect label='{0.label}' value={0.value} "
-            "description={0.description} emoji={0.emoji} default={0.default}>"
+            "<OptionSelect label={0.label!r} value={0.value!r} "
+            "description={0.description!r} emoji={0.emoji!r} default={0.default!r}>"
         ).format(self)
 
     @classmethod
@@ -235,8 +235,11 @@ class SelectMenu(Component):
         self.selected_options = []
 
     def __repr__(self):
-        desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
-        return f"<SelectMenu {desc}>"
+        return (
+            "<SelectMenu custom_id={0.custom_id!r} placeholder={0.placeholder!r} "
+            "min_values={0.min_values!r} max_values={0.max_values!r} options={0.options!r}"
+            "disabled={0.disabled} selected_options={0.selected_options!r}>"
+        ).format(self)
 
     def _select_options(self, values: list):
         self.selected_options = []

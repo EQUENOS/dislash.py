@@ -250,4 +250,5 @@ def slash_command(*args, **kwargs):
     return decorator
 
 
-command = slash_command
+def command(*args, **kwargs):
+    return slash_command(*args, **kwargs)

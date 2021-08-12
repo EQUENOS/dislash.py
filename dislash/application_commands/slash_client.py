@@ -3,7 +3,7 @@ import discord
 from discord.abc import Messageable
 from discord.http import Route
 from discord.ext.commands import Context
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from .slash_core import slash_command
 from .context_menus_core import user_command, message_command
@@ -49,7 +49,7 @@ class InteractionClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, show_warnings: bool = True, modify_send: bool = True):
+    def __init__(self, client, *, test_guilds: List[int] = None, show_warnings: bool = True, modify_send: bool = True):
         self._uses_discord_2 = hasattr(client, "add_view")
         _HANDLER.client = client
         self.client = _HANDLER.client
@@ -63,6 +63,7 @@ class InteractionClient:
             "on_user_command_error": [],
             "on_message_command_error": []
         }
+        self._test_guilds = test_guilds
         self._show_warnings = show_warnings
         self._modify_send = modify_send
         self.active_shard_count = 0
@@ -967,8 +968,9 @@ class InteractionClient:
     def _guilds_with_commands(self):
         guilds = set()
         for cmd in _HANDLER.slash_commands.values():
-            if cmd.guild_ids is not None:
-                guilds = guilds.union(set(cmd.guild_ids))
+            guild_ids = cmd.guild_ids or self._test_guilds
+            if guild_ids is not None:
+                guilds = guilds.union(set(guild_ids))
         return list(guilds)
 
     def _per_guild_commands(self):
@@ -977,10 +979,11 @@ class InteractionClient:
         for cmd in self.commands.values():
             if not cmd.auto_sync:
                 continue
-            if cmd.guild_ids is None:
+            guild_ids = cmd.guild_ids or self._test_guilds
+            if guild_ids is None:
                 global_cmds.append(cmd.registerable)
             else:
-                for guild_id in cmd.guild_ids:
+                for guild_id in guild_ids:
                     if guild_id not in guilds:
                         guilds[guild_id] = [cmd.registerable]
                     else:
@@ -1237,11 +1240,19 @@ class InteractionClient:
             del self._guild_commands[guild.id]
 
     async def _on_slash_command(self, inter: SlashInteraction):
-        slash_parent = self.slash_commands.get(inter.data.name)
-        usable = slash_parent.guild_ids is None or inter.guild_id in slash_parent.guild_ids
-        if slash_parent is not None and usable:
+        app_command = self.slash_commands.get(inter.data.name)
+        if app_command is None:
+            usable = False
+        else:
+            guild_ids = app_command.guild_ids or self._test_guilds
+            is_global = self.get_global_command(inter.data.id) is not None 
+            if guild_ids is None:
+                usable = is_global
+            else:
+                usable = not is_global and inter.guild_id in guild_ids
+        if usable:
             try:
-                await slash_parent.invoke(inter)
+                await app_command.invoke(inter)
             except Exception as err:
                 if not self._error_handler_exists("on_slash_command_error"):
                     raise err
@@ -1251,8 +1262,16 @@ class InteractionClient:
 
     async def _on_user_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.user_commands.get(inter.data.name)
-        usable = app_command.guild_ids is None or inter.guild_id in app_command.guild_ids
-        if app_command is not None and usable:
+        if app_command is None:
+            usable = False
+        else:
+            guild_ids = app_command.guild_ids or self._test_guilds
+            is_global = self.get_global_command(inter.data.id) is not None 
+            if guild_ids is None:
+                usable = is_global
+            else:
+                usable = not is_global and inter.guild_id in guild_ids
+        if usable:
             try:
                 await app_command.invoke(inter)
             except Exception as err:
@@ -1264,8 +1283,16 @@ class InteractionClient:
     
     async def _on_message_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.message_commands.get(inter.data.name)
-        usable = app_command.guild_ids is None or inter.guild_id in app_command.guild_ids
-        if app_command is not None and usable:
+        if app_command is None:
+            usable = False
+        else:
+            guild_ids = app_command.guild_ids or self._test_guilds
+            is_global = self.get_global_command(inter.data.id) is not None 
+            if guild_ids is None:
+                usable = is_global
+            else:
+                usable = not is_global and inter.guild_id in guild_ids
+        if usable:
             try:
                 await app_command.invoke(inter)
             except Exception as err:

@@ -76,7 +76,7 @@ class Resolved:
 
 class ApplicationCommandInteractionData:
     def __init__(self, *, data, guild, state):
-        self.id = data["id"]
+        self.id = int(data["id"])
         self.type = data["type"]
         self.name = data["name"]
         self.resolved = Resolved(
