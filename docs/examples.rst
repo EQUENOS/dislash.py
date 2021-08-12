@@ -165,3 +165,32 @@ Buttons
         await inter.reply(f"Button: {button_text}")
 
     bot.run("BOT_TOKEN")
+    
+    
+    
+Context menus
+-------
+
+This example shows how to create context menu commands and interact with them. 
+Context menu commands are actions that can be triggered from user and message context menus.
+
+::
+    from discord.ext import commands
+    from dislash import InteractionClient
+
+    bot = commands.Bot(command_prefix="!")
+    inter_client = InteractionClient(bot)
+
+    @inter_client.user_command(name="Press me")
+    async def press_me(inter):
+        # User commands are visible in user context menus
+        # They can be global or per guild, just like slash commands
+        await inter.respond("Hello there!")
+
+    @inter_client.message_command(name="Resend")
+    async def resend(inter):
+        # Message commands are visible in message context menus
+        # inter is instance of ContextMenuInteraction
+        await inter.respond(inter.message.content)
+
+    bot.run("BOT_TOKEN")
