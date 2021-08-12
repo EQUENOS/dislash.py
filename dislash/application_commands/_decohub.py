@@ -2,6 +2,6 @@
 # Also avoiding circular import
 class _HANDLER:
     client = None
-    commands = {}
+    slash_commands = {}
     user_commands = {}
     message_commands = {}

@@ -5,7 +5,7 @@ from discord.http import Route
 from discord.ext.commands import Context
 from typing import Any, Dict
 
-from .slash_core import CommandParent, slash_command
+from .slash_core import slash_command
 from .context_menus_core import user_command, message_command
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
@@ -211,7 +211,7 @@ class InteractionClient:
 
     @property
     def slash_commands(self):
-        return _HANDLER.commands
+        return _HANDLER.slash_commands
 
     @property
     def user_commands(self):
@@ -224,7 +224,7 @@ class InteractionClient:
     @property
     def commands(self):
         return dict(
-            **_HANDLER.commands,
+            **_HANDLER.slash_commands,
             **_HANDLER.user_commands,
             **_HANDLER.message_commands
         )
@@ -279,13 +279,7 @@ class InteractionClient:
             you don't have to specify the connectors. Connectors template:
             ``{"option-name": "param_name", ...}``
         """
-        def decorator(func):
-            if not asyncio.iscoroutinefunction(func):
-                raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
-            new_func = CommandParent(func, **kwargs)
-            self.slash_commands[new_func.name] = new_func
-            return new_func
-        return decorator
+        return slash_command(*args, **kwargs)
 
     def user_command(self, *args, **kwargs):
         return user_command(*args, **kwargs)
@@ -960,16 +954,19 @@ class InteractionClient:
             except Exception:
                 pass
         # Remove the commands from cache
-        bad_keys = [
-            kw for kw, cmd in _HANDLER.commands.items() if cmd._cog_name == name
-        ]
-
+        bad_keys = [kw for kw, cmd in _HANDLER.slash_commands.items() if cmd._cog_name == name]
         for key in bad_keys:
-            del _HANDLER.commands[key]
+            del _HANDLER.slash_commands[key]
+        bad_keys = [kw for kw, cmd in _HANDLER.user_commands.items() if cmd._cog_name == name]
+        for key in bad_keys:
+            del _HANDLER.user_commands[key]
+        bad_keys = [kw for kw, cmd in _HANDLER.message_commands.items() if cmd._cog_name == name]
+        for key in bad_keys:
+            del _HANDLER.message_commands[key]
 
     def _guilds_with_commands(self):
         guilds = set()
-        for cmd in _HANDLER.commands.values():
+        for cmd in _HANDLER.slash_commands.values():
             if cmd.guild_ids is not None:
                 guilds = guilds.union(set(cmd.guild_ids))
         return list(guilds)
@@ -1009,6 +1006,11 @@ class InteractionClient:
         ---------------------------------------------
         """
         global_cmds, guild_cmds = self._per_guild_commands()
+        # This step is necessary in order to remove commands
+        # from guilds which are not mentioned in decorators
+        for guild_id in self._guild_commands:
+            if guild_id not in guild_cmds:
+                guild_cmds[guild_id] = []
         total_posts = 0
         # Update global commands first
         update_required = False
@@ -1050,6 +1052,29 @@ class InteractionClient:
             self.client.loop.create_task(
                 self._activate_event('auto_register', total_posts, 0)
             )
+
+    async def _maybe_unregister_commands(self, guild_id):
+        """
+        Unregisters all commands from the guild, if possible.
+        Mainly called if a guild command isn't in the code, but
+        it still exists in discord and creates interactions.
+        """
+        # if guild_id is None:
+        #     return
+        # try:
+        #     await self.delete_guild_commands(guild_id)
+        # except Exception:
+        #     pass
+        app_commands = await self.fetch_guild_commands(guild_id)
+        local_app_commands = self.get_guild_commands(guild_id)
+        good_commands = []
+        for cmd in app_commands:
+            if cmd.name in local_app_commands:
+                good_commands.append(cmd)
+        try:
+            await self.overwrite_guild_commands(guild_id, good_commands)
+        except Exception:
+            pass
 
     # Cache commands
     async def _cache_global_commands(self):
@@ -1204,33 +1229,42 @@ class InteractionClient:
 
     async def _on_slash_command(self, inter: SlashInteraction):
         slash_parent = self.slash_commands.get(inter.data.name)
-        if slash_parent:
+        usable = slash_parent.guild_ids is None or inter.guild_id in slash_parent.guild_ids
+        if slash_parent is not None and usable:
             try:
                 await slash_parent.invoke(inter)
             except Exception as err:
                 if not self._error_handler_exists("on_slash_command_error"):
                     raise err
                 await self._activate_event('slash_command_error', inter, err)
+        else:
+            await self._maybe_unregister_commands(inter.guild_id)
 
     async def _on_user_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.user_commands.get(inter.data.name)
-        if app_command:
+        usable = app_command.guild_ids is None or inter.guild_id in app_command.guild_ids
+        if app_command is not None and usable:
             try:
                 await app_command.invoke(inter)
             except Exception as err:
                 if not self._error_handler_exists("on_user_command_error"):
                     raise err
                 await self._activate_event('user_command_error', inter, err)
+        else:
+            await self._maybe_unregister_commands(inter.guild_id)
     
     async def _on_message_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.message_commands.get(inter.data.name)
-        if app_command:
+        usable = app_command.guild_ids is None or inter.guild_id in app_command.guild_ids
+        if app_command is not None and usable:
             try:
                 await app_command.invoke(inter)
             except Exception as err:
                 if not self._error_handler_exists("on_message_command_error"):
                     raise err
                 await self._activate_event('message_command_error', inter, err)
+        else:
+            await self._maybe_unregister_commands(inter.guild_id)
 
     async def _toggle_listeners(self, event, *args, **kwargs):
         listeners = self._listeners.get(event)

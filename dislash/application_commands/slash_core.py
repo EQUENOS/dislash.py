@@ -245,7 +245,7 @@ def slash_command(*args, **kwargs):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
         new_func = CommandParent(func, **kwargs)
-        _HANDLER.commands[new_func.name] = new_func
+        _HANDLER.slash_commands[new_func.name] = new_func
         return new_func
     return decorator
 
