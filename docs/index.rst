@@ -18,6 +18,7 @@ Sections
    buttons_guide
    select_menus_guide
    slash_commands_guide
+   context_menus_guide
    cogs
    events
    checks

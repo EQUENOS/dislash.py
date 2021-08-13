@@ -347,7 +347,7 @@ class ContextMenuInteractionData(ApplicationCommandInteractionData):
     
     @property
     def user(self):
-        if isinstance(self.target, discord.User):
+        if isinstance(self.target, discord.abc.User):
             return self.target
     
     @property

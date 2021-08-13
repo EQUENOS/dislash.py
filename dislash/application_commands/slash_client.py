@@ -1254,9 +1254,10 @@ class InteractionClient:
             try:
                 await app_command.invoke(inter)
             except Exception as err:
-                if not self._error_handler_exists("on_slash_command_error"):
+                if self._error_handler_exists("on_slash_command_error"):
+                    await self._activate_event('slash_command_error', inter, err)
+                elif app_command._error_handler is None:
                     raise err
-                await self._activate_event('slash_command_error', inter, err)
         else:
             await self._maybe_unregister_commands(inter.guild_id)
 
@@ -1275,9 +1276,10 @@ class InteractionClient:
             try:
                 await app_command.invoke(inter)
             except Exception as err:
-                if not self._error_handler_exists("on_user_command_error"):
+                if self._error_handler_exists("on_user_command_error"):
+                    await self._activate_event('user_command_error', inter, err)
+                elif app_command._error_handler is None:
                     raise err
-                await self._activate_event('user_command_error', inter, err)
         else:
             await self._maybe_unregister_commands(inter.guild_id)
     
@@ -1296,9 +1298,10 @@ class InteractionClient:
             try:
                 await app_command.invoke(inter)
             except Exception as err:
-                if not self._error_handler_exists("on_message_command_error"):
+                if self._error_handler_exists("on_message_command_error"):
+                    await self._activate_event('message_command_error', inter, err)
+                elif app_command._error_handler is None:
                     raise err
-                await self._activate_event('message_command_error', inter, err)
         else:
             await self._maybe_unregister_commands(inter.guild_id)
 

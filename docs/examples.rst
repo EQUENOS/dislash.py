@@ -30,7 +30,7 @@ Slash embed
 Let's make something more complicated than **/hello**.
 For example, a command that generates an embed.
 
-::
+.. code-block:: python
 
     from discord.ext import commands
     from dislash import *

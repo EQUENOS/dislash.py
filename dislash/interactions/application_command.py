@@ -13,6 +13,7 @@ __all__ = (
     "OptionType",
     "OptionChoice",
     "Option",
+    "ApplicationCommandPermissions",
     "SlashCommandPermissions",
     "RawCommandPermission",
     "Type"
@@ -369,15 +370,13 @@ class SlashCommand(ApplicationCommand):
 
 
 # Permissions
-class SlashCommandPermissions:
+class ApplicationCommandPermissions:
     """
-    Represents slash command permissions.
+    Represents application command permissions.
     Roughly equivalent to a list of :class:`RawCommandPermission`
 
-    Slash command permissions are checked on the server side.
-    Only local slash commands can have this type of permissions.
-
-    Obtainable via :class:`SlashCommand.permissions`
+    Application command permissions are checked on the server side.
+    Only local application commands can have this type of permissions.
 
     Parameters
     ----------
@@ -501,3 +500,4 @@ class RawCommandPermission:
 
 
 Type = OptionType
+SlashCommandPermissions = ApplicationCommandPermissions

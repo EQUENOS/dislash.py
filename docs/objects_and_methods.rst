@@ -1,18 +1,335 @@
-.. currentmodule:: dislash
+.. currentmodule: dislash
 
 Objects and methods
 ===================
 
-.. _slash_client:
 
-SlashClient
+ActionRow
+---------
+
+.. autoclass:: ActionRow
+
+    .. automethod:: add_button
+
+    .. automethod:: add_menu
+
+    .. automethod:: disable_buttons
+
+    .. automethod:: enable_buttons
+
+    .. automethod:: from_dict
+
+    .. automethod:: to_dict
+
+
+ApplicationCommand
+------------------
+
+.. autoclass:: ApplicationCommand
+
+
+ApplicationCommandError
+-----------------------
+
+.. autoclass:: ApplicationCommandError
+
+
+ApplicationCommandInteractionData
+---------------------------------
+
+.. autoclass:: ApplicationCommandInteractionData
+
+
+ApplicationCommandType
+----------------------
+
+.. autoclass:: ApplicationCommandType
+
+
+BadArgument
 -----------
 
-.. autoclass:: SlashClient
+.. autoclass:: BadArgument
+
+
+BaseInteraction
+---------------
+
+.. autoclass:: BaseInteraction
+
+    .. automethod:: create_response
+
+    .. automethod:: delete
+
+    .. automethod:: delete_after
+
+    .. automethod:: edit
+
+    .. automethod:: fetch_initial_response
+
+    .. automethod:: followup
+
+    .. automethod:: reply
+
+    .. automethod:: respond
+
+    .. automethod:: send
+
+
+BotMissingAnyRole
+-----------------
+
+.. autoclass:: BotMissingAnyRole
+
+
+BotMissingPermissions
+---------------------
+
+.. autoclass:: BotMissingPermissions
+
+
+BotMissingRole
+--------------
+
+.. autoclass:: BotMissingRole
+
+
+BucketType
+----------
+
+.. autoclass:: BucketType
+
+    .. automethod:: try_value
+
+
+Button
+------
+
+.. autoclass:: Button
+
+    .. automethod:: from_dict
+
+    .. automethod:: to_dict
+
+
+MessageInteraction
+------------------
+
+.. autoclass:: MessageInteraction
+
+    .. automethod:: create_response
+
+    .. automethod:: delete
+
+    .. automethod:: delete_after
+
+    .. automethod:: edit
+
+    .. automethod:: fetch_initial_response
+
+    .. automethod:: followup
+
+    .. automethod:: reply
+
+    .. automethod:: respond
+
+    .. automethod:: send
+
+
+ButtonStyle
+-----------
+
+.. autoclass:: ButtonStyle
+
+
+CheckAnyFailure
+---------------
+
+.. autoclass:: CheckAnyFailure
+
+
+ClickListener
+-------------
+
+.. autoclass:: ClickListener
+
+    .. automethod:: from_user
+
+    .. automethod:: kill
+
+    .. automethod:: matching_condition
+
+    .. automethod:: matching_id
+
+    .. automethod:: no_checks
+
+    .. automethod:: not_from_user
+
+    .. automethod:: timeout
+
+
+CommandOnCooldown
+-----------------
+
+.. autoclass:: CommandOnCooldown
+
+
+CommandParent
+-------------
+
+.. autoclass:: CommandParent
+
+    .. automethod:: error
+
+    .. automethod:: get_cooldown_retry_after
+
+    .. automethod:: invoke
+
+    .. automethod:: invoke_children
+
+    .. automethod:: is_on_cooldown
+
+    .. automethod:: reset_cooldown
+
+    .. automethod:: sub_command
+
+    .. automethod:: sub_command_group
+
+
+Component
+---------
+
+.. autoclass:: Component
+
+
+ComponentType
+-------------
+
+.. autoclass:: ComponentType
+
+
+ContextMenuInteraction
+----------------------
+
+.. autoclass:: ContextMenuInteraction
+
+    .. automethod:: create_response
+
+    .. automethod:: delete
+
+    .. automethod:: delete_after
+
+    .. automethod:: edit
+
+    .. automethod:: fetch_initial_response
+
+    .. automethod:: followup
+
+    .. automethod:: reply
+
+    .. automethod:: respond
+
+    .. automethod:: send
+
+
+ContextMenuInteractionData
+--------------------------
+
+.. autoclass:: ContextMenuInteractionData
+
+
+DiscordException
+----------------
+
+.. autoclass:: DiscordException
+
+
+SlashInteraction
+----------------
+
+.. autoclass:: SlashInteraction
+
+    .. automethod:: create_response
+
+    .. automethod:: delete
+
+    .. automethod:: delete_after
+
+    .. automethod:: edit
+
+    .. automethod:: fetch_initial_response
+
+    .. automethod:: followup
+
+    .. automethod:: get
+
+    .. automethod:: get_option
+
+    .. automethod:: option_at
+
+    .. automethod:: reply
+
+    .. automethod:: respond
+
+    .. automethod:: send
+
+
+InteractionCheckFailure
+-----------------------
+
+.. autoclass:: InteractionCheckFailure
+
+
+InteractionClient
+-----------------
+
+.. autoclass:: InteractionClient
+
+    .. automethod:: batch_edit_guild_command_permissions
+
+    .. automethod:: batch_fetch_guild_command_permissions
+
+    .. automethod:: command
+
+    .. automethod:: delete_global_command
+
+    .. automethod:: delete_global_command_named
+
+    .. automethod:: delete_global_commands
+
+    .. automethod:: delete_guild_command
+
+    .. automethod:: delete_guild_command_named
+
+    .. automethod:: delete_guild_commands
+
+    .. automethod:: dispatch
+
+    .. automethod:: edit_global_command
+
+    .. automethod:: edit_global_command_named
+
+    .. automethod:: edit_guild_command
+
+    .. automethod:: edit_guild_command_named
+
+    .. automethod:: edit_guild_command_permissions
 
     .. automethod:: event
 
-    .. automethod:: command
+    .. automethod:: fetch_global_command
+
+    .. automethod:: fetch_global_command_named
+
+    .. automethod:: fetch_global_commands
+
+    .. automethod:: fetch_guild_command
+
+    .. automethod:: fetch_guild_command_named
+
+    .. automethod:: fetch_guild_command_permissions
+
+    .. automethod:: fetch_guild_commands
 
     .. automethod:: get_global_command
 
@@ -24,145 +341,28 @@ SlashClient
 
     .. automethod:: get_guild_commands
 
-    .. automethod:: fetch_global_commands
+    .. automethod:: message_command
 
-    .. automethod:: fetch_guild_commands
-
-    .. automethod:: fetch_global_command
-
-    .. automethod:: fetch_guild_command
-
-    .. automethod:: register_global_slash_command
-
-    .. automethod:: register_guild_slash_command
-
-    .. automethod:: edit_global_slash_command
-
-    .. automethod:: edit_guild_slash_command
-
-    .. automethod:: delete_global_slash_command
-
-    .. automethod:: delete_guild_slash_command
+    .. automethod:: multiple_wait_for
 
     .. automethod:: overwrite_global_commands
 
     .. automethod:: overwrite_guild_commands
 
-    .. automethod:: delete_global_commands
+    .. automethod:: register_global_command
 
-    .. automethod:: delete_guild_commands
+    .. automethod:: register_guild_command
 
-    .. automethod:: fetch_global_command_named
+    .. automethod:: slash_command
 
-    .. automethod:: fetch_guild_command_named
+    .. automethod:: teardown
 
-    .. automethod:: edit_global_command_named
+    .. automethod:: user_command
 
-    .. automethod:: edit_guild_command_named
+    .. automethod:: wait_for_button_click
 
-    .. automethod:: delete_global_command_named
+    .. automethod:: wait_for_dropdown
 
-    .. automethod:: delete_guild_command_named
-
-    .. automethod:: fetch_guild_command_permissions
-
-    .. automethod:: batch_fetch_guild_command_permissions
-
-    .. automethod:: edit_guild_command_permissions
-
-    .. automethod:: batch_edit_guild_command_permissions
-
-
-
-.. _command_parent:
-
-CommandParent
--------------
-
-.. autoclass:: CommandParent
-
-    .. automethod:: sub_command
-
-    .. automethod:: sub_command_group
-
-
-
-.. _sub_command_group:
-
-SubCommandGroup
----------------
-
-.. autoclass:: SubCommandGroup
-
-    .. automethod:: sub_command
-
-
-
-.. _message_interaction:
-
-MessageInteraction
-------------------
-
-.. autoclass:: MessageInteraction
-
-    .. automethod:: fetch_initial_response
-
-    .. automethod:: create_response
-
-    .. automethod:: reply
-
-    .. automethod:: edit
-
-    .. automethod:: delete
-
-    .. automethod:: followup
-
-
-
-.. _slash_interaction:
-
-SlashInteraction
-----------------
-
-.. autoclass:: SlashInteraction
-
-    .. automethod:: get
-
-    .. automethod:: get_option
-
-    .. automethod:: option_at
-
-    .. automethod:: fetch_initial_response
-
-    .. automethod:: create_response
-
-    .. automethod:: reply
-
-    .. automethod:: edit
-
-    .. automethod:: delete
-
-    .. automethod:: followup
-
-
-
-
-.. _interaction_data:
-
-InteractionData
----------------
-
-.. autoclass:: InteractionData
-
-    .. automethod:: get
-
-    .. automethod:: get_option
-
-    .. automethod:: option_at
-
-
-
-.. _interaction_data_option:
 
 InteractionDataOption
 ---------------------
@@ -176,93 +376,149 @@ InteractionDataOption
     .. automethod:: option_at
 
 
+InteractionType
+---------------
 
-.. _response_type:
-
-ResponseType
-------------
-
-.. autoclass:: ResponseType
-    
+.. autoclass:: InteractionType
 
 
-.. _button_style:
+InvokableApplicationCommand
+---------------------------
 
-ButtonStyle
------------
+.. autoclass:: InvokableApplicationCommand
 
-.. autoclass:: ButtonStyle
+    .. automethod:: error
 
+    .. automethod:: get_cooldown_retry_after
 
+    .. automethod:: is_on_cooldown
 
-.. _button:
-
-Button
-------
-
-.. autoclass:: Button
+    .. automethod:: reset_cooldown
 
 
+InvokableContextMenuCommand
+---------------------------
 
-.. _select_menu:
+.. autoclass:: InvokableContextMenuCommand
+
+    .. automethod:: error
+
+    .. automethod:: get_cooldown_retry_after
+
+    .. automethod:: invoke
+
+    .. automethod:: is_on_cooldown
+
+    .. automethod:: reset_cooldown
+
+
+InvokableMessageCommand
+-----------------------
+
+.. autoclass:: InvokableMessageCommand
+
+    .. automethod:: error
+
+    .. automethod:: get_cooldown_retry_after
+
+    .. automethod:: invoke
+
+    .. automethod:: is_on_cooldown
+
+    .. automethod:: reset_cooldown
+
+
+InvokableUserCommand
+--------------------
+
+.. autoclass:: InvokableUserCommand
+
+    .. automethod:: error
+
+    .. automethod:: get_cooldown_retry_after
+
+    .. automethod:: invoke
+
+    .. automethod:: is_on_cooldown
+
+    .. automethod:: reset_cooldown
+
 
 SelectOption
 ------------
 
 .. autoclass:: SelectOption
 
+    .. automethod:: from_dict
+
+    .. automethod:: to_dict
 
 
-.. _select_menu:
+MessageCommand
+--------------
 
-SelectMenu
-----------
+.. autoclass:: MessageCommand
 
-.. autoclass:: SelectMenu
+    .. automethod:: from_dict
 
-
-
-.. _action_row:
-
-ActionRow
----------
-
-.. autoclass:: ActionRow
-
-    .. automethod:: enable_buttons
-
-    .. automethod:: disable_buttons
+    .. automethod:: to_dict
 
 
+MissingAnyRole
+--------------
 
-.. _auto_rows:
-
-auto_rows
----------
-
-.. autofunction:: auto_rows
+.. autoclass:: MissingAnyRole
 
 
+MissingPermissions
+------------------
 
-.. _slash_command:
-
-SlashCommand
-------------
-
-.. autoclass:: SlashCommand
+.. autoclass:: MissingPermissions
 
 
+MissingRole
+-----------
 
-.. _option:
+.. autoclass:: MissingRole
+
+
+NSFWChannelRequired
+-------------------
+
+.. autoclass:: NSFWChannelRequired
+
+
+NoPrivateMessage
+----------------
+
+.. autoclass:: NoPrivateMessage
+
+
+NotGuildOwner
+-------------
+
+.. autoclass:: NotGuildOwner
+
+
+NotOwner
+--------
+
+.. autoclass:: NotOwner
+
 
 Option
 ------
 
 .. autoclass:: Option
 
+    .. automethod:: add_choice
 
+    .. automethod:: add_option
 
-.. _option_choice:
+    .. automethod:: from_dict
+
+    .. automethod:: to_dict
+
 
 OptionChoice
 ------------
@@ -270,65 +526,121 @@ OptionChoice
 .. autoclass:: OptionChoice
 
 
-
-.. _option_type:
-
 OptionType
 ----------
 
-.. autoclass:: Type
+.. autoclass:: OptionType
 
 
+PrivateMessageOnly
+------------------
 
-.. _slash_command_permissions:
+.. autoclass:: PrivateMessageOnly
 
-SlashCommandPermissions
------------------------
-
-.. autoclass:: SlashCommandPermissions
-
-    .. automethod:: from_pairs
-
-    .. automethod:: from_ids
-
-    .. automethod:: from_dict
-
-    .. automethod:: to_dict
-
-
-
-.. _raw_command_permission:
 
 RawCommandPermission
 --------------------
 
 .. autoclass:: RawCommandPermission
 
+    .. automethod:: from_dict
+
     .. automethod:: from_pair
+
+    .. automethod:: to_dict
+
+
+ResponseType
+------------
+
+.. autoclass:: ResponseType
+
+
+SelectMenu
+----------
+
+.. autoclass:: SelectMenu
+
+    .. automethod:: add_option
 
     .. automethod:: from_dict
 
     .. automethod:: to_dict
 
 
+SlashCommand
+------------
 
-.. _click_listener:
+.. autoclass:: SlashCommand
 
-ClickListener
--------------
+    .. automethod:: add_option
 
-.. autoclass:: ClickListener
+    .. automethod:: from_dict
 
-    .. automethod:: matching_condition
+    .. automethod:: to_dict
 
-    .. automethod:: matching_id
 
-    .. automethod:: from_user
+SlashCommandPermissions
+-----------------------
 
-    .. automethod:: not_from_user
+.. autoclass:: SlashCommandPermissions
 
-    .. automethod:: no_checks
+    .. automethod:: from_dict
 
-    .. automethod:: timeout
+    .. automethod:: from_ids
 
-    .. automethod:: kill
+    .. automethod:: from_pairs
+
+    .. automethod:: to_dict
+
+
+SlashInteractionData
+--------------------
+
+.. autoclass:: SlashInteractionData
+
+    .. automethod:: get
+
+    .. automethod:: get_option
+
+    .. automethod:: option_at
+
+
+SubCommand
+----------
+
+.. autoclass:: SubCommand
+
+    .. automethod:: error
+
+    .. automethod:: get_cooldown_retry_after
+
+    .. automethod:: is_on_cooldown
+
+    .. automethod:: reset_cooldown
+
+
+SubCommandGroup
+---------------
+
+.. autoclass:: SubCommandGroup
+
+    .. automethod:: error
+
+    .. automethod:: get_cooldown_retry_after
+
+    .. automethod:: is_on_cooldown
+
+    .. automethod:: reset_cooldown
+
+    .. automethod:: sub_command
+
+
+UserCommand
+-----------
+
+.. autoclass:: UserCommand
+
+    .. automethod:: from_dict
+
+    .. automethod:: to_dict
