@@ -1,4 +1,4 @@
-.. currentmodule: dislash
+.. currentmodule:: dislash
 
 Objects and methods
 ===================
