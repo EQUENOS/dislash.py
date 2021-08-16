@@ -130,6 +130,10 @@ class BaseInteraction:
     def client(self):
         return self.bot
 
+    @property
+    def me(self):
+        return self.guild.me if self.guild is not None else self.bot.user
+
     def _cache_ephemeral_message(self, message):
         try:
             cached = self.bot.cached_ephemeral_messages
