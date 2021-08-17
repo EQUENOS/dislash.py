@@ -108,7 +108,6 @@ class BaseInteraction:
             self.channel = None
 
         self._sent = False
-        self._webhook = None
 
     @property
     def created_at(self):
@@ -133,16 +132,6 @@ class BaseInteraction:
     @property
     def me(self):
         return self.guild.me if self.guild is not None else self.bot.user
-
-    def _cache_ephemeral_message(self, message):
-        try:
-            cached = self.bot.cached_ephemeral_messages
-        except AttributeError:
-            self.bot.cached_ephemeral_messages = []
-            cached = self.bot.cached_ephemeral_messages
-        cached.append(message)
-        if len(cached) > 1000:
-            cached.pop(0)
 
     async def reply(self, content=None, *,  embed=None, embeds=None,
                     components=None, view=None,
@@ -249,11 +238,6 @@ class BaseInteraction:
             self.bot.loop.create_task(self.delete_after(delete_after))
 
         if fetch_response_message:
-            if ephemeral:
-                msg = await self.edit(content=content, embed=embed, embeds=embeds)
-                msg._overwrite_components(components)
-                self._cache_ephemeral_message(msg)
-                return msg
             try:
                 return await self.fetch_initial_response()
             except Exception:
@@ -300,7 +284,7 @@ class BaseInteraction:
         data = {}
         if content is not None:
             data['content'] = str(content)
-        # Embed or embeds
+        
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
 
@@ -337,7 +321,6 @@ class BaseInteraction:
         if _components is not None:
             data["components"] = _components
 
-        # Allowed mentions
         if content or embed or embeds:
             state = self.bot._connection
             if allowed_mentions is not None:
@@ -346,22 +329,22 @@ class BaseInteraction:
                 else:
                     allowed_mentions = allowed_mentions.to_dict()
                 data['allowed_mentions'] = allowed_mentions
-        # Message design
+        
         if ephemeral:
             data["flags"] = 64
         if tts:
             data["tts"] = True
-        # Final JSON formation
-        _json = {"type": type}
+        
+        payload = {"type": type}
         if data:
-            _json["data"] = data
-        # HTTP-request
+            payload["data"] = data
+        
         await self.bot.http.request(
             Route(
                 'POST', '/interactions/{interaction_id}/{token}/callback',
                 interaction_id=self.id, token=self.token
             ),
-            json=_json
+            json=payload
         )
 
     async def edit(self, content=None, *, embed=None, embeds=None, components=None, allowed_mentions=None):

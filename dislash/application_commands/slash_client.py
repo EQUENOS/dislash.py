@@ -17,7 +17,7 @@ from ..interactions import (
     MessageInteraction,
     ContextMenuInteraction,
     ApplicationCommand,
-    SlashCommandPermissions,
+    ApplicationCommandPermissions,
     application_command_factory
 )
 
@@ -42,14 +42,24 @@ class InteractionClient:
     Attributes
     ----------
     client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
-    global_commands : :class:`list`
-        All registered global commands are cached here
-    commands : :class:`list`
-        All working slash commands
+        an instance of any class inherited from :class:`discord.Client`
+    application_id : :class:`int`
+        the ID of the application your bot is related to
+    global_commands : List[:class:`ApplicationCommand`]
+        All registered global application commands
+    slash_commands : :class:`Dict[str, CommandParent]`
+        All invokable slash commands from your code
+    user_commands : :class:`Dict[str, InvokableUserCommand]`
+        All invokable user commands from your code
+    message_commands : :class:`Dict[str, InvokableMessageCommand]`
+        All invokable message commands from your code
+    commands : :class:`Dict[str, InvokableApplicationCommand]`
+        All invokable application commands from your code
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, test_guilds: List[int] = None, show_warnings: bool = True, modify_send: bool = True):
+    def __init__(self, client, *, test_guilds: List[int] = None, sync_commands: bool = True,
+                show_warnings: bool = True, modify_send: bool = True):
         self._uses_discord_2 = hasattr(client, "add_view")
         _HANDLER.client = client
         self.client = _HANDLER.client
@@ -64,6 +74,7 @@ class InteractionClient:
             "on_message_command_error": []
         }
         self._test_guilds = test_guilds
+        self._sync_commands = sync_commands
         self._show_warnings = show_warnings
         self._modify_send = modify_send
         self.active_shard_count = 0
@@ -72,11 +83,9 @@ class InteractionClient:
         self._register_listeners()
         # Modify old discord.py methods
         self._modify_discord()
-        # Link the slash ext to client if doesn't already exist
+        # Link the slash ext to client if doesn't exist yet
         if not hasattr(self.client, "slash"):
             self.client.slash = self
-        if not hasattr(self.client, "cached_ephemeral_messages"):
-            self.client.cached_ephemeral_messages = []
         # Inject cogs that are already loaded
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)
@@ -718,7 +727,7 @@ class InteractionClient:
                 command_id=command_id
             )
         )
-        return SlashCommandPermissions.from_dict(r)
+        return ApplicationCommandPermissions.from_dict(r)
 
     async def batch_fetch_guild_command_permissions(self, guild_id: int):
         """
@@ -737,9 +746,9 @@ class InteractionClient:
                 guild_id=guild_id
             )
         )
-        return {int(obj["id"]): SlashCommandPermissions.from_dict(obj) for obj in array}
+        return {int(obj["id"]): ApplicationCommandPermissions.from_dict(obj) for obj in array}
 
-    async def edit_guild_command_permissions(self, guild_id: int, command_id: int, permissions: SlashCommandPermissions):
+    async def edit_guild_command_permissions(self, guild_id: int, command_id: int, permissions: ApplicationCommandPermissions):
         """
         Edits command permissions for a specific command in a guild.
 
@@ -755,7 +764,7 @@ class InteractionClient:
         """
 
         if isinstance(permissions, dict):
-            permissions = SlashCommandPermissions.from_pairs(permissions)
+            permissions = ApplicationCommandPermissions.from_pairs(permissions)
 
         await self.client.http.request(
             Route(
@@ -778,10 +787,9 @@ class InteractionClient:
         ----------
         guild_id : :class:`int`
             the ID of the guild
-        permissions : :class:`dict`
-            a dictionary of ``command_id``: :class:`SlashCommandPermissions`
+        permissions : Dict[:class:`int`, :class:`ApplicationCommandPermissions`]
+            a dictionary of command IDs and permissions
         """
-
         data = []
         for cmd_id, perms in permissions.items():
             # Cache
@@ -1008,8 +1016,13 @@ class InteractionClient:
         Assuming that all commands are already cached
         ---------------------------------------------
         """
+        if not self._sync_commands:
+            return
+        # Sort all invokable commands between guild IDs
         global_cmds, guild_cmds = self._per_guild_commands()
-        total_posts = 0
+        # This is for the event
+        global_commands_patched = False
+        patched_guilds = []
         # Update global commands first
         update_required = False
         deletion_required = False
@@ -1030,7 +1043,7 @@ class InteractionClient:
                 if deletion_required:
                     await self.delete_global_commands()
                 await self.overwrite_global_commands(global_cmds)
-                total_posts += 1
+                global_commands_patched = True
             except Exception as e:
                 if self._show_warnings:
                     print(f"[WARNING] Failed to overwrite global commands due to {e}")
@@ -1055,28 +1068,19 @@ class InteractionClient:
                     if deletion_required:
                         await self.delete_guild_commands(guild_id)
                     await self.overwrite_guild_commands(guild_id, cmds)
-                    total_posts += 1
+                    patched_guilds.append(guild_id)
                 except Exception as e:
                     if self._show_warnings:
                         print(f"[WARNING] Failed to overwrite commands in <Guild id={guild_id}> due to {e}")
         # Dispatch an event
-        if total_posts > 0:
-            self.client.loop.create_task(
-                self._activate_event('auto_register', total_posts, 0)
-            )
+        self.dispatch('auto_register', global_commands_patched, patched_guilds)
 
     async def _maybe_unregister_commands(self, guild_id):
         """
-        Unregisters all commands from the guild, if possible.
+        Unregisters unknown commands from the guild, if possible.
         Mainly called if a guild command isn't in the code, but
         it still exists in discord and creates interactions.
         """
-        # if guild_id is None:
-        #     return
-        # try:
-        #     await self.delete_guild_commands(guild_id)
-        # except Exception:
-        #     pass
         app_commands = await self.fetch_guild_commands(guild_id)
         local_app_commands = self.get_guild_commands(guild_id)
         good_commands = []

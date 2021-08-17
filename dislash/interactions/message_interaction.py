@@ -43,16 +43,6 @@ class MessageInteraction(BaseInteraction):
         if msg_data is None:
             self.message = None
             self.components = []
-        elif msg_data.get("flags") == 64:
-            # The original message is ephemeral
-            message_id = int(msg_data["id"])
-            self.message = None
-            self.components = []
-            for message in client.cached_ephemeral_messages:
-                if message.id == message_id and message.channel.id == self.channel.id:
-                    self.message = message
-                    self.components = message.components
-                    break
         else:
             components = msg_data.get("components", [])
             self.components = [ActionRow.from_dict(comp) for comp in components]

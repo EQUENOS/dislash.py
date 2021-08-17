@@ -99,6 +99,7 @@ class ClickListener:
         else:
             new_func = func
         self._timeout_waiter = new_func
+        return func
 
     def matching_condition(self, check, *, cancel_others: bool = False, reset_timeout: bool = True):
         """
