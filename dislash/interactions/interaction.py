@@ -316,7 +316,7 @@ class BaseInteraction:
                 raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
             data['embeds'] = [embed.to_dict() for embed in embeds]
 
-        if view:
+        if view is not None:
             if not hasattr(view, '__discord_ui_view__'):
                 raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
 
@@ -324,7 +324,7 @@ class BaseInteraction:
         else:
             _components = None
 
-        if components:
+        if components is not None:
             if len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 action rows")
             _components = _components or []
@@ -334,7 +334,7 @@ class BaseInteraction:
                 else:
                     _components.append(ActionRow(comp).to_dict())
 
-        if _components:
+        if _components is not None:
             data["components"] = _components
 
         # Allowed mentions
