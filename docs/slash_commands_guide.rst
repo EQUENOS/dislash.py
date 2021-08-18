@@ -19,7 +19,7 @@ What are interactions?
 | 2. Discord converts this data into valid command args
 | 3. Discord API sends the data to your app
 
-The data you receive is called :ref:`slash_interaction`.
+The data you receive is called :class:`SlashInteraction`.
 
 There're 2 types of slash commands: global and local (per guild).
 Global commands are visible everywhere, including bot DMs.
@@ -36,20 +36,20 @@ Basic example
 
 In this example we're using the following objects and methods:
 
-* :class:`SlashClient` to activate the extension
+* :class:`InteractionClient` to activate the extension
 * :class:`SlashClient.command` to make a command
 * :class:`SlashInteraction` represented by ``inter`` (see the code below)
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
-    TEST_GUILDS = [12345] # Insert the ID of your guild here
+    # test_guilds param is an optional list of guild IDs
+    inter_client = InteractionClient(bot, test_guilds=[12345])
 
-    @slash.command(description="Test command", guild_ids=TEST_GUILDS)
+    @inter_client.slash_command(description="Test command")
     async def test(inter):
         await inter.reply("Test")
 
@@ -66,29 +66,28 @@ If user isn't specified, it shows the avatar of the author.
 In addition to all previous methods, we're going to use these:
 
 * :class:`Option` to make an option
-* :class:`Type` to specify the option type
+* :class:`OptionType` to specify the option type
 
 This is required for further command registration.
 
-::
+.. code-block:: python
 
+    import discord
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, Option, OptionType
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
-    TEST_GUILDS = [12345] # Insert the ID of your guild here
+    inter_client = InteractionClient(bot, test_guilds=[12345])
 
-    @slash.command(
-        guild_ids=TEST_GUILDS,
+    @inter_client.slash_command(
         description="Shows the avatar of the user",
         options=[
-            Option("user", "Enter the user", Type.USER)
+            Option("user", "Enter the user", OptionType.USER)
             # By default, Option is optional
             # Pass required=True to make it a required arg
         ]
     )
-    async def hello(inter, user=None):
+    async def avatar(inter, user=None):
         # If user is None, set it to inter.author
         user = user or inter.author
         # We are guaranteed to receive a discord.User object,
@@ -114,19 +113,15 @@ The only difference is the decorator we use.
 In addition to all previous methods, we're going to use :class:`CommandParent.sub_command`
 (represented by ``say.sub_command`` in the code)
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
-    TEST_GUILDS = [12345] # Insert the ID of your guild here
+    inter_client = InteractionClient(bot, test_guilds=[12345])
 
-    @slash.command(
-        guild_ids=TEST_GUILDS,
-        description="Has subcommands"
-    )
+    @inter_client.slash_command(description="Has subcommands")
     async def say(inter):
         # This is just a parent for 2 subcommands
         # It's not necessary to do anything here,
@@ -154,12 +149,9 @@ You can make a command with groups of subcommands using
 
 **Partial code:**
 
-::
+.. code-block:: python
 
-    @slash.command(
-        guild_ids=TEST_GUILDS,
-        description="Has groups"
-    )
+    @inter_client.slash_command(description="Has groups")
     async def groups(inter):
         pass
     

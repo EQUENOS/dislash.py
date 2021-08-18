@@ -4,6 +4,8 @@ Objects and methods
 ===================
 
 
+.. _action_row:
+
 ActionRow
 ---------
 
@@ -22,11 +24,15 @@ ActionRow
     .. automethod:: to_dict
 
 
+.. _application_command:
+
 ApplicationCommand
 ------------------
 
 .. autoclass:: ApplicationCommand
 
+
+.. _application_command_error:
 
 ApplicationCommandError
 -----------------------
@@ -34,11 +40,31 @@ ApplicationCommandError
 .. autoclass:: ApplicationCommandError
 
 
+.. _application_command_interaction_data:
+
 ApplicationCommandInteractionData
 ---------------------------------
 
 .. autoclass:: ApplicationCommandInteractionData
 
+
+.. _application_command_permissions:
+
+ApplicationCommandPermissions
+-----------------------------
+
+.. autoclass:: ApplicationCommandPermissions
+
+    .. automethod:: from_dict
+
+    .. automethod:: from_ids
+
+    .. automethod:: from_pairs
+
+    .. automethod:: to_dict
+
+
+.. _application_command_type:
 
 ApplicationCommandType
 ----------------------
@@ -46,11 +72,15 @@ ApplicationCommandType
 .. autoclass:: ApplicationCommandType
 
 
+.. _bad_argument:
+
 BadArgument
 -----------
 
 .. autoclass:: BadArgument
 
+
+.. _base_interaction:
 
 BaseInteraction
 ---------------
@@ -71,10 +101,8 @@ BaseInteraction
 
     .. automethod:: reply
 
-    .. automethod:: respond
 
-    .. automethod:: send
-
+.. _bot_missing_any_role:
 
 BotMissingAnyRole
 -----------------
@@ -82,17 +110,23 @@ BotMissingAnyRole
 .. autoclass:: BotMissingAnyRole
 
 
+.. _bot_missing_permissions:
+
 BotMissingPermissions
 ---------------------
 
 .. autoclass:: BotMissingPermissions
 
 
+.. _bot_missing_role:
+
 BotMissingRole
 --------------
 
 .. autoclass:: BotMissingRole
 
+
+.. _bucket_type:
 
 BucketType
 ----------
@@ -101,6 +135,8 @@ BucketType
 
     .. automethod:: try_value
 
+
+.. _button:
 
 Button
 ------
@@ -111,6 +147,8 @@ Button
 
     .. automethod:: to_dict
 
+
+.. _message_interaction:
 
 MessageInteraction
 ------------------
@@ -131,10 +169,8 @@ MessageInteraction
 
     .. automethod:: reply
 
-    .. automethod:: respond
 
-    .. automethod:: send
-
+.. _button_style:
 
 ButtonStyle
 -----------
@@ -142,11 +178,15 @@ ButtonStyle
 .. autoclass:: ButtonStyle
 
 
+.. _check_any_failure:
+
 CheckAnyFailure
 ---------------
 
 .. autoclass:: CheckAnyFailure
 
+
+.. _click_listener:
 
 ClickListener
 -------------
@@ -168,11 +208,15 @@ ClickListener
     .. automethod:: timeout
 
 
+.. _command_on_cooldown:
+
 CommandOnCooldown
 -----------------
 
 .. autoclass:: CommandOnCooldown
 
+
+.. _command_parent:
 
 CommandParent
 -------------
@@ -196,17 +240,23 @@ CommandParent
     .. automethod:: sub_command_group
 
 
+.. _component:
+
 Component
 ---------
 
 .. autoclass:: Component
 
 
+.. _component_type:
+
 ComponentType
 -------------
 
 .. autoclass:: ComponentType
 
+
+.. _context_menu_interaction:
 
 ContextMenuInteraction
 ----------------------
@@ -227,10 +277,8 @@ ContextMenuInteraction
 
     .. automethod:: reply
 
-    .. automethod:: respond
 
-    .. automethod:: send
-
+.. _context_menu_interaction_data:
 
 ContextMenuInteractionData
 --------------------------
@@ -238,11 +286,15 @@ ContextMenuInteractionData
 .. autoclass:: ContextMenuInteractionData
 
 
+.. _discord_exception:
+
 DiscordException
 ----------------
 
 .. autoclass:: DiscordException
 
+
+.. _slash_interaction:
 
 SlashInteraction
 ----------------
@@ -269,16 +321,16 @@ SlashInteraction
 
     .. automethod:: reply
 
-    .. automethod:: respond
 
-    .. automethod:: send
-
+.. _interaction_check_failure:
 
 InteractionCheckFailure
 -----------------------
 
 .. autoclass:: InteractionCheckFailure
 
+
+.. _interaction_client:
 
 InteractionClient
 -----------------
@@ -288,8 +340,6 @@ InteractionClient
     .. automethod:: batch_edit_guild_command_permissions
 
     .. automethod:: batch_fetch_guild_command_permissions
-
-    .. automethod:: command
 
     .. automethod:: delete_global_command
 
@@ -364,6 +414,8 @@ InteractionClient
     .. automethod:: wait_for_dropdown
 
 
+.. _interaction_data_option:
+
 InteractionDataOption
 ---------------------
 
@@ -376,11 +428,15 @@ InteractionDataOption
     .. automethod:: option_at
 
 
+.. _interaction_type:
+
 InteractionType
 ---------------
 
 .. autoclass:: InteractionType
 
+
+.. _invokable_application_command:
 
 InvokableApplicationCommand
 ---------------------------
@@ -395,6 +451,8 @@ InvokableApplicationCommand
 
     .. automethod:: reset_cooldown
 
+
+.. _invokable_context_menu_command:
 
 InvokableContextMenuCommand
 ---------------------------
@@ -412,6 +470,8 @@ InvokableContextMenuCommand
     .. automethod:: reset_cooldown
 
 
+.. _invokable_message_command:
+
 InvokableMessageCommand
 -----------------------
 
@@ -427,6 +487,8 @@ InvokableMessageCommand
 
     .. automethod:: reset_cooldown
 
+
+.. _invokable_user_command:
 
 InvokableUserCommand
 --------------------
@@ -444,6 +506,8 @@ InvokableUserCommand
     .. automethod:: reset_cooldown
 
 
+.. _select_option:
+
 SelectOption
 ------------
 
@@ -453,6 +517,8 @@ SelectOption
 
     .. automethod:: to_dict
 
+
+.. _message_command:
 
 MessageCommand
 --------------
@@ -464,11 +530,15 @@ MessageCommand
     .. automethod:: to_dict
 
 
+.. _missing_any_role:
+
 MissingAnyRole
 --------------
 
 .. autoclass:: MissingAnyRole
 
+
+.. _missing_permissions:
 
 MissingPermissions
 ------------------
@@ -476,11 +546,15 @@ MissingPermissions
 .. autoclass:: MissingPermissions
 
 
+.. _missing_role:
+
 MissingRole
 -----------
 
 .. autoclass:: MissingRole
 
+
+.. _n_s_f_w_channel_required:
 
 NSFWChannelRequired
 -------------------
@@ -488,11 +562,15 @@ NSFWChannelRequired
 .. autoclass:: NSFWChannelRequired
 
 
+.. _no_private_message:
+
 NoPrivateMessage
 ----------------
 
 .. autoclass:: NoPrivateMessage
 
+
+.. _not_guild_owner:
 
 NotGuildOwner
 -------------
@@ -500,11 +578,15 @@ NotGuildOwner
 .. autoclass:: NotGuildOwner
 
 
+.. _not_owner:
+
 NotOwner
 --------
 
 .. autoclass:: NotOwner
 
+
+.. _option:
 
 Option
 ------
@@ -520,11 +602,15 @@ Option
     .. automethod:: to_dict
 
 
+.. _option_choice:
+
 OptionChoice
 ------------
 
 .. autoclass:: OptionChoice
 
+
+.. _option_type:
 
 OptionType
 ----------
@@ -532,11 +618,15 @@ OptionType
 .. autoclass:: OptionType
 
 
+.. _private_message_only:
+
 PrivateMessageOnly
 ------------------
 
 .. autoclass:: PrivateMessageOnly
 
+
+.. _raw_command_permission:
 
 RawCommandPermission
 --------------------
@@ -550,11 +640,15 @@ RawCommandPermission
     .. automethod:: to_dict
 
 
+.. _response_type:
+
 ResponseType
 ------------
 
 .. autoclass:: ResponseType
 
+
+.. _select_menu:
 
 SelectMenu
 ----------
@@ -568,6 +662,8 @@ SelectMenu
     .. automethod:: to_dict
 
 
+.. _slash_command:
+
 SlashCommand
 ------------
 
@@ -580,19 +676,7 @@ SlashCommand
     .. automethod:: to_dict
 
 
-SlashCommandPermissions
------------------------
-
-.. autoclass:: SlashCommandPermissions
-
-    .. automethod:: from_dict
-
-    .. automethod:: from_ids
-
-    .. automethod:: from_pairs
-
-    .. automethod:: to_dict
-
+.. _slash_interaction_data:
 
 SlashInteractionData
 --------------------
@@ -605,6 +689,8 @@ SlashInteractionData
 
     .. automethod:: option_at
 
+
+.. _sub_command:
 
 SubCommand
 ----------
@@ -619,6 +705,8 @@ SubCommand
 
     .. automethod:: reset_cooldown
 
+
+.. _sub_command_group:
 
 SubCommandGroup
 ---------------
@@ -635,6 +723,8 @@ SubCommandGroup
 
     .. automethod:: sub_command
 
+
+.. _user_command:
 
 UserCommand
 -----------

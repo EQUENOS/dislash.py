@@ -9,12 +9,12 @@ A simple slash command
 .. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
+    inter_client = InteractionClient(bot)
 
-    @slash.command(description="Sends Hello")
+    @inter_client.slash_command(description="Sends Hello")
     async def hello(interaction):
         await interaction.reply("Hello!")
     
@@ -24,6 +24,7 @@ A simple slash command
 
     | What's interaction? See :ref:`slash_interaction` to learn more.
 
+
 Slash embed
 -----------
 
@@ -32,20 +33,21 @@ For example, a command that generates an embed.
 
 .. code-block:: python
 
+    import discord
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, Option, OptionType
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
+    inter_client = InteractionClient(bot)
     test_guilds = [12345]   # Insert ID of your guild here
 
-    @slash.command(
+    @inter_client.slash_command(
         guild_ids=test_guilds,
         description="Builds a custom embed",
         options=[
-            Option('title', 'Makes the title of the embed', Type.STRING),
-            Option('description', 'Makes the description', Type.STRING),
-            Option('color', 'The color of the embed', Type.STRING)
+            Option('title', 'Makes the title of the embed', OptionType.STRING),
+            Option('description', 'Makes the description', OptionType.STRING),
+            Option('color', 'The color of the embed', OptionType.STRING)
 
             # Note that all args are optional
             # because we didn't specify required=True in Options
@@ -67,13 +69,13 @@ For example, a command that generates an embed.
         if desc is not None:
             emb.description = desc
         # Sending the output
-        await inter.reply(embed=emb, hide_user_input=True)
+        await inter.respond(embed=emb, hide_user_input=True)
     
     bot.run("BOT_TOKEN")
 
 .. seealso::
 
-    | :ref:`option` to learn more about slash-command options.
+    | :ref:`option` to learn more about slash command options.
 
 Here's the result we've just achieved:
 
@@ -89,21 +91,22 @@ Slash user-info
 It's time to work with different argument types.
 This example shows how to easily make a **/user-info** command
 
-::
+.. code-block:: python
 
+    import discord
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, Option, OptionType
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
+    inter_client = InteractionClient(bot)
     test_guilds = [12345]
 
-    @slash.command(
+    @inter_client.slash_command(
         guild_ids=test_guilds,
         name="user-info",
         description="Shows user's profile",
         options=[
-            Option("user", "Specify any user", Type.USER),
+            Option("user", "Specify any user", OptionType.USER),
         ]
     )
     async def user_info(inter, user=None):
@@ -114,10 +117,10 @@ This example shows how to easily make a **/user-info** command
         emb.title = str(user)
         emb.description = (
             f"**Created at:** `{user.created_at}`\n"
-            f"**ID:** `{user.id}`
+            f"**ID:** `{user.id}`"
         )
         emb.set_thumbnail(url=user.avatar_url)
-        await inter.send(embed=emb)
+        await inter.respond(embed=emb)
     
     bot.run("BOT_TOKEN")
 
@@ -130,13 +133,13 @@ Here's how this slash command looks like in Discord:
 Buttons
 -------
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, ActionRow, Button, ButtonStyle
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
+    inter_client = InteractionClient(bot)
 
     @bot.command()
     async def test(ctx):
@@ -169,12 +172,12 @@ Buttons
     
     
 Context menus
--------
+-------------
 
 This example shows how to create context menu commands and interact with them. 
 Context menu commands are actions that can be triggered from user and message context menus.
 
-::
+.. code-block:: python
 
     from discord.ext import commands
     from dislash import InteractionClient

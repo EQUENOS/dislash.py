@@ -1,3 +1,6 @@
+.. currentmodule:: dislash
+
+
 .. _quickstart:
 
 Quickstart
@@ -39,19 +42,16 @@ Creating a simple command
 
 Let's make a **/hello** command that will send "Hello!" to the chat.
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
-    test_guilds = [12345]   # Insert ID of your guild here
+    # test_guilds param is optional, this is a list of guild IDs
+    inter_client = InteractionClient(bot, test_guilds=[12345])
 
-    @slash.command(
-        guild_ids=test_guilds,   # Delete this param if you want to register globally
-        description="Says Hello"
-    )
+    @inter_client.slash_command(description="Says Hello")
     async def hello(ctx):
         await ctx.send("Hello!")
     
@@ -60,7 +60,7 @@ Let's make a **/hello** command that will send "Hello!" to the chat.
 .. note::
 
     | Per-guild registration is **instant**, while global registration takes up to **1 hour** to complete.
-    | In order to register a command globally, do not specify the ``guild_ids`` parameter.
+    | In order to register a command globally, do not specify the ``test_guilds`` / ``guild_ids`` parameters.
 
 And here we go! We've just made a simple slash-command named **/hello**
 
@@ -74,13 +74,13 @@ Playing with buttons
 
 Let's make a text command that sends 2 buttons and removes them as soon as one of them is pressed.
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, ActionRow, Button, ButtonStyle
 
     bot = commands.Bot(command_prefix="!")
-    SlashClient(bot)
+    inter_client = InteractionClient(bot)
 
     @bot.command()
     async def test(ctx):
@@ -117,7 +117,7 @@ Let's make a text command that sends 2 buttons and removes them as soon as one o
 
 .. note::
 
-    :ref:`slash_client` should always be called in the main file,
+    :class:`InteractionClient` should always be called in the main file,
     even if you're not making any slash commands. This class modifies
     some **discord.py** methods so they work with buttons.
 

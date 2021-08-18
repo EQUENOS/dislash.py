@@ -13,14 +13,14 @@ Here's a possible use case:
 
 .. code-block:: python
 
+    import dislash
     from discord.ext import commands
-    from dislash import *
 
     bot = commands.Bot(command_prefix="!")
-    slash = SlashClient(bot)
+    inter_client = dislash.InteractionClient(bot)
 
-    @slash.command(description="A command for admins")
-    @slash_commands.has_permissions(administrator=True)
+    @inter_client.slash_command(description="A command for admins")
+    @dislash.has_permissions(administrator=True)
     async def hello(inter):
         await inter.reply("Hello, administrator!")
     

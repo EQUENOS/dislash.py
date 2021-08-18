@@ -12,20 +12,20 @@ Let's make a simple command that waits for button clicks and deletes the button 
 
 In this example we're using the following objects and methods:
 
-* :class:`SlashClient` to enable the extension
+* :class:`InteractionClient` to enable the extension
 * :class:`ActionRow` to make a row of buttons
 * :class:`Button` to design the buttons
 * :class:`ClickListener` to process the button clicks
 * * :class:`ClickListener.matching_id`
 * * :class:`ClickListener.timeout`
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, ActionRow, Button, ButtonStyle
 
     bot = commands.Bot(command_prefix="!")
-    SlashClient(bot)
+    inter_client = InteractionClient(bot)
 
     @bot.command()
     async def test(ctx):
@@ -65,13 +65,13 @@ Adding layers
 Let's say we don't want any other person except for the command author to click the buttons.
 It's time to work with :class:`ClickListener.not_from_user` decorator.
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import *
+    from dislash import InteractionClient, ActionRow, Button, ButtonStyle
 
     bot = commands.Bot(command_prefix="!")
-    SlashClient(bot)
+    inter_client = InteractionClient(bot)
 
     @bot.command()
     async def test(ctx):
@@ -90,11 +90,16 @@ It's time to work with :class:`ClickListener.not_from_user` decorator.
 
         @on_click.not_from_user(ctx.author, cancel_others=True, reset_timeout=False)
         async def on_wrong_user(inter):
-            # Reply with a hidden message
+            # This function is called in case a button was clicked not by the author
+            # cancel_others=True prevents all on_click-functions under this function from working
+            # regardless of their checks
+            # reset_timeout=False makes the timer keep going after this function is called
             await inter.reply("You're not the author", ephemeral=True)
 
         @on_click.matching_id("test_button")
         async def on_test_button(inter):
+            # This function only works if the author presses the button
+            # Becase otherwise the previous decorator cancels this one
             await inter.reply("You've clicked the button!")
         
         @on_click.timeout

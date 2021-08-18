@@ -12,16 +12,16 @@ Let's make a simple command that sends a menu.
 
 In this example we're using the following objects and methods:
 
-* :class:`SlashClient` to enable the extension
+* :class:`InteractionClient` to enable the extension
 * :class:`SelectMenu` to build the menu
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import SlashClient, SelectMenu
+    from dislash import InteractionClient, SelectMenu
 
     bot = commands.Bot(command_prefix="!")
-    SlashClient(bot)
+    InteractionClient(bot)
 
     @bot.command()
     async def test(ctx):
@@ -49,13 +49,13 @@ Responding to a menu click
 
 Let's send a menu and then respond to the first click.
 
-::
+.. code-block:: python
 
     from discord.ext import commands
-    from dislash import SlashClient, SelectMenu
+    from dislash import InteractionClient, SelectMenu
 
     bot = commands.Bot(command_prefix="!")
-    SlashClient(bot)
+    InteractionClient(bot)
 
     @bot.command()
     async def test(ctx):
@@ -89,7 +89,7 @@ Let's send a menu and then respond to the first click.
 Here we used :class:`Message.wait_for_dropdown` method to receive an interaction with the menu.
 This is cool, but if you want to track menu interactions permanently, try using the ``on_dropdown`` event.
 
-::
+.. code-block:: python
 
     @bot.event
     async def on_dropdown(inter: MessageInteraction):

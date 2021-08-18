@@ -9,10 +9,10 @@ It's as simple as this:
 Example
 -------
 
-::
+.. code-block::
 
-    from dislash import *
     from discord.ext import commands
+    from dislash import slash_command, ActionRow, Button, ButtonStyle
 
 
     class mycog(commands.Cog):
@@ -20,9 +20,9 @@ Example
             self.bot = bot
         
         # Example of a slash command in a cog
-        @slash_commands.command(description="Says Hello")
-        async def hello(self, ctx):
-            await ctx.send("Hello from cog!")
+        @slash_command(description="Says Hello")
+        async def hello(self, inter):
+            await inter.respond("Hello from cog!")
         
         # Buttons in cogs (no changes basically)
         @commands.command()
@@ -54,10 +54,10 @@ Example
 Differences
 -----------
 
-* :class:`@slash_commands.command()` instead of :class:`@SlashClient.command()`
+* :class:`@slash_command` instead of :class:`@InteractionClient.slash_command`
 
 * ``self`` is a required first argument 
 
 * :class:`self.bot` instead of :class:`bot`
 
-* :class:`SlashClient` is accessible via :class:`self.bot.slash`
+* :class:`InteractionClient` is accessible via :class:`self.bot.slash`
