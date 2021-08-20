@@ -21,7 +21,7 @@ setup(
     author_email='equenos1@gmail.com',
     keywords='python, discord, slash, commands, api, discord-api, discord-py, slash-commands, message-components, buttons, select-menus, context-menus',
     packages=['dislash', 'dislash.application_commands', 'dislash.interactions', 'dislash.application_commands._modifications'],
-    python_requires='>=3.8, <4',
+    python_requires='>=3.6, <4',
     install_requires=requirements,
     project_urls={
         'Documentation': 'https://dislashpy.readthedocs.io/en/latest',
@@ -33,6 +33,8 @@ setup(
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Topic :: Internet',

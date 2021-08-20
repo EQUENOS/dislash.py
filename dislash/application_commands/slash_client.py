@@ -942,19 +942,36 @@ class InteractionClient:
         )
 
     def _inject_cogs(self, cog):
-        for cmd in self.commands.values():
+        # Insert the cog into slash commands:
+        if not hasattr(cog, "slash_commands"):
+            cog.slash_commands = []
+        for cmd in self.slash_commands.values():
             if cmd._cog_class_name == cog.__class__.__name__:
                 cmd._inject_cog(cog)
+                cog.slash_commands.append(cmd)
+        # Insert the cog into user commands:
+        if not hasattr(cog, "user_commands"):
+            cog.user_commands = []
+        for cmd in self.user_commands.values():
+            if cmd._cog_class_name == cog.__class__.__name__:
+                cmd._inject_cog(cog)
+                cog.user_commands.append(cmd)
+        # Insert the cog into message commands:
+        if not hasattr(cog, "message_commands"):
+            cog.message_commands = []
+        for cmd in self.message_commands.values():
+            if cmd._cog_class_name == cog.__class__.__name__:
+                cmd._inject_cog(cog)
+                cog.message_commands.append(cmd)
+        # Auto register the commands again
         if self.is_ready:
             self.client.loop.create_task(self._auto_register_or_patch())
         # We need to know which cogs are able to dispatch errors
         pairs = cog.get_listeners()
-        for name, func in pairs:
-            # Loop through all error listener types
-            for event_name, cog_names in self._cogs_with_err_listeners.items():
-                if name == event_name:
-                    cog_names.append(cog.qualified_name)
-                    break
+        for event_name, func in pairs:
+            cog_names = self._cogs_with_err_listeners.get(event_name)
+            if cog_names is not None:
+                cog_names.append(cog.qualified_name)
 
     def _eject_cogs(self, name):
         for cog_names in self._cogs_with_err_listeners.values():
