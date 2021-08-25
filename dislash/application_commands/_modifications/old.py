@@ -1,4 +1,4 @@
-from discord import utils, AllowedMentions, File, InvalidArgument
+from discord import utils, AllowedMentions, File, InvalidArgument, Message
 from discord.http import Route
 from discord.flags import MessageFlags
 
@@ -6,9 +6,15 @@ from ...interactions import ActionRow
 
 
 __all__ = (
+    "create_message_with_components",
     "send_with_components",
-    "edit_with_components"
+    "edit_with_components",
+    "MessageWithComponents"
 )
+
+
+def create_message_with_components(self, *, channel, data):
+    return MessageWithComponents(state=self, channel=channel, data=data)
 
 
 def send_message(self, channel_id, content, *, tts=False, embed=None, nonce=None,
@@ -221,3 +227,17 @@ async def edit_with_components(message, **fields):
 
     if delete_after is not None:
         await message.delete(delay=delete_after)
+
+
+class MessageWithComponents(Message):
+    def __init__(self, *, state, channel, data):
+        super().__init__(
+            state=state,
+            channel=channel,
+            data=data
+        )
+        self.components = [ActionRow.from_dict(dat) for dat in data.get("components", [])]
+
+    def __repr__(self):
+        res = super().__repr__()
+        return f"{res[:-1]} components={self.components!r}>"

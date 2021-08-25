@@ -1,6 +1,7 @@
 import asyncio
 import discord
 from discord.abc import Messageable
+from discord.state import ConnectionState
 from discord.http import Route
 from discord.ext.commands import Context
 from typing import Any, Dict, List
@@ -183,7 +184,12 @@ class InteractionClient:
                     edit as edit_with_components
                 )
             else:
-                from ._modifications.old import send_with_components, edit_with_components
+                from ._modifications.old import (
+                    create_message_with_components,
+                    send_with_components,
+                    edit_with_components
+                )
+                ConnectionState.create_message = create_message_with_components
             Messageable.send = send_with_components
             discord.Message.edit = edit_with_components
         Context.wait_for_button_click = ctx_wait_for_button_click
@@ -1392,6 +1398,7 @@ class InteractionClient:
         elif _type == 3:
             inter = MessageInteraction(self.client, payload)
             self.dispatch(event_name, inter)
+            self.dispatch("message_interaction", inter)
             if inter.component is None:
                 return
             if inter.component.type == ComponentType.Button:

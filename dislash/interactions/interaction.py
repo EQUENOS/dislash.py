@@ -13,28 +13,6 @@ __all__ = (
 )
 
 
-class MessageWithComponents(discord.Message):
-    def __init__(self, *, state, channel, data):
-        super().__init__(state=state, channel=channel, data=data)
-        if not hasattr(self, "components"):
-            # Bypasses discord.py 2.0 Message object
-            self._from_dpy_2 = False
-            self.components = [ActionRow.from_dict(comp) for comp in data.get("components", [])]
-        else:
-            self._from_dpy_2 = True
-
-    def _overwrite_components(self, components):
-        # This method is necessary for ephemeral messages
-        if components is None:
-            return
-        self.components = []
-        for comp in components:
-            if isinstance(comp, ActionRow):
-                self.components.append(comp)
-            else:
-                self.components.append(ActionRow(comp))
-
-
 class InteractionType:
     Ping = 1
     ApplicationCommand = 2
@@ -411,11 +389,7 @@ class BaseInteraction:
             ),
             json=data
         )
-        return MessageWithComponents(
-            state=state,
-            channel=self.channel,
-            data=r
-        )
+        return state.create_message(channel=self.channel, data=r)
 
     async def delete(self):
         """
@@ -445,11 +419,8 @@ class BaseInteraction:
                 app_id=self.application_id, token=self.token
             )
         )
-        return MessageWithComponents(
-            state=self.bot._connection,
-            channel=self.channel,
-            data=data
-        )
+        state = self.bot._connection
+        return state.create_message(channel=self.channel, data=data)
 
     async def followup(self, content=None, *,   embed=None, embeds=None,
                        file=None, files=None,

@@ -83,6 +83,15 @@ def auto_rows(*buttons, max_in_row: int = 5):
 
 
 class ComponentType:
+    """
+    An enumerator for component types.
+
+    Attributes
+    ----------
+    ActionRow = 1
+    Button = 2
+    SelectMenu = 3
+    """
     ActionRow = 1
     Button = 2
     SelectMenu = 3
@@ -338,8 +347,11 @@ class Button(Component):
         self.disabled = disabled
 
     def __repr__(self):
-        desc = " ".join(f"{kw}={v}" for kw, v in self.to_dict().items())
-        return f"<Button {desc}>"
+        return (
+            f"<Button custom_id={self.custom_id!r} label={self.label!r} "
+            f"style={self.style!r} emoji={self.emoji!r} "
+            f"url={self.url!r} disabled={self.disabled!r}>"
+        )
 
     @property
     def id(self):
