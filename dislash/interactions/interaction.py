@@ -110,7 +110,13 @@ class BaseInteraction:
     @property
     def me(self):
         return self.guild.me if self.guild is not None else self.bot.user
-
+    async def defer(self):
+        """
+        Creates and initial response to the interaction giving a 'bot is thinking' state.
+        Use this first if you will take more than 3 seconds to respond to an interaction.
+        If you use defer(), use edit() instead of reply() to make the next response.
+        """
+        await self.reply(type=5)
     async def reply(self, content=None, *,  embed=None, embeds=None,
                     components=None, view=None,
                     file=None, files=None,
