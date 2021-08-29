@@ -54,14 +54,14 @@ from discord.ext import commands
 from dislash import InteractionClient
 
 bot = commands.Bot(command_prefix="!")
-slash = InteractionClient(client)
-test_guilds = [12345, 98765]
+inter_client = InteractionClient(bot, test_guilds=[12345, 98765])
+# If 'test_guilds' param isn't specified, the commands are registered globally.
+# Global registration takes up to 1 hour.
 
-@slash.command(
-    name="hello", # Defaults to function name
+@inter_client.slash_command(
+    name="hello", # Defaults to the function name
     description="Says hello",
-    guild_ids=test_guilds # If not specified, the command is registered globally
-    # Global registration takes up to 1 hour
+    guild_ids=test_guilds
 )
 async def hello(inter):
     await inter.reply("Hello!")
@@ -79,7 +79,7 @@ from discord.ext import commands
 from dislash import InteractionClient, ActionRow, Button, ButtonStyle
 
 bot = commands.Bot(command_prefix="!")
-slash = InteractionClient(bot)
+inter_client = InteractionClient(bot)
 
 @bot.command()
 async def test(ctx):
@@ -122,7 +122,7 @@ from discord.ext import commands
 from dislash import InteractionClient, SelectMenu, SelectOption
 
 bot = commands.Bot(command_prefix="!")
-slash = InteractionClient(bot)
+inter_client = InteractionClient(bot)
 
 @bot.command()
 async def test(ctx):
