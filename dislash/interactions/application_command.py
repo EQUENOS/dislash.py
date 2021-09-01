@@ -1,7 +1,8 @@
-import discord
 import re
-from typing import Any, Dict, Union, List
+from typing import Any, Callable, Dict, List, Union
 
+import discord
+from dislash.interactions.app_command_interaction import SlashInteraction
 
 __all__ = (
     "application_command_factory",
@@ -233,11 +234,12 @@ class OptionParam:
         float: 10,
     }
     
-    def __init__(self, default: Any = ..., name: str = None, description: str = None, type: Union[int, type] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
+    def __init__(self, default: Any = ..., *, name: str = None, description: str = None, type: Union[int, type] = None, converter: Callable[[SlashInteraction, Any], Any] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
         self.default = default
         self.name = name
         self.description = description or '-'
         self.type = type if isinstance(type, int) else self.TYPES[type] if type is not None else None
+        self.converter = converter
         self._python_type = None if isinstance(type, int) else type
         self.choices = choices or []
         self.options = options or []

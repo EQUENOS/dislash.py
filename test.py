@@ -1,4 +1,5 @@
 # will remove in production
+from discord.ext.commands import converter
 import dislash
 import discord
 from discord.ext import commands
@@ -20,12 +21,12 @@ async def command(
         lambda i: i.author,
         description="the target user",
     ),
-    item: str = dislash.OptionParam("dollar", description="the item to give"),
+    item: str = dislash.OptionParam("dollar", description="the item to give", converter=lambda inter, arg: arg + 's'),
     channel: discord.TextChannel = dislash.OptionParam(
         lambda i: i.channel, name="the-target-channel", description="name says it all"
     ),
 ):
-    await inter.reply(f"{inter.author.mention} gave {target.mention} {amount} {item}(s) in {channel.mention}")
+    await inter.reply(f"{inter.author.mention} gave {target.mention} {amount} {item} in {channel.mention}")
 
 
 print(command.registerable.options, command.connectors)

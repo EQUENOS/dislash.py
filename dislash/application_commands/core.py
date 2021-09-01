@@ -86,6 +86,11 @@ class InvokableApplicationCommand:
                         kwargs[param.name] = param.default.default
                 elif param.default is not inspect.Parameter.empty:
                     kwargs[param.name] = param.default
+            elif param.name in kwargs and isinstance(param.default, OptionParam) and param.default.converter is not None:
+                    try:
+                        kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
+                    except Exception as e:
+                        raise ConversionError(param.default.converter, e) from e
             
             # verify types
             if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation or param.default._python_type):
@@ -94,7 +99,7 @@ class InvokableApplicationCommand:
                         f"Expected option {param.default.name or param.name!r} "
                         f"to be of type {param.default._python_type or param.annotation!r} but received {kwargs[param.name]!r}"
                     )
-                    raise ConversionError(param.default, error) from error
+                    raise ConversionError(None, error) from error
             
         return kwargs
 
