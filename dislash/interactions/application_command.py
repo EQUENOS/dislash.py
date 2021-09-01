@@ -1,7 +1,8 @@
-import discord
 import re
-from typing import Any, Union, List
+from typing import Any, Callable, Dict, List, Union
 
+import discord
+from dislash.interactions.app_command_interaction import SlashInteraction
 
 __all__ = (
     "application_command_factory",
@@ -13,6 +14,7 @@ __all__ = (
     "OptionType",
     "OptionChoice",
     "Option",
+    "OptionParam",
     "ApplicationCommandPermissions",
     "SlashCommandPermissions",
     "RawCommandPermission",
@@ -214,6 +216,48 @@ class Option:
             payload['options'] = [o.to_dict() for o in self.options]
         return payload
 
+
+class OptionParam:
+    """A descriptor-like parameter default that can be used to define options"""
+    TYPES: Dict[type, int] = {
+        str: 3,
+        int: 4,
+        bool: 5,
+        discord.User: 6,
+        discord.Member: 6,
+        discord.abc.GuildChannel: 7,
+        discord.TextChannel: 7,
+        discord.VoiceChannel: 7,
+        discord.Role: 8,
+        discord.Object: 9,
+        discord.abc.Snowflake: 9,
+        float: 10,
+    }
+    
+    def __init__(self, default: Any = ..., *, name: str = None, description: str = None, type: Union[int, type] = None, converter: Callable[[SlashInteraction, Any], Any] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
+        self.default = default
+        self.name = name
+        self.description = description or '-'
+        self.type = type if isinstance(type, int) else self.TYPES[type] if type is not None else None
+        self.converter = converter
+        self._python_type = None if isinstance(type, int) else type
+        self.choices = choices or []
+        self.options = options or []
+    
+    @property
+    def required(self):
+        return self.default is ...
+    
+    def create_option(self, name: str, type: str):
+        return Option(self.name or name, self.description, self.type or type, self.required, self.choices, self.options)
+    
+    def __repr__(self):
+        string = "default={0.default} name='{0.name}' description='{0.description}' type={0.type}".format(self)
+        if len(self.options) > 0:
+            string = f"{string} options={self.options}"
+        if len(self.choices) > 0:
+            string = f"{string} choices={self.choices}"
+        return f"<Option {string}>"
 
 class ApplicationCommandType:
     CHAT_INPUT = 1

@@ -1,10 +1,10 @@
 import asyncio
 import inspect
+from typing import Callable, Dict, List, Tuple
 
-from .core import InvokableApplicationCommand, class_name
-from ..interactions import SlashCommand, Option, Type
+from ..interactions import Option, OptionParam, SlashCommand, Type
 from ._decohub import _HANDLER
-
+from .core import InvokableApplicationCommand, class_name
 
 __all__ = (
     "SubCommand",
@@ -86,12 +86,17 @@ class CommandParent(BaseSlashCommand):
                  guild_ids=None, connectors=None,
                  auto_sync=True, **kwargs):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
+        if not options:
+            options, connectors = self._extract_options(func)
+            if self.connectors: self.connectors.update(connectors)
+            else: self.connectors = connectors
+        
         self.children = {}
         self.auto_sync = auto_sync
         self.registerable = SlashCommand(
             name=self.name,
             description=description or "-",
-            options=options or [],
+            options=options,
             default_permission=default_permission,
         )
         self.guild_ids = guild_ids
@@ -104,6 +109,32 @@ class CommandParent(BaseSlashCommand):
     def _inject_cog(self, cog):
         self._cog = cog
         self._cog_name = cog.qualified_name
+    
+    
+    @staticmethod
+    def _extract_options(func: Callable) -> Tuple[List[Option], Dict[str, str]]:
+        """Helper function to extract options and connectors from a function"""
+        empty = inspect.Parameter.empty # helper
+        
+        sig = inspect.signature(func)
+        if 'self' in sig.parameters:
+            params = list(sig.parameters.values())[2:]
+        else:
+            params = list(sig.parameters.values())[1:]
+        
+        options = []
+        connectors = {}
+        for param in params:
+            annot_type = OptionParam.TYPES.get(param.annotation)
+            if isinstance(param.default, OptionParam):
+                d = param.default
+                option = d.create_option(param.name, annot_type)
+                if d.name is not None:
+                    connectors[d.name] = param.name
+            else:
+                option = Option(param.name, description='-', type=annot_type, required=param.default is empty)
+            options.append(option)
+        return options, connectors
 
     def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None, **kwargs):
         """

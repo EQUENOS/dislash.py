@@ -3,6 +3,7 @@ from discord.ext.commands.cooldowns import (
     CooldownMapping,
     BucketType
 )
+from discord.ext.commands.errors import ConversionError
 import asyncio
 import datetime
 import discord
@@ -11,6 +12,7 @@ import functools
 
 from .errors import *
 from ._decohub import _HANDLER
+from ..interactions import OptionParam
 
 
 __all__ = (
@@ -69,7 +71,37 @@ class InvokableApplicationCommand:
                 setattr(self, kw, value)
 
     async def __call__(self, *args, **kwargs):
+        kwargs = self._process_arguments(args[0], kwargs)
         return await self.func(*args, **kwargs)
+
+    def _process_arguments(self, inter, kwargs):
+        sig = inspect.signature(self.func)
+        for param in sig.parameters.values():
+            # fix accidental defaults
+            if param.name not in kwargs or isinstance(kwargs[param.name], OptionParam):
+                if isinstance(param.default, OptionParam):
+                    if callable(param.default.default):
+                        kwargs[param.name] = param.default.default(inter)
+                    elif param.default.default is not ...:
+                        kwargs[param.name] = param.default.default
+                elif param.default is not inspect.Parameter.empty:
+                    kwargs[param.name] = param.default
+            elif param.name in kwargs and isinstance(param.default, OptionParam) and param.default.converter is not None:
+                    try:
+                        kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
+                    except Exception as e:
+                        raise ConversionError(param.default.converter, e) from e
+            
+            # verify types
+            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation or param.default._python_type):
+                if not isinstance(kwargs[param.name], (param.annotation or param.default._python_type)):
+                    error = TypeError(
+                        f"Expected option {param.default.name or param.name!r} "
+                        f"to be of type {param.default._python_type or param.annotation!r} but received {kwargs[param.name]!r}"
+                    )
+                    raise ConversionError(None, error) from error
+            
+        return kwargs
 
     def _prepare_cooldowns(self, inter):
         if self._buckets.valid:
