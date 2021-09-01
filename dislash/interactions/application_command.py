@@ -1,6 +1,6 @@
 import discord
 import re
-from typing import Any, Union, List
+from typing import Any, Dict, Union, List
 
 
 __all__ = (
@@ -13,6 +13,7 @@ __all__ = (
     "OptionType",
     "OptionChoice",
     "Option",
+    "OptionParam",
     "ApplicationCommandPermissions",
     "SlashCommandPermissions",
     "RawCommandPermission",
@@ -214,6 +215,38 @@ class Option:
             payload['options'] = [o.to_dict() for o in self.options]
         return payload
 
+
+class OptionParam:
+    """A descriptor-like parameter default that can be used to define options"""
+    TYPES: Dict[type, int] = {
+        str: 3,
+        int: 4,
+        bool: 5,
+        discord.User: 6,
+        discord.Member: 6,
+        discord.abc.GuildChannel: 7,
+        discord.TextChannel: 7,
+        discord.VoiceChannel: 7,
+        discord.Role: 8,
+        discord.Object: 9,
+        discord.abc.Snowflake: 9,
+        float: 10,
+    }
+    
+    def __init__(self, default: Any = ..., description: str = None, type: Union[int, type] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
+        self.default = default
+        self.description = description or '-'
+        self.type = type if isinstance(type, int) else self.TYPES[type] if type is not None else None
+        self._python_type = None if isinstance(type, int) else type
+        self.choices = choices
+        self.options = options
+    
+    @property
+    def required(self):
+        return self.default is ...
+    
+    def create_option(self, name: str):
+        return Option(name, self.description, self.type, self.required, self.choices, self.options)
 
 class ApplicationCommandType:
     CHAT_INPUT = 1

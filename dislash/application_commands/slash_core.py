@@ -1,10 +1,10 @@
 import asyncio
 import inspect
+from typing import Callable, List
 
-from .core import InvokableApplicationCommand, class_name
-from ..interactions import SlashCommand, Option, Type
+from ..interactions import Option, OptionParam, SlashCommand, Type
 from ._decohub import _HANDLER
-
+from .core import InvokableApplicationCommand, class_name
 
 __all__ = (
     "SubCommand",
@@ -91,7 +91,7 @@ class CommandParent(BaseSlashCommand):
         self.registerable = SlashCommand(
             name=self.name,
             description=description or "-",
-            options=options or [],
+            options=options or self._extract_options(func),
             default_permission=default_permission,
         )
         self.guild_ids = guild_ids
@@ -104,6 +104,29 @@ class CommandParent(BaseSlashCommand):
     def _inject_cog(self, cog):
         self._cog = cog
         self._cog_name = cog.qualified_name
+    
+    
+    @staticmethod
+    def _extract_options(func: Callable) -> List[Option]:
+        """Helper function to extract options from a function"""
+        empty = inspect.Parameter.empty # helper
+        
+        sig = inspect.signature(func)
+        if 'self' in sig.parameters:
+            params = list(sig.parameters.values())[2:]
+        else:
+            params = list(sig.parameters.values())[1:]
+        
+        options = []
+        for param in params:
+            annot_type = OptionParam.TYPES.get(param.annotation)
+            if isinstance(param.default, OptionParam):
+                d = param.default
+                option = Option(param.name, d.description, d.type or annot_type, d.required, d.choices, d.options)
+            else:
+                option = Option(param.name, description='-', type=annot_type, required=param.default is empty)
+            options.append(option)
+        return options
 
     def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None, **kwargs):
         """

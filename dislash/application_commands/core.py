@@ -11,6 +11,7 @@ import functools
 
 from .errors import *
 from ._decohub import _HANDLER
+from ..interactions import OptionParam
 
 
 __all__ = (
@@ -69,7 +70,18 @@ class InvokableApplicationCommand:
                 setattr(self, kw, value)
 
     async def __call__(self, *args, **kwargs):
+        kwargs = self._process_defaults(args[0], kwargs)
         return await self.func(*args, **kwargs)
+
+    def _process_defaults(self, inter, kwargs):
+        sig = inspect.signature(self.func)
+        for param in sig.parameters.values():
+            if isinstance(param.default, OptionParam) and param.default.default is not ... and (param.name not in kwargs or isinstance(kwargs[param.name], OptionParam)):
+                if callable(param.default.default):
+                    kwargs[param.name] = param.default.default(inter)
+                else:
+                    kwargs[param.name] = param.default.default
+        return kwargs
 
     def _prepare_cooldowns(self, inter):
         if self._buckets.valid:
