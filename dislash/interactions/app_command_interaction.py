@@ -27,7 +27,7 @@ class Resolved:
             user_id = int(ID)
             if ID in members:
                 self.members[user_id] = discord.Member(
-                    data={**members[ID], "user": data},
+                    data={**members[ID], "user": data}, # type: ignore
                     guild=guild,
                     state=state
                 )

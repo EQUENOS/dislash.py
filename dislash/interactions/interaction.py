@@ -191,7 +191,7 @@ class BaseInteraction:
                 send_kwargs["view"] = view
             if self.bot.slash._modify_send:
                 send_kwargs["components"] = components
-            return await self.channel.send(**send_kwargs)
+            return await self.channel.send(**send_kwargs) # type: ignore
         # Create response
         await self.create_response(
             content=content,

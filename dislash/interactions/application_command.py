@@ -1,3 +1,4 @@
+from enum import Enum
 import re
 from typing import Any, Callable, Dict, List, Union
 
@@ -22,7 +23,7 @@ __all__ = (
 )
 
 
-def application_command_factory(data: dict):
+def application_command_factory(data: dict) -> ApplicationCommand: # type: ignore
     cmd_type = data.get("type", 1)
     if cmd_type == ApplicationCommandType.CHAT_INPUT:
         return SlashCommand.from_dict(data)
@@ -186,7 +187,7 @@ class Option:
         Parameters are the same as for :class:`Option`
         '''
         if self.type == 1:
-            if type < 3:
+            if type and type < 3:
                 raise ValueError('sub_command can only be nested in a sub_command_group')
         elif self.type == 2:
             if type != 1:
@@ -248,7 +249,7 @@ class OptionParam:
     def required(self):
         return self.default is ...
     
-    def create_option(self, name: str, type: str):
+    def create_option(self, name: str, type: int = None):
         return Option(self.name or name, self.description, self.type or type, self.required, self.choices, self.options)
     
     def __repr__(self):
@@ -259,7 +260,7 @@ class OptionParam:
             string = f"{string} choices={self.choices}"
         return f"<Option {string}>"
 
-class ApplicationCommandType:
+class ApplicationCommandType(int, Enum):
     CHAT_INPUT = 1
     SLASH = 1
     USER = 2
@@ -281,6 +282,9 @@ class ApplicationCommand:
     
     def __eq__(self, other):
         return False
+
+    def to_dict(self, **kwargs):
+        raise NotImplementedError
 
 
 class UserCommand(ApplicationCommand):

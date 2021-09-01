@@ -1,5 +1,8 @@
+from typing import Any, Dict, Union
 import discord
 import re
+
+from discord.partial_emoji import PartialEmoji
 
 
 __all__ = (
@@ -143,7 +146,7 @@ class SelectOption:
 
     __slots__ = ("label", "value", "description", "emoji", "default")
 
-    def __init__(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
+    def __init__(self, label: str, value: str, description: str = None, emoji: Union[str, PartialEmoji] = None, default: bool = False):
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
 
@@ -166,15 +169,15 @@ class SelectOption:
         else:
             emoji = None
         return SelectOption(
-            label=data.get("label"),
-            value=data.get("value"),
+            label=data["label"],
+            value=data["value"],
             description=data.get("description"),
             emoji=emoji,
             default=data.get("default", False)
         )
 
     def to_dict(self):
-        data = {
+        data: Dict[str, Any] = {
             "label": self.label,
             "value": self.value
         }
@@ -320,7 +323,7 @@ class Button(Component):
     disabled : :class:`bool`
         Whether the button is disabled or not. Defaults to false.
     """
-    def __init__(self, *, style: ButtonStyle, label: str = None, emoji: discord.PartialEmoji = None,
+    def __init__(self, *, style: ButtonStyle, label: str = None, emoji: Union[discord.PartialEmoji, str] = None,
                  custom_id: str = None, url: str = None, disabled: bool = False):
         global ID_SOURCE  # Ugly as hell
 
@@ -364,7 +367,7 @@ class Button(Component):
         else:
             emoji = None
         return Button(
-            style=data.get("style"),
+            style=data["style"],
             label=data.get("label"),
             emoji=emoji,
             custom_id=data.get("custom_id"),

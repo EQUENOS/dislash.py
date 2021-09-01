@@ -1,10 +1,11 @@
 import asyncio
 import discord
 from discord.abc import Messageable
+from discord.ext import commands
 from discord.state import ConnectionState
 from discord.http import Route
 from discord.ext.commands import Context
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 from .slash_core import slash_command
 from .context_menus_core import user_command, message_command
@@ -94,7 +95,7 @@ class InteractionClient:
     def _register_listeners(self):
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.add_listener(self._on_socket_response, 'on_socket_response')
-        if isinstance(self.client, discord.AutoShardedClient):
+        if isinstance(self.client, commands.AutoShardedBot):
             self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.add_listener(self._on_ready, 'on_ready')
         else:
@@ -102,7 +103,7 @@ class InteractionClient:
         # For nice click listener
         self.client.add_listener(_on_button_click, 'on_button_click')
 
-    def _modify_discord(self):
+    def _modify_discord(self): # type: ignore
         # Modify cog loader
         _add_cog = self.client.add_cog
 
@@ -211,7 +212,7 @@ class InteractionClient:
         '''Cleanup the client by removing all registered listeners and caches.'''
         self.client.remove_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.remove_listener(self._on_socket_response, 'on_socket_response')
-        if isinstance(self.client, discord.AutoShardedClient):
+        if isinstance(self.client, commands.AutoShardedBot):
             self.client.remove_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.remove_listener(self._on_ready, 'on_ready')
         else:
@@ -222,7 +223,7 @@ class InteractionClient:
         self._global_commands.clear()
         self._guild_commands.clear()
         if hasattr(self.client, "slash"):
-            del self.client.slash
+            del self.client.slash # type: ignore
         self.is_ready = False
 
     @property
@@ -337,7 +338,7 @@ class InteractionClient:
         slash_command : SlashCommand | None
         """
         for cmd in self._global_commands.values():
-            if cmd.name == name:
+            if cmd and cmd.name == name:
                 return cmd
 
     def get_guild_command(self, guild_id: int, command_id: int):
@@ -1024,7 +1025,7 @@ class InteractionClient:
     def _modify_parser(self, parsers, event, func):
         def empty_func(data):
             pass
-        old_func = parsers.get(event, empty_func)
+        old_func: Callable = parsers.get(event, empty_func)
         original_func = getattr(old_func, "__original_parser__", old_func)
 
         def new_func(data):
@@ -1269,7 +1270,8 @@ class InteractionClient:
     async def _on_slash_command(self, inter: SlashInteraction):
         app_command = self.slash_commands.get(inter.data.name)
         if app_command is None:
-            usable = False
+            await self._maybe_unregister_commands(inter.guild_id)
+            return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
             is_global = self.get_global_command(inter.data.id) is not None 
@@ -1291,7 +1293,8 @@ class InteractionClient:
     async def _on_user_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.user_commands.get(inter.data.name)
         if app_command is None:
-            usable = False
+            await self._maybe_unregister_commands(inter.guild_id)
+            return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
             is_global = self.get_global_command(inter.data.id) is not None 
@@ -1313,7 +1316,8 @@ class InteractionClient:
     async def _on_message_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.message_commands.get(inter.data.name)
         if app_command is None:
-            usable = False
+            await self._maybe_unregister_commands(inter.guild_id)
+            return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
             is_global = self.get_global_command(inter.data.id) is not None 

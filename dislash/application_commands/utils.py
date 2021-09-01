@@ -38,7 +38,7 @@ class ClickListener:
 
     __slots__ = ("id", "_listeners", "_timeout_waiter", "_timeout", "_ends_at")
 
-    def __init__(self, message_id: int, timeout: float = None):
+    def __init__(self, message_id: int, timeout: float = 0):
         self.id = message_id
         self._listeners = []
         self._timeout_waiter = None
@@ -47,7 +47,7 @@ class ClickListener:
         # Launch a finishing task
         if timeout is not None:
             self._ends_at = datetime.now() + timedelta(seconds=timeout)
-            _HANDLER.client.loop.create_task(self._wait_and_finish())
+            asyncio.create_task(self._wait_and_finish())
         else:
             self._ends_at = None
 
@@ -56,7 +56,7 @@ class ClickListener:
         while True:
             await asyncio.sleep(delay)
             now = datetime.now()
-            if self._ends_at > now:
+            if self._ends_at and self._ends_at > now:
                 delay = (self._ends_at - now).total_seconds()
             else:
                 break
@@ -73,7 +73,7 @@ class ClickListener:
                 res = False
             if res:
                 task_toggled = task_toggled or reset_timeout
-                _HANDLER.client.loop.create_task(listener(inter))
+                asyncio.create_task(listener(inter))
                 if cancel_others:
                     break
         # Delay more

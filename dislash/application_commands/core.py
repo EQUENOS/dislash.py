@@ -59,10 +59,10 @@ class InvokableApplicationCommand:
             except Exception:
                 # discord.py <= 1.6.x
                 try:
-                    self._buckets = CooldownMapping(cooldown)
+                    self._buckets = CooldownMapping(cooldown) # type: ignore
                 except Exception:
                     # Hopefully we never reach this
-                    self._buckets = None
+                    self._buckets: CooldownMapping = None # type: ignore
         else:
             self._buckets = cooldown
         # Add custom kwargs
@@ -90,16 +90,16 @@ class InvokableApplicationCommand:
                     try:
                         kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
                     except Exception as e:
-                        raise ConversionError(param.default.converter, e) from e
+                        raise ConversionError(param.default.converter, e) from e # type: ignore
             
             # verify types
             if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation or param.default._python_type):
-                if not isinstance(kwargs[param.name], (param.annotation or param.default._python_type)):
+                if not isinstance(kwargs[param.name], (param.annotation, param.default._python_type)): # type: ignore
                     error = TypeError(
                         f"Expected option {param.default.name or param.name!r} "
                         f"to be of type {param.default._python_type or param.annotation!r} but received {kwargs[param.name]!r}"
                     )
-                    raise ConversionError(None, error) from error
+                    raise ConversionError(None, error) from error # type: ignore
             
         return kwargs
 
@@ -113,7 +113,7 @@ class InvokableApplicationCommand:
                 raise CommandOnCooldown(bucket, retry_after)
 
     def _dispatch_error(self, cog, inter, error):
-        _HANDLER.client.loop.create_task(self._invoke_error_handler(cog, inter, error))
+        asyncio.create_task(self._invoke_error_handler(cog, inter, error))
 
     async def _run_checks(self, inter):
         for _check in self.checks:
@@ -213,7 +213,7 @@ def get_class(func):
         cn = class_name(func)
         if cn is not None:
             mod = inspect.getmodule(func)
-            return getattr(mod, class_name(func), None)
+            return getattr(mod, str(class_name(func)), None)
 
 
 def check(predicate):
@@ -237,7 +237,7 @@ def check(predicate):
 
     '''
     if inspect.iscoroutinefunction(predicate):
-        wrapper = predicate
+        wrapper = predicate # type: ignore
     else:
         async def wrapper(ctx):
             return predicate(ctx)
@@ -504,12 +504,12 @@ def cooldown(rate, per, type=BucketType.default):
     '''
     def decorator(func):
         try:
-            cooldown_obj = Cooldown(rate, per, type)
+            cooldown_obj = Cooldown(rate, per, type) # type: ignore
         except Exception:
             cooldown_obj = Cooldown(rate, per)
 
         try:
-            mapping = CooldownMapping(cooldown_obj)
+            mapping = CooldownMapping(cooldown_obj) # type: ignore
         except Exception:
             mapping = CooldownMapping(cooldown_obj, type)
 
