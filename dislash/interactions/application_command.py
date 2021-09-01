@@ -233,20 +233,29 @@ class OptionParam:
         float: 10,
     }
     
-    def __init__(self, default: Any = ..., description: str = None, type: Union[int, type] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
+    def __init__(self, default: Any = ..., name: str = None, description: str = None, type: Union[int, type] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
         self.default = default
+        self.name = name
         self.description = description or '-'
         self.type = type if isinstance(type, int) else self.TYPES[type] if type is not None else None
         self._python_type = None if isinstance(type, int) else type
-        self.choices = choices
-        self.options = options
+        self.choices = choices or []
+        self.options = options or []
     
     @property
     def required(self):
         return self.default is ...
     
-    def create_option(self, name: str):
-        return Option(name, self.description, self.type, self.required, self.choices, self.options)
+    def create_option(self, name: str, type: str):
+        return Option(self.name or name, self.description, self.type or type, self.required, self.choices, self.options)
+    
+    def __repr__(self):
+        string = "default={0.default} name='{0.name}' description='{0.description}' type={0.type}".format(self)
+        if len(self.options) > 0:
+            string = f"{string} options={self.options}"
+        if len(self.choices) > 0:
+            string = f"{string} choices={self.choices}"
+        return f"<Option {string}>"
 
 class ApplicationCommandType:
     CHAT_INPUT = 1
