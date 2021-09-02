@@ -1,8 +1,9 @@
 import asyncio
 import inspect
-from typing import Callable, Dict, List, Tuple
+from typing import Awaitable, Callable, Dict, List, Tuple
 
-from ..interactions import Option, OptionParam, SlashCommand, Type
+from ..interactions import Option, SlashCommand, Type
+from ..interactions.application_command import OptionParam
 from ._decohub import _HANDLER
 from .core import InvokableApplicationCommand, class_name
 
@@ -247,7 +248,7 @@ class CommandParent(BaseSlashCommand):
             raise err
 
 
-def slash_command(*args, **kwargs):
+def slash_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
     """
     A decorator that allows to build a slash command.
 

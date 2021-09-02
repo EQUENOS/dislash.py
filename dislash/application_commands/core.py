@@ -1,3 +1,5 @@
+from typing import Any, Dict
+from dislash.interactions.app_command_interaction import SlashInteraction
 from discord.ext.commands.cooldowns import (
     Cooldown,
     CooldownMapping,
@@ -11,8 +13,7 @@ import inspect
 import functools
 
 from .errors import *
-from ._decohub import _HANDLER
-from ..interactions import OptionParam
+from ..interactions.application_command import OptionParam
 
 
 __all__ = (
@@ -74,7 +75,7 @@ class InvokableApplicationCommand:
         kwargs = self._process_arguments(args[0], kwargs)
         return await self.func(*args, **kwargs)
 
-    def _process_arguments(self, inter, kwargs):
+    def _process_arguments(self, inter: SlashInteraction, kwargs: Dict[str, Any]):
         sig = inspect.signature(self.func)
         for param in sig.parameters.values():
             # fix accidental defaults
@@ -93,8 +94,8 @@ class InvokableApplicationCommand:
                         raise ConversionError(param.default.converter, e) from e # type: ignore
             
             # verify types
-            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation or param.default._python_type):
-                if not isinstance(kwargs[param.name], (param.annotation, param.default._python_type)): # type: ignore
+            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.default._python_type or param.annotation):
+                if not self._isinstance(kwargs[param.name], (param.default._python_type or param.annotation)):
                     error = TypeError(
                         f"Expected option {param.default.name or param.name!r} "
                         f"to be of type {param.default._python_type or param.annotation!r} but received {kwargs[param.name]!r}"
@@ -102,6 +103,13 @@ class InvokableApplicationCommand:
                     raise ConversionError(None, error) from error # type: ignore
             
         return kwargs
+
+    @staticmethod
+    def _isinstance(obj: Any, typ: type) -> bool:
+        if issubclass(typ, discord.User):
+            return isinstance(obj, (discord.User, discord.Member, discord.ClientUser))
+        else:
+            return isinstance(obj, typ)
 
     def _prepare_cooldowns(self, inter):
         if self._buckets.valid:
