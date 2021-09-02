@@ -1,3 +1,4 @@
+from dislash.interactions.interaction import BaseInteraction
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 from dislash.interactions.app_command_interaction import SlashInteraction
 from discord.ext.commands.cooldowns import (
@@ -120,21 +121,21 @@ class InvokableApplicationCommand:
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
 
-    def _dispatch_error(self, cog: Any, inter: SlashInteraction, error: Exception):
+    def _dispatch_error(self, cog: Any, inter: BaseInteraction, error: Exception):
         asyncio.create_task(self._invoke_error_handler(cog, inter, error))
 
-    async def _run_checks(self, inter: SlashInteraction):
+    async def _run_checks(self, inter: BaseInteraction):
         for _check in self.checks:
             if not await _check(inter):
                 raise InteractionCheckFailure(f"command <{self.name}> has failed")
 
-    async def _maybe_cog_call(self, cog: Any, inter: SlashInteraction):
+    async def _maybe_cog_call(self, cog: Any, inter: BaseInteraction):
         if cog:
             return await self(cog, inter)
         else:
             return await self(inter)
 
-    async def _invoke_error_handler(self, cog: Any, inter: SlashInteraction, error: Exception):
+    async def _invoke_error_handler(self, cog: Any, inter: BaseInteraction, error: Exception):
         if self._error_handler is None:
             return
         if cog:
