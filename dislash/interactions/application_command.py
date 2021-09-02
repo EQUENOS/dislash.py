@@ -1,10 +1,11 @@
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
-import re
-from typing import Any, Callable, Dict, List, TypeVar, Union
+from typing import Any, Callable, Dict, List, Union
 
 import discord
-from dislash.interactions.app_command_interaction import SlashInteraction
+
+from .app_command_interaction import SlashInteraction
 
 __all__ = (
     "application_command_factory",
@@ -20,11 +21,11 @@ __all__ = (
     "ApplicationCommandPermissions",
     "SlashCommandPermissions",
     "RawCommandPermission",
-    "Type"
+    "Type",
 )
 
 
-def application_command_factory(data: Dict[str, Any]) -> 'ApplicationCommand':
+def application_command_factory(data: Dict[str, Any]) -> "ApplicationCommand":
     cmd_type = data.get("type", 1)
     if cmd_type == ApplicationCommandType.CHAT_INPUT:
         cmd = SlashCommand.from_dict(data)
@@ -34,10 +35,10 @@ def application_command_factory(data: Dict[str, Any]) -> 'ApplicationCommand':
         cmd = MessageCommand.from_dict(data)
     else:
         cmd = None
-    
+
     if cmd is not None:
         return cmd
-    
+
     raise ValueError("Invalid command type")
 
 
@@ -56,6 +57,7 @@ class OptionType:
     MENTIONABLE = 9
     NUMBER = 10
     """
+
     SUB_COMMAND = 1
     SUB_COMMAND_GROUP = 2
     STRING = 3
@@ -86,10 +88,7 @@ class OptionChoice:
         return "<OptionChoice name='{0.name}' value={0.value}>".format(self)
 
     def __eq__(self, other):
-        return (
-            self.name == other.name and
-            self.value == other.value
-        )
+        return self.name == other.name and self.value == other.value
 
 
 class Option:
@@ -113,7 +112,15 @@ class Option:
 
     __slots__ = ("name", "description", "type", "required", "choices", "options", "_choice_connectors")
 
-    def __init__(self, name: str, description: str = None, type: int = None, required: bool = False, choices: List[OptionChoice] = None, options: list = None):
+    def __init__(
+        self,
+        name: str,
+        description: str = None,
+        type: int = None,
+        required: bool = False,
+        choices: List[OptionChoice] = None,
+        options: List["Option"] = None,
+    ):
         assert name.islower(), f"Option name {name!r} must be lowercase"
         self.name = name
         self.description = description
@@ -124,11 +131,11 @@ class Option:
             if self.type == 1:
                 for option in options:
                     if option.type < 3:
-                        raise ValueError('Unexpected sub_command in a sub_command')
+                        raise ValueError("Unexpected sub_command in a sub_command")
             elif self.type == 2:
                 for option in options:
                     if option.type != 1:
-                        raise ValueError('Expected sub_command in this sub_command_group')
+                        raise ValueError("Expected sub_command in this sub_command_group")
         self.options = options or []
         self._choice_connectors = {}
         # Wrap choices
@@ -144,7 +151,7 @@ class Option:
                     choice.value = valid_value
 
     def __repr__(self):
-        string = "name='{0.name}' description='{0.description} type={0.type} required={0.required}".format(self)
+        string = "name='{0.name}' description='{0.description}' type={0.type} required={0.required}".format(self)
         if len(self.options) > 0:
             string = f"{string} options={self.options}"
         if len(self.choices) > 0:
@@ -153,28 +160,28 @@ class Option:
 
     def __eq__(self, other):
         return (
-            self.name == other.name and
-            self.description == other.description and
-            self.type == other.type and
-            self.required == other.required and
-            self.choices == other.choices and
-            self.options == other.options
+            self.name == other.name
+            and self.description == other.description
+            and self.type == other.type
+            and self.required == other.required
+            and self.choices == other.choices
+            and self.options == other.options
         )
 
     @classmethod
     def from_dict(cls, payload: dict):
-        if 'options' in payload:
-            payload['options'] = [Option.from_dict(p) for p in payload['options']]
-        if 'choices' in payload:
-            payload['choices'] = [OptionChoice(**p) for p in payload['choices']]
+        if "options" in payload:
+            payload["options"] = [Option.from_dict(p) for p in payload["options"]]
+        if "choices" in payload:
+            payload["choices"] = [OptionChoice(**p) for p in payload["choices"]]
         return Option(**payload)
 
     def add_choice(self, name: str, value: Any):
-        '''
+        """
         Adds an OptionChoice to the list of current choices
 
         Parameters are the same as for :class:`OptionChoice`
-        '''
+        """
         # Wrap the value
         true_value = value
         if self.type == Type.STRING:
@@ -188,88 +195,94 @@ class Option:
         # Add an option choice
         self.choices.append(OptionChoice(name=name, value=true_value))
 
-    def add_option(self, name: str, description: str = None, type: int = None, required: bool = False, choices: List[OptionChoice] = None, options: list = None):
-        '''
+    def add_option(
+        self,
+        name: str,
+        description: str = None,
+        type: int = None,
+        required: bool = False,
+        choices: List[OptionChoice] = None,
+        options: list = None,
+    ):
+        """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
-        '''
+        """
         if self.type == 1:
             if type and type < 3:
-                raise ValueError('sub_command can only be nested in a sub_command_group')
+                raise ValueError("sub_command can only be nested in a sub_command_group")
         elif self.type == 2:
             if type != 1:
-                raise ValueError('Expected sub_command in this sub_command_group')
+                raise ValueError("Expected sub_command in this sub_command_group")
         self.options.append(
-            Option(
-                name=name,
-                description=description,
-                type=type,
-                required=required,
-                choices=choices,
-                options=options
-            )
+            Option(name=name, description=description, type=type, required=required, choices=choices, options=options)
         )
 
     def to_dict(self):
-        payload = {
-            'name': self.name,
-            'description': self.description,
-            'type': self.type
-        }
+        payload = {"name": self.name, "description": self.description, "type": self.type}
         if self.required:
-            payload['required'] = True
+            payload["required"] = True
         if len(self.choices) > 0:
-            payload['choices'] = [c.__dict__ for c in self.choices]
+            payload["choices"] = [c.__dict__ for c in self.choices]
         if len(self.options) > 0:
-            payload['options'] = [o.to_dict() for o in self.options]
+            payload["options"] = [o.to_dict() for o in self.options]
         return payload
 
 
 class OptionParam:
     """A descriptor-like parameter default that can be used to define options"""
+
     TYPES: Dict[type, int] = {
         str: 3,
         int: 4,
         bool: 5,
+        discord.abc.User: 6,
         discord.User: 6,
         discord.Member: 6,
         discord.abc.GuildChannel: 7,
         discord.TextChannel: 7,
         discord.VoiceChannel: 7,
+        discord.CategoryChannel: 7,
+        discord.StageChannel: 7,
+        discord.StoreChannel: 7,
         discord.Role: 8,
         discord.Object: 9,
         discord.abc.Snowflake: 9,
         float: 10,
     }
-    
-    def __init__(self, default: Any = ..., *, name: str = None, description: str = None, type: Union[int, type] = None, converter: Callable[[SlashInteraction, Any], Any] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> None:
+
+    def __init__(
+        self,
+        default: Any = ...,
+        *,
+        name: str = None,
+        description: str = None,
+        converter: Callable[[SlashInteraction, Any], Any] = None,
+    ) -> None:
         self.default = default
         self.name = name
-        self.description = description or '-'
-        self.type = type if isinstance(type, int) else self.TYPES[type] if type is not None else None
+        self.description = description or "-"
         self.converter = converter
-        self._python_type = None if isinstance(type, int) else type
-        self.choices = choices or []
-        self.options = options or []
-    
+
     @property
     def required(self):
         return self.default is ...
-    
-    def create_option(self, name: str, type: int = None):
-        return Option(self.name or name, self.description, self.type or type, self.required, self.choices, self.options)
-    
+
     def __repr__(self):
-        string = "default={0.default} name='{0.name}' description='{0.description}' type={0.type}".format(self)
-        if len(self.options) > 0:
-            string = f"{string} options={self.options}"
-        if len(self.choices) > 0:
-            string = f"{string} choices={self.choices}"
+        string = "default={0.default} name='{0.name}' description='{0.description}'".format(self)
         return f"<Option {string}>"
 
-def optionparam(default: Any = ..., *, name: str = None, description: str = None, type: Union[int, type] = None, converter: Callable[[SlashInteraction, Any], Any] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> Any:
-    return OptionParam(default, name=name, description=description, type=type, converter=converter, choices=choices, options=options)
+
+def optionparam(
+    default: Any = ...,
+    *,
+    name: str = None,
+    description: str = None,
+    converter: Callable[[SlashInteraction, Any], Any] = None,
+) -> Any:
+    return OptionParam(default, name=name, description=description, converter=converter)
+
 
 class ApplicationCommandType(int, Enum):
     CHAT_INPUT = 1
@@ -282,15 +295,16 @@ class ApplicationCommand(ABC):
     """
     Base class for application commands
     """
+
     name: str
-    
+
     def __init__(self, type: ApplicationCommandType, **kwargs):
         self.type = type
-        self.id: int = int(kwargs.pop('id', 0))
-        self.application_id = kwargs.pop('application_id', None)
+        self.id: int = int(kwargs.pop("id", 0))
+        self.application_id = kwargs.pop("application_id", None)
         if self.application_id:
             self.application_id = int(self.application_id)
-    
+
     def __eq__(self, other):
         return False
 
@@ -303,49 +317,36 @@ class UserCommand(ApplicationCommand):
     def __init__(self, name: str, **kwargs):
         super().__init__(ApplicationCommandType.USER, **kwargs)
         self.name = name
-    
+
     def __repr__(self):
         return f"<UserCommand name={self.name!r}>"
-    
+
     def __eq__(self, other):
-        return (
-            self.type == other.type and
-            self.name == other.name
-        )
+        return self.type == other.type and self.name == other.name
 
     def to_dict(self, **kwargs):
-        return {
-            "type": self.type,
-            "name": self.name
-        }
-    
+        return {"type": self.type, "name": self.name}
+
     @classmethod
     def from_dict(cls, data: dict):
         if data.pop("type", 1) == ApplicationCommandType.USER:
             return UserCommand(**data)
 
 
-
 class MessageCommand(ApplicationCommand):
     def __init__(self, name: str, **kwargs):
         super().__init__(ApplicationCommandType.MESSAGE, **kwargs)
         self.name = name
-    
+
     def __repr__(self):
         return f"<MessageCommand name={self.name!r}>"
-    
+
     def __eq__(self, other):
-        return (
-            self.type == other.type and
-            self.name == other.name
-        )
+        return self.type == other.type and self.name == other.name
 
     def to_dict(self, **kwargs):
-        return {
-            "type": self.type,
-            "name": self.name
-        }
-    
+        return {"type": self.type, "name": self.name}
+
     @classmethod
     def from_dict(cls, data: dict):
         if data.pop("type", 0) == ApplicationCommandType.MESSAGE:
@@ -368,12 +369,12 @@ class SlashCommand(ApplicationCommand):
         Whether the command is enabled by default when the app is added to a guild
     """
 
-    def __init__(self, name: str, description: str, options: list = None,
-                 default_permission: bool = True, **kwargs):
+    def __init__(self, name: str, description: str, options: list = None, default_permission: bool = True, **kwargs):
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
-        assert re.match(r"^[\w-]{1,32}$", name) is not None and name.islower(),\
-            f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
+        assert (
+            re.match(r"^[\w-]{1,32}$", name) is not None and name.islower()
+        ), f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
 
         self.name = name
         self.description = description
@@ -386,43 +387,40 @@ class SlashCommand(ApplicationCommand):
 
     def __eq__(self, other):
         return (
-            self.type == other.type and
-            self.name == other.name and
-            self.description == other.description and
-            self.options == other.options
+            self.type == other.type
+            and self.name == other.name
+            and self.description == other.description
+            and self.options == other.options
         )
 
     @classmethod
     def from_dict(cls, payload: dict):
         if payload.pop("type", 1) != ApplicationCommandType.CHAT_INPUT:
             return None
-        if 'options' in payload:
-            payload['options'] = [Option.from_dict(p) for p in payload['options']]
+        if "options" in payload:
+            payload["options"] = [Option.from_dict(p) for p in payload["options"]]
         return SlashCommand(**payload)
 
-    def add_option(self, name: str, description: str = None, type: int = None, required: bool = False, choices: List[OptionChoice] = None, options: list = None):
-        '''
+    def add_option(
+        self,
+        name: str,
+        description: str = None,
+        type: int = None,
+        required: bool = False,
+        choices: List[OptionChoice] = None,
+        options: list = None,
+    ):
+        """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
-        '''
+        """
         self.options.append(
-            Option(
-                name=name,
-                description=description,
-                type=type,
-                required=required,
-                choices=choices,
-                options=options
-            )
+            Option(name=name, description=description, type=type, required=required, choices=choices, options=options)
         )
 
     def to_dict(self, *, hide_name=False):
-        res = {
-            "type": self.type,
-            "description": self.description,
-            "options": [o.to_dict() for o in self.options]
-        }
+        res = {"type": self.type, "description": self.description, "options": [o.to_dict() for o in self.options]}
         if not self.default_permission:
             res["default_permission"] = False
         if not hide_name:
@@ -464,10 +462,7 @@ class ApplicationCommandPermissions:
         permissions : :class:`dict`
             a dictionary of {:class:`Role | User`: :class:`bool`}
         """
-        raw_perms = [
-            RawCommandPermission.from_pair(target, perm)
-            for target, perm in permissions.items()
-        ]
+        raw_perms = [RawCommandPermission.from_pair(target, perm) for target, perm in permissions.items()]
 
         return SlashCommandPermissions(raw_perms)
 
@@ -486,10 +481,7 @@ class ApplicationCommandPermissions:
         """
         role_perms = role_perms or {}
         user_perms = user_perms or {}
-        raw_perms = [
-            RawCommandPermission(role_id, 1, perm)
-            for role_id, perm in role_perms.items()
-        ]
+        raw_perms = [RawCommandPermission(role_id, 1, perm) for role_id, perm in role_perms.items()]
 
         for user_id, perm in user_perms.items():
             raw_perms.append(RawCommandPermission(user_id, 2, perm))
@@ -497,15 +489,10 @@ class ApplicationCommandPermissions:
 
     @classmethod
     def from_dict(cls, data: dict):
-        return SlashCommandPermissions([
-            RawCommandPermission.from_dict(perm)
-            for perm in data["permissions"]
-        ])
+        return SlashCommandPermissions([RawCommandPermission.from_dict(perm) for perm in data["permissions"]])
 
     def to_dict(self):
-        return {
-            "permissions": [perm.to_dict() for perm in self.permissions]
-        }
+        return {"permissions": [perm.to_dict() for perm in self.permissions]}
 
 
 class RawCommandPermission:
@@ -539,25 +526,15 @@ class RawCommandPermission:
         if not isinstance(permission, bool):
             raise discord.InvalidArgument("permission should be bool")
         return RawCommandPermission(
-            id=target.id,
-            type=1 if isinstance(target, discord.Role) else 2,
-            permission=permission
+            id=target.id, type=1 if isinstance(target, discord.Role) else 2, permission=permission
         )
 
     @classmethod
     def from_dict(cls, data: dict):
-        return RawCommandPermission(
-            id=data["id"],
-            type=data["type"],
-            permission=data["permission"]
-        )
+        return RawCommandPermission(id=data["id"], type=data["type"], permission=data["permission"])
 
     def to_dict(self):
-        return {
-            "id": self.id,
-            "type": self.type,
-            "permission": self.permission
-        }
+        return {"id": self.id, "type": self.type, "permission": self.permission}
 
 
 Type = OptionType

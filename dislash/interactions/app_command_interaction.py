@@ -1,8 +1,10 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Union
-import discord
-from .interaction import *
 
+from typing import Any, Dict, Optional, Union
+
+import discord
+
+from .interaction import *
 
 __all__ = (
     "InteractionDataOption",
@@ -11,7 +13,7 @@ __all__ = (
     "ContextMenuInteractionData",
     "SlashInteraction",
     "ContextMenuInteraction",
-    "Interaction"
+    "Interaction",
 )
 
 
@@ -29,25 +31,20 @@ class Resolved:
             user_id = int(ID)
             if ID in members:
                 self.members[user_id] = discord.Member(
-                    data={**members[ID], "user": data}, # type: ignore
-                    guild=guild,
-                    state=state
+                    data={**members[ID], "user": data}, guild=guild, state=state  # type: ignore
                 )
             else:
-                self.users[user_id] = discord.User(
-                    state=state,
-                    data=data
-                )
-        
+                self.users[user_id] = discord.User(state=state, data=data)
+
         for ID, data in data.get("roles", {}).items():
             self.roles[int(ID)] = discord.Role(guild=guild, state=state, data=data)
-        
-        for ID, data in data.get('channels', {}).items():
-            data['position'] = 0
-            factory, ch_type = discord.channel._channel_factory(data['type'])
+
+        for ID, data in data.get("channels", {}).items():
+            data["position"] = 0
+            factory, ch_type = discord.channel._channel_factory(data["type"])
             if factory:
                 self.channels[int(ID)] = factory(guild=guild, data=data, state=state)
-        
+
         for ID, data in data.get("messages", {}).items():
             channel_id = int(data["channel_id"])
             channel = guild.get_channel(channel_id) if guild else None
@@ -81,15 +78,11 @@ class ApplicationCommandInteractionData:
         self.id = int(data["id"])
         self.type: int = data["type"]
         self.name: str = data["name"]
-        self.resolved = Resolved(
-            data=data.get("resolved", {}),
-            guild=guild,
-            state=state
-        )
+        self.resolved = Resolved(data=data.get("resolved", {}), guild=guild, state=state)
 
 
 class InteractionDataOption:
-    '''
+    """
     Represents user's input for a specific option
 
     Attributes
@@ -101,10 +94,11 @@ class InteractionDataOption:
     options : dict
         | Represents options of a sub-slash-command.
         | {``name``: :class:`InteractionDataOption`, ...}
-    '''
+    """
+
     def __init__(self, *, data, resolved: Resolved):
-        self.name: str = data['name']
-        self.value: Any = data.get('value')
+        self.name: str = data["name"]
+        self.value: Any = data.get("value")
         # Some devices may return old-formatted Interactions
         # We have to figure out the best matching type in this case
         if "type" in data:
@@ -141,8 +135,7 @@ class InteractionDataOption:
             self.value = int(self.value)
         # Converting sub options
         self.options: Dict[str, InteractionDataOption] = {
-            o['name']: InteractionDataOption(data=o, resolved=resolved)
-            for o in data.get('options', [])
+            o["name"]: InteractionDataOption(data=o, resolved=resolved) for o in data.get("options", [])
         }
 
     def __repr__(self):
@@ -163,7 +156,7 @@ class InteractionDataOption:
             return opt
 
     def get_option(self, name: str) -> Optional[InteractionDataOption]:
-        '''
+        """
         Get the raw :class:`InteractionDataOption` matching the specified name
 
         Parameters
@@ -174,11 +167,11 @@ class InteractionDataOption:
         Returns
         -------
         option : InteractionDataOption | ``None``
-        '''
+        """
         return self.options.get(name)
 
-    def get(self, name: str, default: Any=None) -> Union[InteractionDataOption, Any]: # put T here maybe
-        '''
+    def get(self, name: str, default: Any = None) -> Union[InteractionDataOption, Any]:  # put T here maybe
+        """
         Get the value of an option with the specified name
 
         Parameters
@@ -194,7 +187,7 @@ class InteractionDataOption:
             The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
         option: InteractionDataOption | ``default``
             Otherwise
-        '''
+        """
         for n, o in self.options.items():
             if n == name:
                 return o.value if o.type > 2 else o
@@ -206,7 +199,7 @@ class InteractionDataOption:
 
 
 class SlashInteractionData(ApplicationCommandInteractionData):
-    '''
+    """
     Attributes
     ----------
     id : :class:`int`
@@ -218,13 +211,12 @@ class SlashInteractionData(ApplicationCommandInteractionData):
         | {``name``: :class:`InteractionDataOption`, ...}
     resolved : :class:`Resolved`
         The collection of related objects, such as users, members, roles, channels and messages
-    '''
+    """
 
     def __init__(self, *, data, guild, state):
         super().__init__(data=data, guild=guild, state=state)
         self.options = {
-            o['name']: InteractionDataOption(data=o, resolved=self.resolved)
-            for o in data.get('options', [])
+            o["name"]: InteractionDataOption(data=o, resolved=self.resolved) for o in data.get("options", [])
         }
 
     def __repr__(self) -> str:
@@ -236,12 +228,12 @@ class SlashInteractionData(ApplicationCommandInteractionData):
         elif isinstance(key, int):
             opt = self.option_at(key)
         else:
-            raise TypeError(f'unsupported key type. Expected str or int, but received {type(key)} instead')
+            raise TypeError(f"unsupported key type. Expected str or int, but received {type(key)} instead")
         if opt is None:
             return None
         return opt.value if opt.type > 2 else opt
 
-    def _to_dict_values(self, connectors: Dict[str, str] = None) -> Dict[Any, Any]: # idk what this func is for
+    def _to_dict_values(self, connectors: Dict[str, str] = None) -> Dict[Any, Any]:  # idk what this func is for
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
@@ -256,11 +248,9 @@ class SlashInteractionData(ApplicationCommandInteractionData):
                 if data_option is None:
                     continue
                 if len(option._choice_connectors) > 0:
-                    data_option.value = option._choice_connectors.get(
-                        data_option.value,
-                        data_option.value
-                    )
+                    data_option.value = option._choice_connectors.get(data_option.value, data_option.value)
                 recursive_wrapper(data_option, option)
+
         recursive_wrapper(self, slash_command)
 
     @property
@@ -276,7 +266,7 @@ class SlashInteractionData(ApplicationCommandInteractionData):
             return opt
 
     def get_option(self, name: str) -> Optional[InteractionDataOption]:
-        '''
+        """
         Get the raw :class:`InteractionDataOption` matching the specified name
 
         Parameters
@@ -287,11 +277,11 @@ class SlashInteractionData(ApplicationCommandInteractionData):
         Returns
         -------
         option : :class:`InteractionDataOption` | ``None``
-        '''
+        """
         return self.options.get(name)
 
-    def get(self, name: str, default: Any=None) -> Union[InteractionDataOption, Any]:
-        '''
+    def get(self, name: str, default: Any = None) -> Union[InteractionDataOption, Any]:
+        """
         Get the value of an option with the specified name
 
         Parameters
@@ -307,7 +297,7 @@ class SlashInteractionData(ApplicationCommandInteractionData):
             The option type isn't ``SUB_COMMAND_GROUP`` or ``SUB_COMMAND``
         option: :class:`InteractionDataOption` | ``default``
             Otherwise
-        '''
+        """
         opt = self.options.get(name)
         if opt is None:
             return default
@@ -335,23 +325,22 @@ class ContextMenuInteractionData(ApplicationCommandInteractionData):
         super().__init__(data=data, guild=guild, state=state)
         self.target_id = int(data["target_id"])
         self.target = self.resolved.get(self.target_id)
-    
+
     def __repr__(self):
         return (
-            f"<ContextMenuInteractionData id={self.id} type={self.type} "
-            f"name={self.name!r} target={self.target!r}>"
+            f"<ContextMenuInteractionData id={self.id} type={self.type} " f"name={self.name!r} target={self.target!r}>"
         )
 
     @property
     def member(self):
         if isinstance(self.target, discord.Member):
             return self.target
-    
+
     @property
     def user(self):
         if isinstance(self.target, discord.abc.User):
             return self.target
-    
+
     @property
     def message(self):
         if isinstance(self.target, discord.Message):
@@ -359,7 +348,7 @@ class ContextMenuInteractionData(ApplicationCommandInteractionData):
 
 
 class SlashInteraction(BaseInteraction):
-    '''
+    """
     Every interaction with slash-commands is represented by instances of this class
 
     Attributes
@@ -376,17 +365,14 @@ class SlashInteraction(BaseInteraction):
         Then interaction was created
     expired : :class:`bool`:
         Whether the interaction token is still valid
-    '''
+    """
+
     def __init__(self, client, payload):
         super().__init__(client, payload)
 
         state = client._connection
-        self.prefix: str = "/" # Just in case
-        self.data = SlashInteractionData(
-            data=payload.get('data', {}),
-            guild=self.guild,
-            state=state
-        )
+        self.prefix: str = "/"  # Just in case
+        self.data = SlashInteractionData(data=payload.get("data", {}), guild=self.guild, state=state)
         self.invoked_with = self.data.name
         # what's this???
         self.slash_command: Optional[Any] = None
@@ -406,7 +392,7 @@ class SlashInteraction(BaseInteraction):
     def _wrap_choices(self, slash_command):
         self.data._wrap_choices(slash_command)
 
-    def get(self, name: str, default: Any=None):
+    def get(self, name: str, default: Any = None):
         """Equivalent to :class:`InteractionData.get`"""
         return self.data.get(name, default)
 
@@ -422,14 +408,10 @@ class SlashInteraction(BaseInteraction):
 class ContextMenuInteraction(BaseInteraction):
     def __init__(self, client, payload):
         super().__init__(client, payload)
-        self.data = ContextMenuInteractionData(
-            data=payload.get("data", {}),
-            guild=self.guild,
-            state=client._connection
-        )
+        self.data = ContextMenuInteractionData(data=payload.get("data", {}), guild=self.guild, state=client._connection)
         self.user_command: Optional[Any] = None
         self.message_command: Optional[Any] = None
-    
+
     def __repr__(self):
         return (
             f"<ContextMenuInteraction id={self.id} guild={self.guild!r} "
@@ -439,7 +421,7 @@ class ContextMenuInteraction(BaseInteraction):
     @property
     def target(self):
         return self.data.target
-    
+
     @property
     def user(self):
         return self.data.user
@@ -447,7 +429,7 @@ class ContextMenuInteraction(BaseInteraction):
     @property
     def member(self):
         return self.data.member
-    
+
     @property
     def message(self):
         return self.data.message

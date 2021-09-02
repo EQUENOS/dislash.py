@@ -1,10 +1,10 @@
 import asyncio
-from dislash.interactions.app_command_interaction import SlashInteraction
 import inspect
-from typing import Any, Awaitable, Callable, Dict, List, Tuple, Union
+from enum import EnumMeta
+from typing import Any, Awaitable, Callable, Dict, List, Literal, Tuple, Union, get_origin
 
-from ..interactions import Option, SlashCommand, Type
-from ..interactions.application_command import OptionParam
+from ..interactions import Option, SlashCommand, SlashInteraction, Type
+from ..interactions.application_command import OptionChoice, OptionParam, OptionType
 from ._decohub import _HANDLER
 from .core import InvokableApplicationCommand, class_name
 
@@ -137,14 +137,37 @@ class CommandParent(BaseSlashCommand):
         options = []
         connectors = {}
         for param in params:
-            annot_type = OptionParam.TYPES.get(param.annotation)
+            option_type = None
+            choices = None
+            if param.annotation is inspect.Parameter.empty:
+                option_type = OptionType.STRING
+            elif get_origin(param.annotation) is Literal:
+                choices = param.annotation.__args__
+                if not all(isinstance(i, str) for i in choices):
+                    raise TypeError("Literal[...] annotations can only be composed of strings")
+                choices = [OptionChoice(i, i) for i in choices]
+            elif isinstance(param.annotation, EnumMeta):
+                choices = [(i.name, i.value) for i in param.annotation]  # type: ignore
+                if len(choices) == 0:
+                    raise TypeError("Enum cannot be empty")
+                choices = [OptionChoice(name, values) for name, values in choices]
+            elif param.annotation not in OptionParam.TYPES:
+                raise TypeError(
+                    f"{param.annotation} is not a valid type. Must be one of:"
+                    + ", ".join(i.__name__ for i in OptionParam.TYPES)
+                )
+            else:
+                option_type = OptionParam.TYPES.get(param.annotation)
+
             if isinstance(param.default, OptionParam):
                 d = param.default
-                option = d.create_option(param.name, annot_type)
+                option = Option(d.name or param.name, d.description, option_type, d.required, choices)
                 if d.name is not None:
                     connectors[d.name] = param.name
             else:
-                option = Option(param.name, description="-", type=annot_type, required=param.default is empty)
+                option = Option(
+                    param.name, description="-", type=option_type, required=param.default is empty, choices=choices
+                )
             options.append(option)
         return options, connectors
 

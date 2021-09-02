@@ -1,23 +1,20 @@
 import asyncio
 import datetime
-from typing import Any, Dict, List, Union
-import discord
 import json
-from discord.client import Client
-from discord.embeds import Embed
-from discord.file import File
-from discord.http import Route
-from discord.member import Member
-from discord.mentions import AllowedMentions
-from discord.user import ClientUser
-from discord.webhook.async_ import WebhookMessage
-from .message_components import ActionRow, Component
+from enum import Enum
+from typing import Any, Dict, List, Union
 
+import discord
+from discord import AllowedMentions, Client, ClientUser, Embed, File, Member
+from discord.http import Route
+from discord.webhook.async_ import WebhookMessage
+
+from .message_components import ActionRow
 
 __all__ = ("InteractionType", "ResponseType", "BaseInteraction")
 
 
-class InteractionType:
+class InteractionType(int, Enum):
     Ping = 1
     ApplicationCommand = 2
     MessageComponent = 3

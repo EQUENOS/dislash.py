@@ -1,21 +1,17 @@
-from dislash.interactions.interaction import BaseInteraction
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
-from dislash.interactions.app_command_interaction import SlashInteraction
-from discord.ext.commands.cooldowns import (
-    Cooldown,
-    CooldownMapping,
-    BucketType
-)
-from discord.ext.commands.errors import ConversionError
 import asyncio
 import datetime
-import discord
-import inspect
 import functools
+import inspect
+from enum import EnumMeta
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
-from .errors import *
+import discord
+from discord.ext.commands import BucketType, Cooldown, CooldownMapping
+from discord.ext.commands.errors import ConversionError
+
+from ..interactions import BaseInteraction, SlashInteraction
 from ..interactions.application_command import OptionParam
-
+from .errors import *
 
 __all__ = (
     "BucketType",
@@ -34,18 +30,18 @@ __all__ = (
     "guild_only",
     "is_owner",
     "is_nsfw",
-    "cooldown"
+    "cooldown",
 )
 
 
 class InvokableApplicationCommand:
-    def __init__(self, func: Callable[..., Awaitable], *, name: str=None, **kwargs):
+    def __init__(self, func: Callable[..., Awaitable], *, name: str = None, **kwargs):
         self.func = func
         self.name = name or func.__name__
         self._error_handler: Optional[Callable[..., Any]] = None
         self.auto_sync: bool = True
         # Extract checks
-        if hasattr(func, '__slash_checks__'):
+        if hasattr(func, "__slash_checks__"):
             self.checks: List[Callable[..., Any]] = func.__slash_checks__
         else:
             self.checks: List[Callable[..., Any]] = []
@@ -61,10 +57,10 @@ class InvokableApplicationCommand:
             except Exception:
                 # discord.py <= 1.6.x
                 try:
-                    self._buckets = CooldownMapping(cooldown) # type: ignore
+                    self._buckets = CooldownMapping(cooldown)  # type: ignore
                 except Exception:
                     # Hopefully we never reach this
-                    self._buckets: CooldownMapping = None # type: ignore
+                    self._buckets: CooldownMapping = None  # type: ignore
         else:
             self._buckets = cooldown
         # Add custom kwargs
@@ -88,25 +84,31 @@ class InvokableApplicationCommand:
                         kwargs[param.name] = param.default.default
                 elif param.default is not inspect.Parameter.empty:
                     kwargs[param.name] = param.default
-            elif param.name in kwargs and isinstance(param.default, OptionParam) and param.default.converter is not None:
-                    try:
-                        kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
-                    except Exception as e:
-                        raise ConversionError(param.default.converter, e) from e # type: ignore
-            
+            elif (
+                param.name in kwargs and isinstance(param.default, OptionParam) and param.default.converter is not None
+            ):
+                try:
+                    kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
+                except Exception as e:
+                    raise ConversionError(param.default.converter, e) from e  # type: ignore
+
             # verify types
-            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.default._python_type or param.annotation):
-                if not self._isinstance(kwargs[param.name], (param.default._python_type or param.annotation)):
+            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation):
+                if not self._isinstance(kwargs[param.name], (param.annotation)):
                     error = TypeError(
                         f"Expected option {param.default.name or param.name!r} "
-                        f"to be of type {param.default._python_type or param.annotation!r} but received {kwargs[param.name]!r}"
+                        f"to be of type {param.annotation!r} but received {kwargs[param.name]!r}"
                     )
-                    raise ConversionError(None, error) from error # type: ignore
-            
+                    raise ConversionError(None, error) from error  # type: ignore
+
         return kwargs
 
     @staticmethod
     def _isinstance(obj: Any, typ: type) -> bool:
+        if not isinstance(typ, type):  # special annotation?
+            return True
+        elif isinstance(typ, EnumMeta):
+            return True
         if issubclass(typ, discord.User):
             return isinstance(obj, (discord.User, discord.Member, discord.ClientUser))
         else:
@@ -213,7 +215,7 @@ class InvokableApplicationCommand:
 
 
 def class_name(func: Callable) -> Optional[str]:
-    res = func.__qualname__[:-len(func.__name__)]
+    res = func.__qualname__[: -len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
 
 
@@ -226,7 +228,7 @@ def get_class(func: Callable) -> Any:
 
 
 def check(predicate: Callable[..., Any]):
-    '''
+    """
     A function that converts ``predicate(interaction)`` functions
     into application command decorators
 
@@ -244,10 +246,11 @@ def check(predicate: Callable[..., Any]):
         async def hello(inter):
             await inter.reply("Hello, Mr.Owner!")
 
-    '''
+    """
     if inspect.iscoroutinefunction(predicate):
-        wrapper = predicate # type: ignore
+        wrapper = predicate  # type: ignore
     else:
+
         async def wrapper(ctx):
             return predicate(ctx)
 
@@ -255,10 +258,11 @@ def check(predicate: Callable[..., Any]):
         if isinstance(func, InvokableApplicationCommand):
             func.checks.append(wrapper)
         else:
-            if not hasattr(func, '__slash_checks__'):
+            if not hasattr(func, "__slash_checks__"):
                 func.__slash_checks__ = []
             func.__slash_checks__.append(wrapper)
         return func
+
     decorator.predicate = wrapper
     return decorator
 
@@ -271,7 +275,7 @@ def check_any(*checks: Callable[..., Any]):
         try:
             pred = wrapped.predicate
         except AttributeError:
-            raise TypeError('%r must be wrapped by commands.check decorator' % wrapped) from None
+            raise TypeError("%r must be wrapped by commands.check decorator" % wrapped) from None
         else:
             unwrapped.append(pred)
 
@@ -311,12 +315,15 @@ def has_role(item: Union[int, str]):
 
 def has_any_role(*items: Union[int, str]):
     """Similar to ``commands.has_any_role``"""
+
     def predicate(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise NoPrivateMessage()
 
         getter = functools.partial(discord.utils.get, ctx.author.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+        if any(
+            getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items
+        ):
             return True
         raise MissingAnyRole(items)
 
@@ -339,11 +346,13 @@ def bot_has_role(item: Union[int, str]):
         if role is None:
             raise BotMissingRole(item)
         return True
+
     return check(predicate)
 
 
 def bot_has_any_role(*items: Union[int, str]):
     """Similar to ``commands.bot_has_any_role``"""
+
     def predicate(ctx):
         ch = ctx.channel
         if not isinstance(ch, discord.abc.GuildChannel):
@@ -351,9 +360,12 @@ def bot_has_any_role(*items: Union[int, str]):
 
         me = ch.guild.me
         getter = functools.partial(discord.utils.get, me.roles)
-        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+        if any(
+            getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items
+        ):
             return True
         raise BotMissingAnyRole(items)
+
     return check(predicate)
 
 
@@ -362,7 +374,7 @@ def has_permissions(**perms: bool):
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
-        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+        raise TypeError("Invalid permission(s): %s" % (", ".join(invalid)))
 
     def predicate(ctx):
         ch = ctx.channel
@@ -383,7 +395,7 @@ def bot_has_permissions(**perms: bool):
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
-        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+        raise TypeError("Invalid permission(s): %s" % (", ".join(invalid)))
 
     def predicate(ctx):
         guild = ctx.guild
@@ -405,7 +417,7 @@ def has_guild_permissions(**perms: bool):
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
-        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+        raise TypeError("Invalid permission(s): %s" % (", ".join(invalid)))
 
     def predicate(ctx):
         if not ctx.guild:
@@ -427,7 +439,7 @@ def bot_has_guild_permissions(**perms: bool):
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
-        raise TypeError('Invalid permission(s): %s' % (', '.join(invalid)))
+        raise TypeError("Invalid permission(s): %s" % (", ".join(invalid)))
 
     def predicate(ctx):
         if not ctx.guild:
@@ -471,7 +483,7 @@ def is_owner():
 
     async def predicate(ctx):
         if not await ctx.bot.is_owner(ctx.author):
-            raise NotOwner('You do not own this bot.')
+            raise NotOwner("You do not own this bot.")
         return True
 
     return check(predicate)
@@ -479,16 +491,18 @@ def is_owner():
 
 def is_nsfw():
     """Similar to ``commands.is_nsfw``"""
+
     def pred(ctx):
         ch = ctx.channel
         if ctx.guild is None or (isinstance(ch, discord.TextChannel) and ch.is_nsfw()):
             return True
         raise NSFWChannelRequired(ch)
+
     return check(pred)
 
 
-def cooldown(rate: int, per: float, type: BucketType=BucketType.default):
-    '''
+def cooldown(rate: int, per: float, type: BucketType = BucketType.default):
+    """
     A decorator that adds a cooldown to a slash-command. Similar to **discord.py** cooldown decorator.
 
     A cooldown allows a command to only be used a specific amount
@@ -510,15 +524,16 @@ def cooldown(rate: int, per: float, type: BucketType=BucketType.default):
         The amount of seconds to wait for a cooldown when it's been triggered.
     type : BucketType
         The type of cooldown to have.
-    '''
+    """
+
     def decorator(func):
         try:
-            cooldown_obj = Cooldown(rate, per, type) # type: ignore
+            cooldown_obj = Cooldown(rate, per, type)  # type: ignore
         except Exception:
             cooldown_obj = Cooldown(rate, per)
 
         try:
-            mapping = CooldownMapping(cooldown_obj) # type: ignore
+            mapping = CooldownMapping(cooldown_obj)  # type: ignore
         except Exception:
             mapping = CooldownMapping(cooldown_obj, type)
 
@@ -528,4 +543,5 @@ def cooldown(rate: int, per: float, type: BucketType=BucketType.default):
             func.__slash_cooldown__ = mapping
 
         return func
+
     return decorator

@@ -1,11 +1,10 @@
-from datetime import datetime, timedelta
 import asyncio
-from dislash.interactions.message_interaction import MessageInteraction
+from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Dict, List, Tuple
+
 import discord
 
-from ._decohub import _HANDLER
-
+from ..interactions import MessageInteraction
 
 __all__ = ("ClickListener", "ClickManager")
 
