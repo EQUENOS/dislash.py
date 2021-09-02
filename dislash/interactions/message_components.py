@@ -1,4 +1,6 @@
-from typing import Any, Dict, Union
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 import discord
 import re
 
@@ -40,7 +42,7 @@ def _partial_emoji_converter(argument: str):
     raise discord.InvalidArgument(f"Failed to convert {argument} to PartialEmoji")
 
 
-def _component_factory(data: dict):
+def _component_factory(data: dict) -> "Component":
     _type = data.get("type")
     if _type == 1:
         return ActionRow.from_dict(data)
@@ -48,9 +50,10 @@ def _component_factory(data: dict):
         return Button.from_dict(data)
     if _type == 3:
         return SelectMenu.from_dict(data)
+    raise ValueError("Invalid component type")
 
 
-def auto_rows(*buttons, max_in_row: int = 5):
+def auto_rows(*buttons: "Button", max_in_row: int = 5):
     """
     Distributes buttons across multiple rows
     and returns the list of rows.
@@ -85,7 +88,7 @@ def auto_rows(*buttons, max_in_row: int = 5):
     ]
 
 
-class ComponentType:
+class ComponentType(int, Enum):
     """
     An enumerator for component types.
 
@@ -100,7 +103,7 @@ class ComponentType:
     SelectMenu = 3
 
 
-class ButtonStyle:
+class ButtonStyle(int, Enum):
     """
     Attributes
     ----------
@@ -190,13 +193,19 @@ class SelectOption:
         return data
 
 
-class Component:
+class Component(ABC):
     """
     The base class for message components
     """
+    disabled: bool
+    custom_id: Optional[str]
+    
     def __init__(self, type: int):
         self.type = type
 
+    @abstractmethod
+    def to_dict(self):
+        raise NotImplementedError
 
 class SelectMenu(Component):
     """
@@ -236,7 +245,7 @@ class SelectMenu(Component):
     """
 
     def __init__(self, *, custom_id: str = None, placeholder: str = None, min_values: int = 1, max_values: int = 1,
-                 options: list = None, disabled: bool = False):
+                 options: List[SelectOption] = None, disabled: bool = False):
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
@@ -253,8 +262,8 @@ class SelectMenu(Component):
             "disabled={0.disabled} selected_options={0.selected_options!r}>"
         ).format(self)
 
-    def _select_options(self, values: list):
-        self.selected_options = []
+    def _select_options(self, values: List[SelectOption]):
+        self.selected_options: List[SelectOption] = []
         for option in self.options:
             if option.value in values:
                 self.selected_options.append(option)
@@ -403,7 +412,7 @@ class ActionRow(Component):
     components : :class:`List[Button]`
         a list of up to 5 buttons to place in a row
     """
-    def __init__(self, *components):
+    def __init__(self, *components: Component):
         self._limit = 5
         if len(components) > self._limit:
             raise discord.InvalidArgument(f"components must be a list of up to {self._limit} elements")
@@ -473,7 +482,7 @@ class ActionRow(Component):
         )
 
     def add_menu(self, *, custom_id: str, placeholder: str = None, min_values: int = 1, max_values: int = 1,
-                 options: list = None):
+                 options: List[SelectOption] = None):
         self.components.append(
             SelectMenu(
                 custom_id=custom_id,

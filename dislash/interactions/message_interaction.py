@@ -73,7 +73,7 @@ class MessageInteraction(BaseInteraction):
             for component in action_row.components:
                 if component.custom_id == custom_id and component.type == component_type:
                     self.component = component
-                    if component_type == ComponentType.SelectMenu:
+                    if component_type == ComponentType.SelectMenu and isinstance(self.component, SelectMenu):
                         self.component._select_options(component_data.get("values", []))
                     break
             if self.component is not None:
