@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 import asyncio
+from dislash.interactions.message_interaction import MessageInteraction
+from typing import Any, Awaitable, Callable, List, Tuple
 import discord
 
 from ._decohub import _HANDLER
@@ -40,7 +42,8 @@ class ClickListener:
 
     def __init__(self, message_id: int, timeout: float = 0):
         self.id = message_id
-        self._listeners = []
+        # listener, condition, cancel_others, reset_timeout
+        self._listeners: List[Tuple[Callable[[MessageInteraction], Awaitable[Any]], Callable[[MessageInteraction], bool], bool, bool]] = []
         self._timeout_waiter = None
         self._timeout = timeout
         PER_MESSAGE_LISTENERS[message_id] = self
@@ -64,7 +67,7 @@ class ClickListener:
         if self._timeout_waiter is not None:
             await self._timeout_waiter()
 
-    def _toggle_listeners(self, inter):
+    def _toggle_listeners(self, inter: MessageInteraction):
         task_toggled = False
         for listener, condition, cancel_others, reset_timeout in self._listeners:
             try:
@@ -88,7 +91,7 @@ class ClickListener:
         self._timeout_waiter = None  # Also kills the timeout waiter
         PER_MESSAGE_LISTENERS.pop(self.id, None)
 
-    def timeout(self, func):
+    def timeout(self, func: Callable[..., Any]):
         """
         A decorator that makes the function below waiting for click listener timeout.
         """
@@ -101,7 +104,7 @@ class ClickListener:
         self._timeout_waiter = new_func
         return func
 
-    def matching_condition(self, check, *, cancel_others: bool = False, reset_timeout: bool = True):
+    def matching_condition(self, check: Callable[[MessageInteraction], bool], *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         matching the specified conditions.
@@ -141,7 +144,7 @@ class ClickListener:
         Parameters are the same as in :meth:`matching_condition`, except
         ``check`` parameter is replaced with a ``user`` to compare with.
         """
-        def is_user(inter):
+        def is_user(inter: MessageInteraction):
             return inter.author == user
         return self.matching_condition(
             is_user,
