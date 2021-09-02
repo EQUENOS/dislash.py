@@ -72,7 +72,7 @@ class InteractionClient:
         self.client: Any = _HANDLER.client
         self.application_id = None
         self.events: Dict[str, Callable[..., Awaitable]] = {}
-        self._listeners = {}
+        self._listeners: Dict[Any, List[Tuple[Any, Callable]]] = {}
         self._global_commands: Dict[int, ApplicationCommand] = {}
         self._guild_commands: Dict[int, Dict[int, ApplicationCommand]] = {}
         self._cogs_with_err_listeners = {

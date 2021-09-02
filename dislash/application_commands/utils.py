@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import asyncio
 from dislash.interactions.message_interaction import MessageInteraction
-from typing import Any, Awaitable, Callable, List, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Tuple
 import discord
 
 from ._decohub import _HANDLER
@@ -10,7 +10,7 @@ from ._decohub import _HANDLER
 __all__ = ("ClickListener", "ClickManager")
 
 
-PER_MESSAGE_LISTENERS = {}
+PER_MESSAGE_LISTENERS: Dict[int, 'ClickListener'] = {}
 
 
 async def _on_button_click(inter):

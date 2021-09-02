@@ -253,7 +253,7 @@ class SelectMenu(Component):
         self.max_values = max_values
         self.options = options or []
         self.disabled = disabled
-        self.selected_options = []
+        self.selected_options: List[SelectOption] = []
 
     def __repr__(self):
         return (
