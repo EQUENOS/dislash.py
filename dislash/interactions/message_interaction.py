@@ -61,19 +61,19 @@ class MessageInteraction(BaseInteraction):
             # channel must not be None, because channel.id attr is needed in discord.Message.__init__
             self.message = discord.Message(
                 state=state,
-                channel=channel or PartialTextChannel(0),
+                channel=channel or PartialTextChannel(0), # type: ignore
                 data=msg_data
             )
 
         component_data = data.get("data", {})
         component_type = component_data.get("component_type", 1)
         custom_id = component_data.get("custom_id")
-        self.component = None
+        self.component: Component = None # type: ignore
         for action_row in self.components:
             for component in action_row.components:
                 if component.custom_id == custom_id and component.type == component_type:
                     self.component = component
-                    if component_type == ComponentType.SelectMenu:
+                    if component_type == ComponentType.SelectMenu and isinstance(self.component, SelectMenu):
                         self.component._select_options(component_data.get("values", []))
                     break
             if self.component is not None:
@@ -81,8 +81,9 @@ class MessageInteraction(BaseInteraction):
 
     @property
     def clicked_button(self) -> Button:
-        if self.component.type == ComponentType.Button:
+        if self.component.type == ComponentType.Button and isinstance(self.component, Button):
             return self.component
+        return None # type: ignore
 
     @property
     def button(self) -> Button:
@@ -90,8 +91,9 @@ class MessageInteraction(BaseInteraction):
 
     @property
     def select_menu(self) -> SelectMenu:
-        if self.component.type == ComponentType.SelectMenu:
+        if self.component.type == ComponentType.SelectMenu and isinstance(self.component, SelectMenu):
             return self.component
+        return None # type: ignore
 
 
 ButtonInteraction = MessageInteraction

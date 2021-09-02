@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 import asyncio
+from dislash.interactions.message_interaction import MessageInteraction
+from typing import Any, Awaitable, Callable, Dict, List, Tuple
 import discord
 
 from ._decohub import _HANDLER
@@ -8,7 +10,7 @@ from ._decohub import _HANDLER
 __all__ = ("ClickListener", "ClickManager")
 
 
-PER_MESSAGE_LISTENERS = {}
+PER_MESSAGE_LISTENERS: Dict[int, 'ClickListener'] = {}
 
 
 async def _on_button_click(inter):
@@ -38,16 +40,17 @@ class ClickListener:
 
     __slots__ = ("id", "_listeners", "_timeout_waiter", "_timeout", "_ends_at")
 
-    def __init__(self, message_id: int, timeout: float = None):
+    def __init__(self, message_id: int, timeout: float = 0):
         self.id = message_id
-        self._listeners = []
+        # listener, condition, cancel_others, reset_timeout
+        self._listeners: List[Tuple[Callable[[MessageInteraction], Awaitable[Any]], Callable[[MessageInteraction], bool], bool, bool]] = []
         self._timeout_waiter = None
         self._timeout = timeout
         PER_MESSAGE_LISTENERS[message_id] = self
         # Launch a finishing task
         if timeout is not None:
             self._ends_at = datetime.now() + timedelta(seconds=timeout)
-            _HANDLER.client.loop.create_task(self._wait_and_finish())
+            asyncio.create_task(self._wait_and_finish())
         else:
             self._ends_at = None
 
@@ -56,7 +59,7 @@ class ClickListener:
         while True:
             await asyncio.sleep(delay)
             now = datetime.now()
-            if self._ends_at > now:
+            if self._ends_at and self._ends_at > now:
                 delay = (self._ends_at - now).total_seconds()
             else:
                 break
@@ -64,7 +67,7 @@ class ClickListener:
         if self._timeout_waiter is not None:
             await self._timeout_waiter()
 
-    def _toggle_listeners(self, inter):
+    def _toggle_listeners(self, inter: MessageInteraction):
         task_toggled = False
         for listener, condition, cancel_others, reset_timeout in self._listeners:
             try:
@@ -73,7 +76,7 @@ class ClickListener:
                 res = False
             if res:
                 task_toggled = task_toggled or reset_timeout
-                _HANDLER.client.loop.create_task(listener(inter))
+                asyncio.create_task(listener(inter))
                 if cancel_others:
                     break
         # Delay more
@@ -88,7 +91,7 @@ class ClickListener:
         self._timeout_waiter = None  # Also kills the timeout waiter
         PER_MESSAGE_LISTENERS.pop(self.id, None)
 
-    def timeout(self, func):
+    def timeout(self, func: Callable[..., Any]):
         """
         A decorator that makes the function below waiting for click listener timeout.
         """
@@ -101,7 +104,7 @@ class ClickListener:
         self._timeout_waiter = new_func
         return func
 
-    def matching_condition(self, check, *, cancel_others: bool = False, reset_timeout: bool = True):
+    def matching_condition(self, check: Callable[[MessageInteraction], bool], *, cancel_others: bool = False, reset_timeout: bool = True):
         """
         A decorator that makes the function below waiting for a click
         matching the specified conditions.
@@ -141,7 +144,7 @@ class ClickListener:
         Parameters are the same as in :meth:`matching_condition`, except
         ``check`` parameter is replaced with a ``user`` to compare with.
         """
-        def is_user(inter):
+        def is_user(inter: MessageInteraction):
             return inter.author == user
         return self.matching_condition(
             is_user,

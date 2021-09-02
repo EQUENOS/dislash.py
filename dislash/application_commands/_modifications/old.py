@@ -1,3 +1,4 @@
+# type: ignore
 from discord import utils, AllowedMentions, File, InvalidArgument, Message
 from discord.http import Route
 from discord.flags import MessageFlags

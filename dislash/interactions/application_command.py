@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
+from enum import Enum
 import re
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, TypeVar, Union
 
 import discord
 from dislash.interactions.app_command_interaction import SlashInteraction
@@ -22,14 +24,21 @@ __all__ = (
 )
 
 
-def application_command_factory(data: dict):
+def application_command_factory(data: Dict[str, Any]) -> 'ApplicationCommand':
     cmd_type = data.get("type", 1)
     if cmd_type == ApplicationCommandType.CHAT_INPUT:
-        return SlashCommand.from_dict(data)
-    if cmd_type == ApplicationCommandType.USER:
-        return UserCommand.from_dict(data)
-    if cmd_type == ApplicationCommandType.MESSAGE:
-        return MessageCommand.from_dict(data)
+        cmd = SlashCommand.from_dict(data)
+    elif cmd_type == ApplicationCommandType.USER:
+        cmd = UserCommand.from_dict(data)
+    elif cmd_type == ApplicationCommandType.MESSAGE:
+        cmd = MessageCommand.from_dict(data)
+    else:
+        cmd = None
+    
+    if cmd is not None:
+        return cmd
+    
+    raise ValueError("Invalid command type")
 
 
 class OptionType:
@@ -186,7 +195,7 @@ class Option:
         Parameters are the same as for :class:`Option`
         '''
         if self.type == 1:
-            if type < 3:
+            if type and type < 3:
                 raise ValueError('sub_command can only be nested in a sub_command_group')
         elif self.type == 2:
             if type != 1:
@@ -248,7 +257,7 @@ class OptionParam:
     def required(self):
         return self.default is ...
     
-    def create_option(self, name: str, type: str):
+    def create_option(self, name: str, type: int = None):
         return Option(self.name or name, self.description, self.type or type, self.required, self.choices, self.options)
     
     def __repr__(self):
@@ -259,28 +268,35 @@ class OptionParam:
             string = f"{string} choices={self.choices}"
         return f"<Option {string}>"
 
-class ApplicationCommandType:
+def optionparam(default: Any = ..., *, name: str = None, description: str = None, type: Union[int, type] = None, converter: Callable[[SlashInteraction, Any], Any] = None, choices: List[OptionChoice] = None, options: List[str] = None) -> Any:
+    return OptionParam(default, name=name, description=description, type=type, converter=converter, choices=choices, options=options)
+
+class ApplicationCommandType(int, Enum):
     CHAT_INPUT = 1
     SLASH = 1
     USER = 2
     MESSAGE = 3
 
 
-class ApplicationCommand:
+class ApplicationCommand(ABC):
     """
     Base class for application commands
     """
+    name: str
+    
     def __init__(self, type: ApplicationCommandType, **kwargs):
         self.type = type
-        self.id = kwargs.pop('id', None)
-        if self.id:
-            self.id = int(self.id)
+        self.id: int = int(kwargs.pop('id', 0))
         self.application_id = kwargs.pop('application_id', None)
         if self.application_id:
             self.application_id = int(self.application_id)
     
     def __eq__(self, other):
         return False
+
+    @abstractmethod
+    def to_dict(self, **kwargs):
+        raise NotImplementedError
 
 
 class UserCommand(ApplicationCommand):
@@ -307,6 +323,7 @@ class UserCommand(ApplicationCommand):
     def from_dict(cls, data: dict):
         if data.pop("type", 1) == ApplicationCommandType.USER:
             return UserCommand(**data)
+
 
 
 class MessageCommand(ApplicationCommand):

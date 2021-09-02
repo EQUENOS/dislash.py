@@ -1,26 +1,24 @@
 import asyncio
+from dislash.interactions.app_command_interaction import SlashInteraction
 import inspect
-from typing import Callable, Dict, List, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Tuple, Union
 
-from ..interactions import Option, OptionParam, SlashCommand, Type
+from ..interactions import Option, SlashCommand, Type
+from ..interactions.application_command import OptionParam
 from ._decohub import _HANDLER
 from .core import InvokableApplicationCommand, class_name
 
-__all__ = (
-    "SubCommand",
-    "SubCommandGroup",
-    "CommandParent",
-    "slash_command",
-    "command"
-)
+__all__ = ("SubCommand", "SubCommandGroup", "CommandParent", "slash_command", "command")
 
 
 class BaseSlashCommand(InvokableApplicationCommand):
-    def __init__(self, func, *, name=None, connectors=None, **kwargs):
+    def __init__(
+        self, func: Callable[..., Awaitable], *, name: str = None, connectors: Dict[str, str] = None, **kwargs
+    ):
         super().__init__(func, name=name, **kwargs)
         self.connectors = connectors
 
-    def _uses_ui(self, from_cog: bool):
+    def _uses_ui(self, from_cog: bool) -> bool:
         func = inspect.unwrap(self.func)
         code = func.__code__
         argcount = code.co_argcount + code.co_kwonlyargcount
@@ -29,7 +27,7 @@ class BaseSlashCommand(InvokableApplicationCommand):
         else:
             return argcount > 1
 
-    async def _maybe_cog_call(self, cog, inter, data):
+    async def _maybe_cog_call(self, cog: Any, inter: SlashInteraction, data: Any):
         params = data._to_dict_values(self.connectors) if self._uses_ui(cog) else {}
         if cog:
             return await self(cog, inter, **params)
@@ -38,60 +36,75 @@ class BaseSlashCommand(InvokableApplicationCommand):
 
 
 class SubCommand(BaseSlashCommand):
-    def __init__(self, func, *, name=None, description=None, options=None, connectors=None, **kwargs):
+    def __init__(
+        self,
+        func: Callable[..., Awaitable],
+        *,
+        name: str = None,
+        description: str = None,
+        options: List[Option] = None,
+        connectors: Dict[str, str] = None,
+        **kwargs,
+    ):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
-        self.option = Option(
-            name=self.name,
-            description=description or "-",
-            type=Type.SUB_COMMAND,
-            options=options
-        )
+        self.option = Option(name=self.name, description=description or "-", type=Type.SUB_COMMAND, options=options)
 
 
 class SubCommandGroup(BaseSlashCommand):
-    def __init__(self, func, *, name=None, **kwargs):
+    def __init__(self, func: Callable[..., Awaitable], *, name: str = None, **kwargs):
         super().__init__(func, name=name, **kwargs)
-        self.children = {}
-        self.option = Option(
-            name=self.name,
-            description="-",
-            type=Type.SUB_COMMAND_GROUP,
-            options=[]
-        )
+        self.children: Dict[str, SubCommand] = {}
+        self.option = Option(name=self.name, description="-", type=Type.SUB_COMMAND_GROUP, options=[])
 
-    def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None, **kwargs):
+    def sub_command(
+        self,
+        name: str = None,
+        description: str = None,
+        options: List[Option] = None,
+        connectors: Dict[str, str] = None,
+        **kwargs,
+    ):
         """
         A decorator that creates a subcommand in the
         subcommand group.
 
         Parameters are the same as in :class:`CommandParent.sub_command`
         """
+
         def decorator(func):
             new_func = SubCommand(
-                func,
-                name=name,
-                description=description,
-                options=options,
-                connectors=connectors,
-                **kwargs
+                func, name=name, description=description, options=options, connectors=connectors, **kwargs
             )
             self.children[new_func.name] = new_func
             self.option.options.append(new_func.option)
             return new_func
+
         return decorator
 
 
 class CommandParent(BaseSlashCommand):
-    def __init__(self, func, *, name=None, description=None, options=None, default_permission=True,
-                 guild_ids=None, connectors=None,
-                 auto_sync=True, **kwargs):
+    def __init__(
+        self,
+        func: Callable[..., Awaitable],
+        *,
+        name: str = None,
+        description: str = None,
+        options: List[Option] = None,
+        default_permission: bool = True,
+        guild_ids: List[int] = None,
+        connectors: Dict[str, str] = None,
+        auto_sync: bool = True,
+        **kwargs,
+    ):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
         if not options:
             options, connectors = self._extract_options(func)
-            if self.connectors: self.connectors.update(connectors)
-            else: self.connectors = connectors
-        
-        self.children = {}
+            if self.connectors:
+                self.connectors.update(connectors)
+            else:
+                self.connectors = connectors
+
+        self.children: Dict[str, Union[SubCommand, SubCommandGroup]] = {}
         self.auto_sync = auto_sync
         self.registerable = SlashCommand(
             name=self.name,
@@ -100,7 +113,7 @@ class CommandParent(BaseSlashCommand):
             default_permission=default_permission,
         )
         self.guild_ids = guild_ids
-        self.child_type = None
+        self.child_type: Any = None
         # Cog indication
         self._cog_class_name = class_name(func)
         self._cog_name = None
@@ -109,19 +122,18 @@ class CommandParent(BaseSlashCommand):
     def _inject_cog(self, cog):
         self._cog = cog
         self._cog_name = cog.qualified_name
-    
-    
+
     @staticmethod
     def _extract_options(func: Callable) -> Tuple[List[Option], Dict[str, str]]:
         """Helper function to extract options and connectors from a function"""
-        empty = inspect.Parameter.empty # helper
-        
+        empty = inspect.Parameter.empty  # helper
+
         sig = inspect.signature(func)
-        if 'self' in sig.parameters:
+        if "self" in sig.parameters:
             params = list(sig.parameters.values())[2:]
         else:
             params = list(sig.parameters.values())[1:]
-        
+
         options = []
         connectors = {}
         for param in params:
@@ -132,11 +144,18 @@ class CommandParent(BaseSlashCommand):
                 if d.name is not None:
                     connectors[d.name] = param.name
             else:
-                option = Option(param.name, description='-', type=annot_type, required=param.default is empty)
+                option = Option(param.name, description="-", type=annot_type, required=param.default is empty)
             options.append(option)
         return options, connectors
 
-    def sub_command(self, name: str = None, description: str = None, options: list = None, connectors: dict = None, **kwargs):
+    def sub_command(
+        self,
+        name: str = None,
+        description: str = None,
+        options: List[Option] = None,
+        connectors: Dict[str, str] = None,
+        **kwargs,
+    ):
         """
         A decorator that creates a subcommand under the base command.
 
@@ -154,6 +173,7 @@ class CommandParent(BaseSlashCommand):
             you don't have to specify the connectors. Connectors template:
             ``{"option-name": "param_name", ...}``
         """
+
         def decorator(func):
             if self.child_type is None:
                 if len(self.registerable.options) > 0:
@@ -161,19 +181,15 @@ class CommandParent(BaseSlashCommand):
                 self.child_type = Type.SUB_COMMAND
 
             new_func = SubCommand(
-                func,
-                name=name,
-                description=description,
-                options=options,
-                connectors=connectors,
-                **kwargs
+                func, name=name, description=description, options=options, connectors=connectors, **kwargs
             )
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
+
         return decorator
 
-    def sub_command_group(self, name=None, **kwargs):
+    def sub_command_group(self, name: str = None, **kwargs):
         """
         A decorator that creates a subcommand group under the base command.
         Remember that the group must have at least one subcommand.
@@ -183,6 +199,7 @@ class CommandParent(BaseSlashCommand):
         name : :class:`str`
             the name of the subcommand group. Defaults to the function name
         """
+
         def decorator(func):
             if self.child_type is None:
                 if len(self.registerable.options) > 0:
@@ -193,9 +210,10 @@ class CommandParent(BaseSlashCommand):
             self.children[new_func.name] = new_func
             self.registerable.options.append(new_func.option)
             return new_func
+
         return decorator
 
-    async def invoke_children(self, interaction):
+    async def invoke_children(self, interaction: SlashInteraction):
         data = interaction.data
 
         option = data.option_at(0)
@@ -211,7 +229,7 @@ class CommandParent(BaseSlashCommand):
 
         if group is not None:
             option = option.option_at(0)
-            subcmd = None if option is None else group.children.get(option.name)
+            subcmd = None if option is None or isinstance(group, SubCommand) else group.children.get(option.name)
         if group is not None:
             interaction.invoked_with += f" {group.name}"
             interaction.sub_command_group = group
@@ -234,7 +252,7 @@ class CommandParent(BaseSlashCommand):
                 subcmd._dispatch_error(self._cog, interaction, err)
                 raise err
 
-    async def invoke(self, interaction):
+    async def invoke(self, interaction: SlashInteraction):
         interaction._wrap_choices(self.registerable)
         interaction.slash_command = self
         try:
@@ -247,7 +265,7 @@ class CommandParent(BaseSlashCommand):
             raise err
 
 
-def slash_command(*args, **kwargs):
+def slash_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
     """
     A decorator that allows to build a slash command.
 
@@ -272,12 +290,14 @@ def slash_command(*args, **kwargs):
         you don't have to specify the connectors. Connectors template:
         ``{"option-name": "param_name", ...}``
     """
+
     def decorator(func):
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
+            raise TypeError(f"<{func.__qualname__}> must be a coroutine function")
         new_func = CommandParent(func, **kwargs)
         _HANDLER.slash_commands[new_func.name] = new_func
         return new_func
+
     return decorator
 
 

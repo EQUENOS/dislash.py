@@ -1,3 +1,6 @@
+from dislash.interactions.interaction import BaseInteraction
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from dislash.interactions.app_command_interaction import SlashInteraction
 from discord.ext.commands.cooldowns import (
     Cooldown,
     CooldownMapping,
@@ -11,8 +14,7 @@ import inspect
 import functools
 
 from .errors import *
-from ._decohub import _HANDLER
-from ..interactions import OptionParam
+from ..interactions.application_command import OptionParam
 
 
 __all__ = (
@@ -37,16 +39,16 @@ __all__ = (
 
 
 class InvokableApplicationCommand:
-    def __init__(self, func, *, name=None, **kwargs):
+    def __init__(self, func: Callable[..., Awaitable], *, name: str=None, **kwargs):
         self.func = func
         self.name = name or func.__name__
-        self._error_handler = None
-        self.auto_sync = True
+        self._error_handler: Optional[Callable[..., Any]] = None
+        self.auto_sync: bool = True
         # Extract checks
         if hasattr(func, '__slash_checks__'):
-            self.checks = func.__slash_checks__
+            self.checks: List[Callable[..., Any]] = func.__slash_checks__
         else:
-            self.checks = []
+            self.checks: List[Callable[..., Any]] = []
         # Cooldown
         try:
             cooldown = func.__slash_cooldown__
@@ -59,10 +61,10 @@ class InvokableApplicationCommand:
             except Exception:
                 # discord.py <= 1.6.x
                 try:
-                    self._buckets = CooldownMapping(cooldown)
+                    self._buckets = CooldownMapping(cooldown) # type: ignore
                 except Exception:
                     # Hopefully we never reach this
-                    self._buckets = None
+                    self._buckets: CooldownMapping = None # type: ignore
         else:
             self._buckets = cooldown
         # Add custom kwargs
@@ -74,7 +76,7 @@ class InvokableApplicationCommand:
         kwargs = self._process_arguments(args[0], kwargs)
         return await self.func(*args, **kwargs)
 
-    def _process_arguments(self, inter, kwargs):
+    def _process_arguments(self, inter: SlashInteraction, kwargs: Dict[str, Any]):
         sig = inspect.signature(self.func)
         for param in sig.parameters.values():
             # fix accidental defaults
@@ -90,20 +92,27 @@ class InvokableApplicationCommand:
                     try:
                         kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
                     except Exception as e:
-                        raise ConversionError(param.default.converter, e) from e
+                        raise ConversionError(param.default.converter, e) from e # type: ignore
             
             # verify types
-            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation or param.default._python_type):
-                if not isinstance(kwargs[param.name], (param.annotation or param.default._python_type)):
+            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.default._python_type or param.annotation):
+                if not self._isinstance(kwargs[param.name], (param.default._python_type or param.annotation)):
                     error = TypeError(
                         f"Expected option {param.default.name or param.name!r} "
                         f"to be of type {param.default._python_type or param.annotation!r} but received {kwargs[param.name]!r}"
                     )
-                    raise ConversionError(None, error) from error
+                    raise ConversionError(None, error) from error # type: ignore
             
         return kwargs
 
-    def _prepare_cooldowns(self, inter):
+    @staticmethod
+    def _isinstance(obj: Any, typ: type) -> bool:
+        if issubclass(typ, discord.User):
+            return isinstance(obj, (discord.User, discord.Member, discord.ClientUser))
+        else:
+            return isinstance(obj, typ)
+
+    def _prepare_cooldowns(self, inter: Any):
         if self._buckets.valid:
             dt = inter.created_at
             current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
@@ -112,21 +121,21 @@ class InvokableApplicationCommand:
             if retry_after:
                 raise CommandOnCooldown(bucket, retry_after)
 
-    def _dispatch_error(self, cog, inter, error):
-        _HANDLER.client.loop.create_task(self._invoke_error_handler(cog, inter, error))
+    def _dispatch_error(self, cog: Any, inter: BaseInteraction, error: Exception):
+        asyncio.create_task(self._invoke_error_handler(cog, inter, error))
 
-    async def _run_checks(self, inter):
+    async def _run_checks(self, inter: BaseInteraction):
         for _check in self.checks:
             if not await _check(inter):
                 raise InteractionCheckFailure(f"command <{self.name}> has failed")
 
-    async def _maybe_cog_call(self, cog, inter):
+    async def _maybe_cog_call(self, cog: Any, inter: BaseInteraction):
         if cog:
             return await self(cog, inter)
         else:
             return await self(inter)
 
-    async def _invoke_error_handler(self, cog, inter, error):
+    async def _invoke_error_handler(self, cog: Any, inter: BaseInteraction, error: Exception):
         if self._error_handler is None:
             return
         if cog:
@@ -134,7 +143,7 @@ class InvokableApplicationCommand:
         else:
             await self._error_handler(inter, error)
 
-    def error(self, func):
+    def error(self, func: Callable[..., Awaitable]):
         """
         A decorator that makes the function below
         work as error handler for this command.
@@ -144,7 +153,7 @@ class InvokableApplicationCommand:
         self._error_handler = func
         return func
 
-    def is_on_cooldown(self, inter):
+    def is_on_cooldown(self, inter: Any):
         """
         Checks whether the slash command is currently on cooldown.
 
@@ -166,7 +175,7 @@ class InvokableApplicationCommand:
         current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
         return bucket.get_tokens(current) == 0
 
-    def reset_cooldown(self, inter):
+    def reset_cooldown(self, inter: Any):
         """
         Resets the cooldown on this slash command.
 
@@ -179,7 +188,7 @@ class InvokableApplicationCommand:
             bucket = self._buckets.get_bucket(inter)
             bucket.reset()
 
-    def get_cooldown_retry_after(self, inter):
+    def get_cooldown_retry_after(self, inter: Any):
         """
         Retrieves the amount of seconds before this slash command can be tried again.
 
@@ -203,20 +212,20 @@ class InvokableApplicationCommand:
         return 0.0
 
 
-def class_name(func):
+def class_name(func: Callable) -> Optional[str]:
     res = func.__qualname__[:-len(func.__name__)]
     return None if len(res) == 0 else res[:-1]
 
 
-def get_class(func):
+def get_class(func: Callable) -> Any:
     if inspect.isfunction(func):
         cn = class_name(func)
-        if cn is not None:
-            mod = inspect.getmodule(func)
-            return getattr(mod, class_name(func), None)
+        if cn is None:
+            return None
+        return getattr(inspect.getmodule(func), cn, None)
 
 
-def check(predicate):
+def check(predicate: Callable[..., Any]):
     '''
     A function that converts ``predicate(interaction)`` functions
     into application command decorators
@@ -237,7 +246,7 @@ def check(predicate):
 
     '''
     if inspect.iscoroutinefunction(predicate):
-        wrapper = predicate
+        wrapper = predicate # type: ignore
     else:
         async def wrapper(ctx):
             return predicate(ctx)
@@ -254,7 +263,7 @@ def check(predicate):
     return decorator
 
 
-def check_any(*checks):
+def check_any(*checks: Callable[..., Any]):
     """Similar to ``commands.check_any``"""
 
     unwrapped = []
@@ -282,7 +291,7 @@ def check_any(*checks):
     return check(predicate)
 
 
-def has_role(item):
+def has_role(item: Union[int, str]):
     """Similar to ``commands.has_role``"""
 
     def predicate(ctx):
@@ -300,7 +309,7 @@ def has_role(item):
     return check(predicate)
 
 
-def has_any_role(*items):
+def has_any_role(*items: Union[int, str]):
     """Similar to ``commands.has_any_role``"""
     def predicate(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
@@ -314,7 +323,7 @@ def has_any_role(*items):
     return check(predicate)
 
 
-def bot_has_role(item):
+def bot_has_role(item: Union[int, str]):
     """Similar to ``commands.bot_has_role``"""
 
     def predicate(ctx):
@@ -333,7 +342,7 @@ def bot_has_role(item):
     return check(predicate)
 
 
-def bot_has_any_role(*items):
+def bot_has_any_role(*items: Union[int, str]):
     """Similar to ``commands.bot_has_any_role``"""
     def predicate(ctx):
         ch = ctx.channel
@@ -348,7 +357,7 @@ def bot_has_any_role(*items):
     return check(predicate)
 
 
-def has_permissions(**perms):
+def has_permissions(**perms: bool):
     """Similar to ``commands.has_permissions``"""
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
@@ -369,7 +378,7 @@ def has_permissions(**perms):
     return check(predicate)
 
 
-def bot_has_permissions(**perms):
+def bot_has_permissions(**perms: bool):
     """Similar to ``commands.bot_has_permissions``"""
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
@@ -391,7 +400,7 @@ def bot_has_permissions(**perms):
     return check(predicate)
 
 
-def has_guild_permissions(**perms):
+def has_guild_permissions(**perms: bool):
     """Similar to ``commands.has_guild_permissions``"""
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
@@ -413,7 +422,7 @@ def has_guild_permissions(**perms):
     return check(predicate)
 
 
-def bot_has_guild_permissions(**perms):
+def bot_has_guild_permissions(**perms: bool):
     """Similar to ``commands.bot_has_guild_permissions``"""
 
     invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
@@ -478,7 +487,7 @@ def is_nsfw():
     return check(pred)
 
 
-def cooldown(rate, per, type=BucketType.default):
+def cooldown(rate: int, per: float, type: BucketType=BucketType.default):
     '''
     A decorator that adds a cooldown to a slash-command. Similar to **discord.py** cooldown decorator.
 
@@ -504,12 +513,12 @@ def cooldown(rate, per, type=BucketType.default):
     '''
     def decorator(func):
         try:
-            cooldown_obj = Cooldown(rate, per, type)
+            cooldown_obj = Cooldown(rate, per, type) # type: ignore
         except Exception:
             cooldown_obj = Cooldown(rate, per)
 
         try:
-            mapping = CooldownMapping(cooldown_obj)
+            mapping = CooldownMapping(cooldown_obj) # type: ignore
         except Exception:
             mapping = CooldownMapping(cooldown_obj, type)
 

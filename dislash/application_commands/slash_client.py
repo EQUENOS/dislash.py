@@ -1,13 +1,19 @@
 import asyncio
+from discord.guild import Guild
+
+from discord.permissions import Permissions
+from dislash.interactions.application_command import MessageCommand, Option, SlashCommand, UserCommand
 import discord
 from discord.abc import Messageable
+from discord.ext import commands
+import discord.state
 from discord.state import ConnectionState
 from discord.http import Route
 from discord.ext.commands import Context
-from typing import Any, Dict, List
+from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Tuple, Union
 
-from .slash_core import slash_command
-from .context_menus_core import user_command, message_command
+from .slash_core import CommandParent, slash_command
+from .context_menus_core import InvokableMessageCommand, InvokableUserCommand, user_command, message_command
 from .utils import ClickListener, _on_button_click
 from ._decohub import _HANDLER
 
@@ -60,15 +66,15 @@ class InteractionClient:
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
     def __init__(self, client, *, test_guilds: List[int] = None, sync_commands: bool = True,
-                show_warnings: bool = True, modify_send: bool = True):
+                show_warnings: bool = True, modify_send: bool = True) -> None:
         self._uses_discord_2 = hasattr(client, "add_view")
         _HANDLER.client = client
-        self.client = _HANDLER.client
+        self.client: Any = _HANDLER.client
         self.application_id = None
-        self.events = {}
-        self._listeners = {}
-        self._global_commands = {}
-        self._guild_commands = {}
+        self.events: Dict[str, Callable[..., Awaitable]] = {}
+        self._listeners: Dict[Any, List[Tuple[Any, Callable]]] = {}
+        self._global_commands: Dict[int, ApplicationCommand] = {}
+        self._guild_commands: Dict[int, Dict[int, ApplicationCommand]] = {}
         self._cogs_with_err_listeners = {
             "on_slash_command_error": [],
             "on_user_command_error": [],
@@ -78,8 +84,8 @@ class InteractionClient:
         self._sync_commands = sync_commands
         self._show_warnings = show_warnings
         self._modify_send = modify_send
-        self.active_shard_count = 0
-        self.is_ready = False
+        self.active_shard_count: int = 0
+        self.is_ready: bool = False
         # Add listeners
         self._register_listeners()
         # Modify old discord.py methods
@@ -91,10 +97,10 @@ class InteractionClient:
         for cog in self.client.cogs.values():
             self._inject_cogs(cog)
 
-    def _register_listeners(self):
+    def _register_listeners(self) -> None:
         self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.add_listener(self._on_socket_response, 'on_socket_response')
-        if isinstance(self.client, discord.AutoShardedClient):
+        if isinstance(self.client, commands.AutoShardedBot):
             self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.add_listener(self._on_ready, 'on_ready')
         else:
@@ -102,7 +108,7 @@ class InteractionClient:
         # For nice click listener
         self.client.add_listener(_on_button_click, 'on_button_click')
 
-    def _modify_discord(self):
+    def _modify_discord(self) -> None:
         # Modify cog loader
         _add_cog = self.client.add_cog
 
@@ -151,7 +157,7 @@ class InteractionClient:
             return await self.fetch_guild_command(guild.id, command_id)
 
         async def edit_command(guild, command_id, slash_command):
-            return await self.edit_guild_slash_command(guild.id, command_id, slash_command)
+            return await self.edit_guild_slash_command(guild.id, command_id, slash_command) # type: ignore
 
         async def edit_command_permissions(guild, command_id, permissions):
             return await self.edit_guild_command_permissions(guild.id, command_id, permissions)
@@ -177,6 +183,10 @@ class InteractionClient:
         def create_click_listener(message, timeout=None):
             return ClickListener(message.id, timeout)
 
+        # hack to allow monkey patching by declaring a module as Any
+        discord = globals()['discord']
+        commands = globals()['commands']
+
         if self._modify_send:
             if self._uses_discord_2:
                 from ._modifications.new import (
@@ -189,10 +199,11 @@ class InteractionClient:
                     send_with_components,
                     edit_with_components
                 )
-                ConnectionState.create_message = create_message_with_components
-            Messageable.send = send_with_components
+                discord.state.create_message = create_message_with_components
+            discord.abc.Messageable.send = send_with_components
             discord.Message.edit = edit_with_components
-        Context.wait_for_button_click = ctx_wait_for_button_click
+        
+        commands.Context.wait_for_button_click = ctx_wait_for_button_click
         discord.Message.create_click_listener = create_click_listener
         discord.Message.wait_for_button_click = message_wait_for_button_click
         discord.Message.wait_for_dropdown = message_wait_for_dropdown
@@ -206,12 +217,14 @@ class InteractionClient:
         discord.Guild.batch_edit_command_permissions = batch_edit_command_permissions
         discord.Guild.delete_command = delete_command
         discord.Guild.delete_commands = delete_commands
+        
+        
 
-    def teardown(self):
+    def teardown(self) -> None:
         '''Cleanup the client by removing all registered listeners and caches.'''
         self.client.remove_listener(self._on_guild_remove, 'on_guild_remove')
         self.client.remove_listener(self._on_socket_response, 'on_socket_response')
-        if isinstance(self.client, discord.AutoShardedClient):
+        if isinstance(self.client, commands.AutoShardedBot):
             self.client.remove_listener(self._on_shard_connect, 'on_shard_connect')
             self.client.remove_listener(self._on_ready, 'on_ready')
         else:
@@ -222,23 +235,23 @@ class InteractionClient:
         self._global_commands.clear()
         self._guild_commands.clear()
         if hasattr(self.client, "slash"):
-            del self.client.slash
+            del self.client.slash # type: ignore
         self.is_ready = False
 
     @property
-    def slash_commands(self):
+    def slash_commands(self) -> Dict[str, CommandParent]:
         return _HANDLER.slash_commands
 
     @property
-    def user_commands(self):
+    def user_commands(self) -> Dict[str, CommandParent]:
         return _HANDLER.user_commands
 
     @property
-    def message_commands(self):
+    def message_commands(self) -> Dict[str, CommandParent]:
         return _HANDLER.message_commands
 
     @property
-    def commands(self):
+    def commands(self) -> Dict[str, CommandParent]:
         return dict(
             **_HANDLER.slash_commands,
             **_HANDLER.user_commands,
@@ -246,10 +259,10 @@ class InteractionClient:
         )
 
     @property
-    def global_commands(self):
+    def global_commands(self) -> List[ApplicationCommand]:
         return [sc for sc in self._global_commands.values()]
 
-    def event(self, func):
+    def event(self, func: Callable[..., Awaitable]) -> Callable[..., Awaitable]:
         """
         Decorator
         ::
@@ -270,7 +283,7 @@ class InteractionClient:
             self.events[name] = func
         return func
 
-    def slash_command(self, *args, **kwargs):
+    def slash_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
         """
         A decorator that allows to build a slash command.
 
@@ -297,10 +310,10 @@ class InteractionClient:
         """
         return slash_command(*args, **kwargs)
 
-    def user_command(self, *args, **kwargs):
+    def user_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableUserCommand]:
         return user_command(*args, **kwargs)
     
-    def message_command(self, *args, **kwargs):
+    def message_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableMessageCommand]:
         return message_command(*args, **kwargs)
 
     # Getters
@@ -337,7 +350,7 @@ class InteractionClient:
         slash_command : SlashCommand | None
         """
         for cmd in self._global_commands.values():
-            if cmd.name == name:
+            if cmd and cmd.name == name:
                 return cmd
 
     def get_guild_command(self, guild_id: int, command_id: int):
@@ -570,7 +583,7 @@ class InteractionClient:
         self._global_commands = {cmd.id: cmd for cmd in new_commands}
         return new_commands
 
-    async def overwrite_guild_commands(self, guild_id: int, app_commands: list):
+    async def overwrite_guild_commands(self, guild_id: int, app_commands: List[ApplicationCommand]):
         """
         Bulk overwrites all guild application commands
 
@@ -785,7 +798,7 @@ class InteractionClient:
         # Update cache
         self._set_permissions(guild_id, command_id, permissions)
 
-    async def batch_edit_guild_command_permissions(self, guild_id: int, permissions: dict):
+    async def batch_edit_guild_command_permissions(self, guild_id: int, permissions: Dict[int, ApplicationCommandPermissions]):
         """
         Batch edits permissions for all commands in a guild.
 
@@ -801,8 +814,7 @@ class InteractionClient:
             # Cache
             self._set_permissions(guild_id, cmd_id, perms)
             # To dict
-            thing = perms.to_dict()
-            thing["id"] = cmd_id
+            thing = {**perms.to_dict(), "id": cmd_id}
             data.append(thing)
         await self.client.http.request(
             Route(
@@ -815,7 +827,7 @@ class InteractionClient:
         )
 
     # Even slower API methods
-    async def fetch_global_command_named(self, name: str):
+    async def fetch_global_command_named(self, name: str) -> Optional[ApplicationCommand]:
         """
         Fetches a global command that matches the specified name
 
@@ -909,35 +921,37 @@ class InteractionClient:
             await self.delete_guild_command(guild_id, cmd.id)
 
     # Internal things
-    def dispatch(self, event_name, *args, **kwargs):
+    def dispatch(self, event_name: str, *args, **kwargs):
         self.client.loop.create_task(self._activate_event(event_name, *args, **kwargs))
 
-    def _add_global_command(self, command):
+    def _add_global_command(self, command: ApplicationCommand):
         self._global_commands[command.id] = command
 
-    def _add_guild_command(self, guild_id, command):
+    def _add_guild_command(self, guild_id: int, command: ApplicationCommand):
         if guild_id not in self._guild_commands:
             self._guild_commands[guild_id] = {command.id: command}
         else:
             self._guild_commands[guild_id][command.id] = command
 
-    def _remove_global_command(self, command_id):
+    def _remove_global_command(self, command_id: int):
         if command_id in self._global_commands:
             del self._global_commands[command_id]
 
-    def _remove_guild_command(self, guild_id, command_id):
+    def _remove_guild_command(self, guild_id: int, command_id: int):
         if guild_id in self._guild_commands:
             granula = self._guild_commands[guild_id]
             if command_id in granula:
                 del granula[command_id]
 
-    def _set_permissions(self, guild_id, command_id, permissions):
+    def _set_permissions(self, guild_id: int, command_id: int, permissions: ApplicationCommandPermissions):
         if guild_id in self._guild_commands:
             granula = self._guild_commands[guild_id]
             if command_id in granula:
-                granula[command_id].permissions = permissions
+                command = granula[command_id]
+                if isinstance(command, SlashCommand):
+                    command.permissions = permissions
 
-    def _error_handler_exists(self, handler_name):
+    def _error_handler_exists(self, handler_name: str) -> bool:
         cog_names = self._cogs_with_err_listeners.get(handler_name, [])
         return not (
             len(cog_names) == 0 and
@@ -947,7 +961,7 @@ class InteractionClient:
             handler_name not in self.events
         )
 
-    def _inject_cogs(self, cog):
+    def _inject_cogs(self, cog: Any):
         # Insert the cog into slash commands:
         if not hasattr(cog, "slash_commands"):
             cog.slash_commands = []
@@ -979,7 +993,7 @@ class InteractionClient:
             if cog_names is not None:
                 cog_names.append(cog.qualified_name)
 
-    def _eject_cogs(self, name):
+    def _eject_cogs(self, name: str):
         for cog_names in self._cogs_with_err_listeners.values():
             try:
                 cog_names.remove(name)
@@ -996,7 +1010,7 @@ class InteractionClient:
         for key in bad_keys:
             del _HANDLER.message_commands[key]
 
-    def _guilds_with_commands(self):
+    def _guilds_with_commands(self) -> List[int]:
         guilds = set()
         for cmd in _HANDLER.slash_commands.values():
             guild_ids = cmd.guild_ids or self._test_guilds
@@ -1004,7 +1018,7 @@ class InteractionClient:
                 guilds = guilds.union(set(guild_ids))
         return list(guilds)
 
-    def _per_guild_commands(self):
+    def _per_guild_commands(self) -> Tuple[List[SlashCommand], Dict[int, List[SlashCommand]]]:
         global_cmds = []
         guilds = {}
         for cmd in self.commands.values():
@@ -1021,10 +1035,10 @@ class InteractionClient:
                         guilds[guild_id].append(cmd.registerable)
         return global_cmds, guilds
 
-    def _modify_parser(self, parsers, event, func):
+    def _modify_parser(self, parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
         def empty_func(data):
             pass
-        old_func = parsers.get(event, empty_func)
+        old_func: Callable = parsers.get(event, empty_func)
         original_func = getattr(old_func, "__original_parser__", old_func)
 
         def new_func(data):
@@ -1090,7 +1104,7 @@ class InteractionClient:
                 try:
                     if deletion_required:
                         await self.delete_guild_commands(guild_id)
-                    await self.overwrite_guild_commands(guild_id, cmds)
+                    await self.overwrite_guild_commands(guild_id, cmds) # type: ignore
                     patched_guilds.append(guild_id)
                 except Exception as e:
                     if self._show_warnings:
@@ -1098,12 +1112,15 @@ class InteractionClient:
         # Dispatch an event
         self.dispatch('auto_register', global_commands_patched, patched_guilds)
 
-    async def _maybe_unregister_commands(self, guild_id):
+    async def _maybe_unregister_commands(self, guild_id: Optional[int]):
         """
         Unregisters unknown commands from the guild, if possible.
         Mainly called if a guild command isn't in the code, but
         it still exists in discord and creates interactions.
         """
+        if guild_id is None:
+            return
+        
         app_commands = await self.fetch_guild_commands(guild_id)
         local_app_commands = self.get_guild_commands(guild_id)
         good_commands = []
@@ -1129,7 +1146,7 @@ class InteractionClient:
                     # Merge commands and permissions
                     merged_commands = {}
                     for cmd in commands:
-                        if cmd.id in perms:
+                        if isinstance(cmd, SlashCommand) and cmd.id in perms:
                             cmd.permissions = perms[cmd.id]
                         merged_commands[cmd.id] = cmd
                     # Put to the dict
@@ -1138,7 +1155,7 @@ class InteractionClient:
                 pass
 
     # Special waiter
-    async def wait_for_button_click(self, check=None, timeout=None):
+    async def wait_for_button_click(self, check: Callable[..., bool]=None, timeout: float=None):
         if check is None:
             check = lambda ctx: True
         future = self.client.loop.create_future()
@@ -1148,7 +1165,7 @@ class InteractionClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
-    async def wait_for_dropdown(self, check=None, timeout=None):
+    async def wait_for_dropdown(self, check: Callable[..., bool]=None, timeout: float=None):
         if check is None:
             check = lambda ctx: True
         future = self.client.loop.create_future()
@@ -1220,15 +1237,15 @@ class InteractionClient:
         return stuff
 
     # Adding relevant listeners
-    def _on_raw_interaction(self, data):
+    def _on_raw_interaction(self, data: Dict[str, Any]):
         self.client.loop.create_task(self._process_interaction(data))
 
-    async def _on_socket_response(self, payload):
+    async def _on_socket_response(self, payload: Dict[str, Any]):
         if payload.get("t") != "INTERACTION_CREATE":
             return
         await self._process_interaction(payload["d"])
 
-    async def _on_shard_connect(self, shard_id):
+    async def _on_shard_connect(self, shard_id: int):
         self.active_shard_count += 1
         if self.active_shard_count == 1:
             await self._fill_app_id()
@@ -1262,14 +1279,15 @@ class InteractionClient:
             self.is_ready = True
             await self._activate_event('ready')
 
-    async def _on_guild_remove(self, guild):
+    async def _on_guild_remove(self, guild: Guild):
         if guild.id in self._guild_commands:
             del self._guild_commands[guild.id]
 
     async def _on_slash_command(self, inter: SlashInteraction):
         app_command = self.slash_commands.get(inter.data.name)
         if app_command is None:
-            usable = False
+            await self._maybe_unregister_commands(inter.guild_id)
+            return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
             is_global = self.get_global_command(inter.data.id) is not None 
@@ -1291,7 +1309,8 @@ class InteractionClient:
     async def _on_user_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.user_commands.get(inter.data.name)
         if app_command is None:
-            usable = False
+            await self._maybe_unregister_commands(inter.guild_id)
+            return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
             is_global = self.get_global_command(inter.data.id) is not None 
@@ -1313,7 +1332,8 @@ class InteractionClient:
     async def _on_message_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.message_commands.get(inter.data.name)
         if app_command is None:
-            usable = False
+            await self._maybe_unregister_commands(inter.guild_id)
+            return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
             is_global = self.get_global_command(inter.data.id) is not None 
@@ -1332,7 +1352,7 @@ class InteractionClient:
         else:
             await self._maybe_unregister_commands(inter.guild_id)
 
-    async def _toggle_listeners(self, event, *args, **kwargs):
+    async def _toggle_listeners(self, event: str, *args, **kwargs):
         listeners = self._listeners.get(event)
         if listeners:
             removed = []
@@ -1361,7 +1381,7 @@ class InteractionClient:
                 for idx in reversed(removed):
                     del listeners[idx]
 
-    async def _activate_event(self, event_name, *args, **kwargs):
+    async def _activate_event(self, event_name: str, *args, **kwargs):
         await self._toggle_listeners(event_name, *args, **kwargs)
         if event_name != "ready":
             self.client.dispatch(event_name, *args, **kwargs)
@@ -1369,7 +1389,7 @@ class InteractionClient:
         if func:
             await func(*args, **kwargs)
 
-    async def _process_interaction(self, payload):
+    async def _process_interaction(self, payload: Dict[str, Any]):
         event_name = "dislash_interaction" if self._uses_discord_2 else "interaction"
         _type = payload.get("type", 1)
         # Received a ping

@@ -1,16 +1,20 @@
 import asyncio
 import datetime
+from typing import Any, Dict, List, Union
 import discord
 import json
+from discord.client import Client
+from discord.embeds import Embed
+from discord.file import File
 from discord.http import Route
-from .message_components import ActionRow
+from discord.member import Member
+from discord.mentions import AllowedMentions
+from discord.user import ClientUser
+from discord.webhook.async_ import WebhookMessage
+from .message_components import ActionRow, Component
 
 
-__all__ = (
-    "InteractionType",
-    "ResponseType",
-    "BaseInteraction"
-)
+__all__ = ("InteractionType", "ResponseType", "BaseInteraction")
 
 
 class InteractionType:
@@ -37,6 +41,7 @@ class ResponseType:
     UpdateMessage = 7
         For components, edit the message the component was attached to
     """
+
     Pong = 1
     Acknowledge = 1
     ChannelMessage = 3
@@ -51,32 +56,26 @@ class BaseInteraction:
     The base class for all interactions
     """
 
-    def __init__(self, client, data: dict):
+    def __init__(self, client: Client, data: dict):
         state = client._connection
 
         self.received_at = datetime.datetime.utcnow()
-        self.bot = client
+        self.bot: Any = client
         self.id = int(data["id"])
         self.application_id = int(data["application_id"])
-        self.type = data["type"]
-        self.token = data["token"]
+        self.type: int = data["type"]
+        self.token: str = data["token"]
         self.version = data["version"]
 
         if "guild_id" in data:
             self.guild_id = int(data["guild_id"])
             self.guild = client.get_guild(self.guild_id)
-            self.author = discord.Member(
-                data=data["member"],
-                guild=self.guild,
-                state=state
-            )
+            assert self.guild is not None, "invalid data"
+            self.author = discord.Member(data=data["member"], guild=self.guild, state=state)
         else:
             self.guild_id = None
             self.guild = None
-            self.author = discord.User(
-                state=state,
-                data=data["user"]
-            )
+            self.author = discord.User(state=state, data=data["user"])
 
         if "channel_id" in data:
             self.channel_id = int(data["channel_id"])
@@ -85,14 +84,14 @@ class BaseInteraction:
             self.channel_id = None
             self.channel = None
 
-        self._sent = False
+        self._sent: bool = False
 
     @property
     def created_at(self):
         return datetime.datetime.utcfromtimestamp(((self.id >> 22) + 1420070400000) / 1000)
 
     @property
-    def expired(self):
+    def expired(self) -> bool:
         # In this method we're using self.received_at
         # instead of self.created_at because the IDs of all interactions
         # seem to always inherit from a timstamp which is
@@ -104,20 +103,31 @@ class BaseInteraction:
             return utcnow - self.received_at > datetime.timedelta(seconds=3)
 
     @property
-    def client(self):
+    def client(self) -> Client:
         return self.bot
 
     @property
-    def me(self):
+    def me(self) -> Union[Member, ClientUser]:
         return self.guild.me if self.guild is not None else self.bot.user
 
-    async def reply(self, content=None, *,  embed=None, embeds=None,
-                    components=None, view=None,
-                    file=None, files=None,
-                    tts=False, hide_user_input=False,
-                    ephemeral=False, delete_after=None,
-                    allowed_mentions=None, type=None,
-                    fetch_response_message=True):
+    async def reply(
+        self,
+        content: Any = None,
+        *,
+        embed: Embed = None,
+        embeds: List[Embed] = None,
+        components: List[ActionRow] = None,
+        view=None,
+        file: File = None,
+        files: List[File] = None,
+        tts: bool = False,
+        hide_user_input: bool = False,
+        ephemeral: bool = False,
+        delete_after: float = None,
+        allowed_mentions: AllowedMentions = None,
+        type: int = None,
+        fetch_response_message: bool = True,
+    ):
         """
         Creates an interaction response. What's the difference between this method and
         :meth:`create_response`? If the token is no longer valid, this method sends a usual
@@ -191,7 +201,7 @@ class BaseInteraction:
                 send_kwargs["view"] = view
             if self.bot.slash._modify_send:
                 send_kwargs["components"] = components
-            return await self.channel.send(**send_kwargs)
+            return await self.channel.send(**send_kwargs)  # type: ignore
         # Create response
         await self.create_response(
             content=content,
@@ -202,7 +212,7 @@ class BaseInteraction:
             view=view,
             ephemeral=ephemeral,
             tts=tts,
-            allowed_mentions=allowed_mentions
+            allowed_mentions=allowed_mentions,
         )
         self._sent = True
 
@@ -221,10 +231,19 @@ class BaseInteraction:
             except Exception:
                 pass
 
-    async def create_response(self, content=None, *, type=None, embed=None, embeds=None,
-                              components=None, view=None,
-                              ephemeral=False, tts=False,
-                              allowed_mentions=None):
+    async def create_response(
+        self,
+        content: Any = None,
+        *,
+        type: int = None,
+        embed: Embed = None,
+        embeds: List[Embed] = None,
+        components: List[ActionRow] = None,
+        view=None,
+        ephemeral: bool = False,
+        tts: bool = False,
+        allowed_mentions=None,
+    ):
         """
         Creates an interaction response.
 
@@ -261,26 +280,26 @@ class BaseInteraction:
 
         data = {}
         if content is not None:
-            data['content'] = str(content)
-        
+            data["content"] = str(content)
+
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
 
         if embed is not None:
             if not isinstance(embed, discord.Embed):
-                raise discord.InvalidArgument('embed parameter must be discord.Embed')
-            data['embeds'] = [embed.to_dict()]
+                raise discord.InvalidArgument("embed parameter must be discord.Embed")
+            data["embeds"] = [embed.to_dict()]
 
         elif embeds is not None:
             if len(embeds) > 10:
-                raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
+                raise discord.InvalidArgument("embds parameter must be a list of up to 10 elements")
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
-                raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
-            data['embeds'] = [embed.to_dict() for embed in embeds]
+                raise discord.InvalidArgument("embeds parameter must be a list of discord.Embed")
+            data["embeds"] = [embed.to_dict() for embed in embeds]
 
         if view is not None:
-            if not hasattr(view, '__discord_ui_view__'):
-                raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
+            if not hasattr(view, "__discord_ui_view__"):
+                raise discord.InvalidArgument(f"view parameter must be View not {view.__class__!r}")
 
             _components = view.to_components()
         else:
@@ -306,26 +325,31 @@ class BaseInteraction:
                     allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
                 else:
                     allowed_mentions = allowed_mentions.to_dict()
-                data['allowed_mentions'] = allowed_mentions
-        
+                data["allowed_mentions"] = allowed_mentions
+
         if ephemeral:
             data["flags"] = 64
         if tts:
             data["tts"] = True
-        
-        payload = {"type": type}
+
+        payload: Dict[str, Any] = {"type": type}
         if data:
             payload["data"] = data
-        
+
         await self.bot.http.request(
-            Route(
-                'POST', '/interactions/{interaction_id}/{token}/callback',
-                interaction_id=self.id, token=self.token
-            ),
-            json=payload
+            Route("POST", "/interactions/{interaction_id}/{token}/callback", interaction_id=self.id, token=self.token),
+            json=payload,
         )
 
-    async def edit(self, content=None, *, embed=None, embeds=None, components=None, allowed_mentions=None):
+    async def edit(
+        self,
+        content: Any = None,
+        *,
+        embed: Embed = None,
+        embeds: List[Embed] = None,
+        components: List[ActionRow] = None,
+        allowed_mentions=None,
+    ):
         """
         Edits the original interaction response.
 
@@ -350,22 +374,22 @@ class BaseInteraction:
         # Form JSON params
         data = {}
         if content is not None:
-            data['content'] = str(content)
+            data["content"] = str(content)
         # Embed or embeds
         if embed is not None and embeds is not None:
             raise discord.InvalidArgument("Can't pass both embed and embeds")
 
         if embed is not None:
             if not isinstance(embed, discord.Embed):
-                raise discord.InvalidArgument('embed parameter must be discord.Embed')
-            data['embeds'] = [embed.to_dict()]
+                raise discord.InvalidArgument("embed parameter must be discord.Embed")
+            data["embeds"] = [embed.to_dict()]
 
         elif embeds is not None:
             if len(embeds) > 10:
-                raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
+                raise discord.InvalidArgument("embds parameter must be a list of up to 10 elements")
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
-                raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
-            data['embeds'] = [embed.to_dict() for embed in embeds]
+                raise discord.InvalidArgument("embeds parameter must be a list of discord.Embed")
+            data["embeds"] = [embed.to_dict() for embed in embeds]
         # Maybe components
         if components is not None:
             if len(components) > 5:
@@ -380,14 +404,13 @@ class BaseInteraction:
                 allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
             else:
                 allowed_mentions = allowed_mentions.to_dict()
-            data['allowed_mentions'] = allowed_mentions
+            data["allowed_mentions"] = allowed_mentions
         # HTTP-response
         r = await self.bot.http.request(
             Route(
-                'PATCH', '/webhooks/{app_id}/{token}/messages/@original',
-                app_id=self.application_id, token=self.token
+                "PATCH", "/webhooks/{app_id}/{token}/messages/@original", app_id=self.application_id, token=self.token
             ),
-            json=data
+            json=data,
         )
         return state.create_message(channel=self.channel, data=r)
 
@@ -397,8 +420,7 @@ class BaseInteraction:
         """
         await self.bot.http.request(
             Route(
-                'DELETE', '/webhooks/{app_id}/{token}/messages/@original',
-                app_id=self.application_id, token=self.token
+                "DELETE", "/webhooks/{app_id}/{token}/messages/@original", app_id=self.application_id, token=self.token
             )
         )
 
@@ -409,25 +431,32 @@ class BaseInteraction:
         except Exception:
             pass
 
-    async def fetch_initial_response(self):
+    async def fetch_initial_response(self) -> WebhookMessage:
         """
         Fetches the original interaction response.
         """
         data = await self.bot.http.request(
-            Route(
-                'GET', '/webhooks/{app_id}/{token}/messages/@original',
-                app_id=self.application_id, token=self.token
-            )
+            Route("GET", "/webhooks/{app_id}/{token}/messages/@original", app_id=self.application_id, token=self.token)
         )
         state = self.bot._connection
         return state.create_message(channel=self.channel, data=data)
 
-    async def followup(self, content=None, *,   embed=None, embeds=None,
-                       file=None, files=None,
-                       components=None, view=None,
-                       tts=False, ephemeral=False,
-                       allowed_mentions=None,
-                       username=None, avatar_url=None):
+    async def followup(
+        self,
+        content: Any = None,
+        *,
+        embed: Embed = None,
+        embeds: List[Embed] = None,
+        file: File = None,
+        files: List[File] = None,
+        components: List[ActionRow] = None,
+        view=None,
+        tts: bool = False,
+        ephemeral: bool = False,
+        allowed_mentions=None,
+        username: str = None,
+        avatar_url: str = None,
+    ):
         """
         Sends a followup message.
 
@@ -460,9 +489,10 @@ class BaseInteraction:
             override the default avatar of the bot
         """
         route = Route(
-            'POST', '/webhooks/{application_id}/{interaction_token}',
+            "POST",
+            "/webhooks/{application_id}/{interaction_token}",
             application_id=self.application_id,
-            interaction_token=self.token
+            interaction_token=self.token,
         )
         data = {}
 
@@ -470,23 +500,23 @@ class BaseInteraction:
             data["content"] = str(content)
 
         if embed is not None and embeds is not None:
-            raise discord.InvalidArgument('cannot pass both embed and embeds parameter to followup()')
+            raise discord.InvalidArgument("cannot pass both embed and embeds parameter to followup()")
 
         if embed is not None:
             if not isinstance(embed, discord.Embed):
-                raise discord.InvalidArgument('embed parameter must be discord.Embed')
-            data['embeds'] = [embed.to_dict()]
+                raise discord.InvalidArgument("embed parameter must be discord.Embed")
+            data["embeds"] = [embed.to_dict()]
 
         elif embeds is not None:
             if len(embeds) > 10:
-                raise discord.InvalidArgument('embds parameter must be a list of up to 10 elements')
+                raise discord.InvalidArgument("embds parameter must be a list of up to 10 elements")
             elif not all(isinstance(embed, discord.Embed) for embed in embeds):
-                raise discord.InvalidArgument('embeds parameter must be a list of discord.Embed')
-            data['embeds'] = [embed.to_dict() for embed in embeds]
+                raise discord.InvalidArgument("embeds parameter must be a list of discord.Embed")
+            data["embeds"] = [embed.to_dict() for embed in embeds]
 
         if view:
-            if not hasattr(view, '__discord_ui_view__'):
-                raise discord.InvalidArgument(f'view parameter must be View not {view.__class__!r}')
+            if not hasattr(view, "__discord_ui_view__"):
+                raise discord.InvalidArgument(f"view parameter must be View not {view.__class__!r}")
 
             _components = view.to_components()
         else:
@@ -511,7 +541,7 @@ class BaseInteraction:
                 allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
             else:
                 allowed_mentions = allowed_mentions.to_dict()
-            data['allowed_mentions'] = allowed_mentions
+            data["allowed_mentions"] = allowed_mentions
 
         if ephemeral:
             data["flags"] = 64
@@ -523,7 +553,7 @@ class BaseInteraction:
             data["avatar_url"] = avatar_url
 
         if file is not None and files is not None:
-            raise discord.InvalidArgument('cannot pass both file and files parameter to followup()')
+            raise discord.InvalidArgument("cannot pass both file and files parameter to followup()")
 
         if file is not None:
             files = [file]
@@ -532,31 +562,33 @@ class BaseInteraction:
             data = await self.bot.http.request(route, json=data)
         else:
             # Send with files
-            form = [
+            form: Any = [
                 {
-                    'name': 'payload_json',
-                    'value': json.dumps(
-                        data, separators=(',', ':'), ensure_ascii=True
-                    ),
+                    "name": "payload_json",
+                    "value": json.dumps(data, separators=(",", ":"), ensure_ascii=True),
                 }
             ]
 
             if len(files) == 1:
                 file = files[0]
-                form.append({
-                    'name': 'file',
-                    'value': file.fp,
-                    'filename': file.filename,
-                    'content_type': 'application/octet-stream'
-                })
+                form.append(
+                    {
+                        "name": "file",
+                        "value": file.fp,
+                        "filename": file.filename,
+                        "content_type": "application/octet-stream",
+                    }
+                )
             else:
                 for index, file in enumerate(files):
-                    form.append({
-                        'name': 'file%s' % index,
-                        'value': file.fp,
-                        'filename': file.filename,
-                        'content_type': 'application/octet-stream'
-                    })
+                    form.append(
+                        {
+                            "name": "file%s" % index,
+                            "value": file.fp,
+                            "filename": file.filename,
+                            "content_type": "application/octet-stream",
+                        }
+                    )
             try:
                 data = await self.bot.http.request(route, form=form, files=files)
             finally:
