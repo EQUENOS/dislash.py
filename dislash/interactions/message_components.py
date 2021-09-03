@@ -172,10 +172,7 @@ class SelectOption:
 
     @classmethod
     def from_dict(cls, data: dict):
-        if "emoji" in data:
-            emoji = discord.PartialEmoji.from_dict(data["emoji"])
-        else:
-            emoji = None
+        emoji = discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None
         return SelectOption(
             label=data["label"],
             value=data["value"],
@@ -275,7 +272,7 @@ class SelectMenu(Component):
         ).format(self)
 
     def _select_options(self, values: List[SelectOption]):
-        self.selected_options: List[SelectOption] = []
+        self.selected_options = []
         for option in self.options:
             if option.value in values:
                 self.selected_options.append(option)
@@ -386,14 +383,10 @@ class Button(Component):
 
     @classmethod
     def from_dict(cls, data: dict):
-        if "emoji" in data:
-            emoji = discord.PartialEmoji.from_dict(data["emoji"])
-        else:
-            emoji = None
         return Button(
             style=data["style"],
             label=data.get("label"),
-            emoji=emoji,
+            emoji=discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None,
             custom_id=data.get("custom_id"),
             url=data.get("url"),
             disabled=data.get("disabled", False),

@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import json
 from enum import Enum
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import discord
 from discord import AllowedMentions, Client, ClientUser, Embed, File, Member
@@ -20,7 +20,7 @@ class InteractionType(int, Enum):
     MessageComponent = 3
 
 
-class ResponseType:
+class ResponseType(int, Enum):
     """
     All possible response type values. Used in :class:`Interaction.reply`
 
@@ -64,6 +64,12 @@ class BaseInteraction:
         self.token: str = data["token"]
         self.version = data["version"]
 
+        self.guild_id: Optional[int]
+        self.guild: Optional[discord.Guild]
+        self.channel_id: Optional[int]
+        self.channel: Optional[Union[discord.abc.GuildChannel, discord.abc.Thread, discord.abc.PrivateChannel]]
+        self.author: Union[discord.User, discord.Member]
+        
         if "guild_id" in data:
             self.guild_id = int(data["guild_id"])
             self.guild = client.get_guild(self.guild_id)
@@ -275,7 +281,7 @@ class BaseInteraction:
         """
         type = type or 4
 
-        data = {}
+        data: Any = {}
         if content is not None:
             data["content"] = str(content)
 
@@ -369,7 +375,7 @@ class BaseInteraction:
             The message that was edited
         """
         # Form JSON params
-        data = {}
+        data: Any = {}
         if content is not None:
             data["content"] = str(content)
         # Embed or embeds
@@ -491,7 +497,7 @@ class BaseInteraction:
             application_id=self.application_id,
             interaction_token=self.token,
         )
-        data = {}
+        data: Any = {}
 
         if content:
             data["content"] = str(content)

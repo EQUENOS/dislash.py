@@ -42,7 +42,7 @@ def application_command_factory(data: Dict[str, Any]) -> "ApplicationCommand":
     raise ValueError("Invalid command type")
 
 
-class OptionType:
+class OptionType(int, Enum):
     """
     Attributes
     ----------
@@ -231,7 +231,18 @@ class Option:
 
 
 class OptionParam:
-    """A descriptor-like parameter default that can be used to define options"""
+    """
+    Parameters
+    ----------
+    default : Union[:class:`str`, Callable[[:class:`SlashInteraction`, Any], Any]]
+        default value or a default value factory
+    name : :class:`str`
+        option's name, the parameter name by default
+    description : :class:`str`
+        option's description
+    converter : Callable[[:class:`SlashInteraction`, Any], Any]
+        the option's converter, takes in an interaction and the argument
+    """
 
     TYPES: Dict[type, int] = {
         str: 3,
@@ -247,7 +258,7 @@ class OptionParam:
         discord.StageChannel: 7,
         discord.StoreChannel: 7,
         discord.Role: 8,
-        discord.Object: 9,
+        Union[discord.Member, discord.Role]: 9,
         discord.abc.Snowflake: 9,
         float: 10,
     }
@@ -369,7 +380,7 @@ class SlashCommand(ApplicationCommand):
         Whether the command is enabled by default when the app is added to a guild
     """
 
-    def __init__(self, name: str, description: str, options: list = None, default_permission: bool = True, **kwargs):
+    def __init__(self, name: str, description: str, options: List[Option] = None, default_permission: bool = True, **kwargs):
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
         assert (

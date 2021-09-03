@@ -71,6 +71,8 @@ class Resolved:
             return self.channels[any_id]
         if any_id in self.messages:
             return self.messages[any_id]
+        
+        return None
 
 
 class ApplicationCommandInteractionData:
@@ -154,6 +156,8 @@ class InteractionDataOption:
         opt = self.option_at(0)
         if opt is not None and opt.type == 1:
             return opt
+        
+        return None
 
     def get_option(self, name: str) -> Optional[InteractionDataOption]:
         """
