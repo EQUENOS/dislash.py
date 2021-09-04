@@ -229,6 +229,50 @@ This can be fixed using a :ref:`fastapi-like<https://fastapi.tiangolo.com/>` par
 
 As you can see the commands syntax is shorter and keeps the option attribute definitions close to the actual parameter.
 
+Defaults
+--------
+
+The default value should be provided as the first argument to :class:`OptionParam`. If the parameter is required you can either not provide it or set it to an ellipsis `...`
+
+.. code-block:: python
+
+    @inter_client.slash_command()
+    async def command(
+        inter: SlashInteraction,
+        a: float = OptionParam(desc="Required float"),
+        b: int = OptionParam(..., desc="Required int"),
+        c: str = OptionParam("default", desc="Optional str")
+    ):
+        pass
+
+Sometimes the default value cannot be hardcoded, such as an author or the current channel. In this case you can just pass in any callable.
+
+.. code-block:: python
+
+    author = lambda inter: inter.author
+    
+    @inter_client.slash_command()
+    async def command(
+        inter: SlashInteraction,
+        user: discord.User = OptionParam(author),
+        channel: discord.abc.TextChannel = OptionParam(lambda i: i.channel),
+    ):
+        pass
+
+Converters
+----------
+
+In some cases you may require the argument to be converted to a type not supported by slash commands. Simply pass a converter callable as the `converter` argument
+
+.. code-block:: python
+
+    @inter_client.slash_command()
+    async def command(
+        inter: SlashInteraction,
+        item: str = OptionParam(desc="An item that will be pluralized", converter=lambda arg: arg + 's')
+    ):
+        pass
+
 Choices
 -------
 
@@ -255,7 +299,7 @@ Choices are highly simplified using :class:`OptionParam`. Simply use either :cla
     async def original(inter: SlashInteraction, arg: str):
         pass
 
-
+    # ------------------------------
     # using Enum:
     class Arg(str, Enum):
         # inheriting from str ensures the typing is correct
@@ -268,23 +312,25 @@ Choices are highly simplified using :class:`OptionParam`. Simply use either :cla
     @inter_client.slash_command()
     async def enumerator(
         inter: SlashInteraction, 
-        arg: Arg = OptionParam(description="An argument picked from multiple choices")
+        arg: Arg = OptionParam(desc="An argument picked from multiple choices")
     ):
         pass
 
 
-    # using one-line Enum
+    # ------------------------------
+    # using one-line Enum:
     OneLineArg = Enum("OneLineArg", {"argument 1": "arg1", "argument 2": "arg2", "argument 3": "arg3"}, type=str)
     # type=str declares the dict value type, this must be provided so typing is correct
 
     @inter_client.slash_command()
     async def oneline_enumerator(
         inter: SlashInteraction, 
-        arg: OneLineArg = OptionParam(description="An argument picked from multiple choices")
+        arg: OneLineArg = OptionParam(desc="An argument picked from multiple choices")
     ):
         pass
 
 
+    # ------------------------------
     # using Literal:
     @inter_client.slash_command()
     async def literal(
@@ -295,3 +341,15 @@ Choices are highly simplified using :class:`OptionParam`. Simply use either :cla
         # that's generally unlikely so you should always prefer enumerators
         pass
 
+
+Supported types for slash command argument
+------------------------------------------
+
+- STRING - `str`
+- INTEGER - `int`
+- NUMBER - `float`
+- BOOLEAN - `bool`
+- USER - `discord.abc.User`, `discord.User`, `discord.Member`
+- CHANNEL - `discord.abc.GuildChannel`, `discord.TextChannel`, `discord.VoiceChannel`, `discord.CategoryChannel`, `discord.StageChannel`, `discord.StoreChannel`
+- ROLE - `discord.Role`
+- MENTIONABLE - `discord.abc.Snowflake`, `Union[discord.Member, discord.Role]`

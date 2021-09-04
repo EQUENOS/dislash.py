@@ -289,10 +289,13 @@ def optionparam(
     default: Any = ...,
     *,
     name: str = None,
+    desc: str = None,
     description: str = None,
     converter: Callable[[SlashInteraction, Any], Any] = None,
 ) -> Any:
-    return OptionParam(default, name=name, description=description, converter=converter)
+    if desc and description:
+        raise TypeError("Only desc or description may be used, not both")
+    return OptionParam(default, name=name, description=desc or description, converter=converter)
 
 
 class ApplicationCommandType(int, Enum):
