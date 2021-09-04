@@ -17,7 +17,6 @@ __all__ = (
     "OptionType",
     "OptionChoice",
     "Option",
-    "OptionParam",
     "ApplicationCommandPermissions",
     "SlashCommandPermissions",
     "RawCommandPermission",
@@ -285,7 +284,7 @@ class OptionParam:
         return f"<Option {string}>"
 
 
-def optionparam(
+def option_param(
     default: Any = ...,
     *,
     name: str = None,

@@ -33,6 +33,11 @@ class InteractionClient:
     ----------
     client : :class:`commands.Bot` | :class:`commands.AutoShardedBot`
         The discord.py Bot instance
+    test_guilds : :class:`List[int]`
+        A list of IDs of guilds where the application commands
+        should be registered instead of global registration
+    sync_commands : :class:`bool`
+        If set to True, your client will sync all registered commands with the code
     show_warnings : :class:`bool`
         Whether to show the warnings or not. Defaults to ``True``
     modify_send : :class:`bool`

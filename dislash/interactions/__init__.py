@@ -4,4 +4,4 @@ from .message_interaction import *
 from .message_components import *
 from .application_command import *
 # for correct annotations
-from .application_command import optionparam as OptionParam
+from .application_command import option_param as OptionParam
