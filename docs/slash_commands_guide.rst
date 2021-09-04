@@ -178,3 +178,178 @@ You can make a command with groups of subcommands using
 
     bot.run("BOT_TOKEN")
 
+Alternative option syntax
+=========================
+
+Sometimes defining options as an argument of the decorator may look confusing, especially when you introduce connectors.
+This can be fixed using a :ref:`fastapi-like<https://fastapi.tiangolo.com/>` paramater "descriptors" using :class:`OptionParam`.
+
+**An example of a command using OptionParam:**
+
+.. code-block:: python
+
+    import discord
+    from discord.ext import commands
+
+    from dislash import InteractionClient, Option, OptionParam, SlashInteraction
+    from dislash.interactions.application_command import OptionType
+
+    bot = commands.Bot(command_prefix="!")
+    inter_client = InteractionClient(bot, test_guilds=[12345])
+
+    # before:
+    @inter_client.slash_command(
+        options=[
+            Option("target", description="The target user", type=OptionType.USER, required=True),
+            Option("action", description="-"),
+            Option("where", description="The location", type=OptionType.CHANNEL),
+        ],
+        connectors={"where": "channel"}
+    )
+    async def complicated(
+        inter: SlashInteraction, 
+        target: discord.User, 
+        action: str = "hug", 
+        channel: discord.TextChannel = None
+    ):
+        if not isinstance(channel, discord.TextChannel):
+            handle_error()  # remember that you could recieve channel categories
+        pass
+
+
+    # after:
+    @inter_client.slash_command()
+    async def simple(
+        inter: SlashInteraction,
+        target: discord.User = OptionParam(..., description="The target user"),
+        action: str = "hug",
+        channel: discord.TextChannel = OptionParam(None, name="where", description="The location"),
+    ):
+        pass
+
+As you can see the commands syntax is shorter and keeps the option attribute definitions close to the actual parameter.
+
+Defaults
+--------
+
+The default value should be provided as the first argument to :class:`OptionParam`. If the parameter is required you can either not provide it or set it to an ellipsis `...`
+
+.. code-block:: python
+
+    @inter_client.slash_command()
+    async def command(
+        inter: SlashInteraction,
+        a: float = OptionParam(desc="Required float"),
+        b: int = OptionParam(..., desc="Required int"),
+        c: str = OptionParam("default", desc="Optional str")
+    ):
+        pass
+
+Sometimes the default value cannot be hardcoded, such as an author or the current channel. In this case you can just pass in any callable.
+
+.. code-block:: python
+
+    author = lambda inter: inter.author
+    
+    @inter_client.slash_command()
+    async def command(
+        inter: SlashInteraction,
+        user: discord.User = OptionParam(author),
+        channel: discord.abc.TextChannel = OptionParam(lambda i: i.channel),
+    ):
+        pass
+
+Converters
+----------
+
+In some cases you may require the argument to be converted to a type not supported by slash commands. Simply pass a converter callable as the `converter` argument
+
+.. code-block:: python
+
+    @inter_client.slash_command()
+    async def command(
+        inter: SlashInteraction,
+        item: str = OptionParam(desc="An item that will be pluralized", converter=lambda arg: arg + 's')
+    ):
+        pass
+
+Choices
+-------
+
+Choices are highly simplified using :class:`OptionParam`. Simply use either :class:`typing.Literal` or :class:`enum.Enum`.
+
+.. code-block:: python
+
+    # before:
+    @inter_client.slash_command(
+        options=[
+            Option(
+                "arg",
+                description="An argument picked from multiple choices",
+                type=OptionType.STRING,
+                required=True,
+                choices=[
+                    OptionChoice("argument 1", "arg1"),
+                    OptionChoice("argument 2", "arg2"),
+                    OptionChoice("argument 3", "arg3"),
+                ],
+            )
+        ]
+    )
+    async def original(inter: SlashInteraction, arg: str):
+        pass
+
+    # ------------------------------
+    # using Enum:
+    class Arg(str, Enum):
+        # inheriting from str ensures the typing is correct
+        # underscores are replaced by spaces
+        argument_1 = "arg1"
+        argument_2 = "arg2"
+        argument_3 = "arg3"
+
+
+    @inter_client.slash_command()
+    async def enumerator(
+        inter: SlashInteraction, 
+        arg: Arg = OptionParam(desc="An argument picked from multiple choices")
+    ):
+        pass
+
+
+    # ------------------------------
+    # using one-line Enum:
+    OneLineArg = Enum("OneLineArg", {"argument 1": "arg1", "argument 2": "arg2", "argument 3": "arg3"}, type=str)
+    # type=str declares the dict value type, this must be provided so typing is correct
+
+    @inter_client.slash_command()
+    async def oneline_enumerator(
+        inter: SlashInteraction, 
+        arg: OneLineArg = OptionParam(desc="An argument picked from multiple choices")
+    ):
+        pass
+
+
+    # ------------------------------
+    # using Literal:
+    @inter_client.slash_command()
+    async def literal(
+        inter: SlashInteraction,
+        arg: Literal["arg1", "arg2", "arg3"]
+    ):
+        # this approach assumes the values and what the user is gonna be picking from are gonna be the same
+        # that's generally unlikely so you should always prefer enumerators
+        pass
+
+
+Supported types for slash command argument
+------------------------------------------
+
+- STRING - `str`
+- INTEGER - `int`
+- NUMBER - `float`
+- BOOLEAN - `bool`
+- USER - `discord.abc.User`, `discord.User`, `discord.Member`
+- CHANNEL - `discord.abc.GuildChannel`, `discord.TextChannel`, `discord.VoiceChannel`, `discord.CategoryChannel`, `discord.StageChannel`, `discord.StoreChannel`
+- ROLE - `discord.Role`
+- MENTIONABLE - `discord.abc.Snowflake`, `Union[discord.Member, discord.Role]`

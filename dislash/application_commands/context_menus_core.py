@@ -1,10 +1,9 @@
 import asyncio
-from dislash.interactions.app_command_interaction import ContextMenuInteraction, SlashInteraction
 from typing import Awaitable, Callable, List
-from .core import InvokableApplicationCommand, class_name
-from ._decohub import _HANDLER
-from ..interactions import UserCommand, MessageCommand
 
+from ..interactions import ContextMenuInteraction, MessageCommand, UserCommand
+from ._decohub import _HANDLER
+from .core import InvokableApplicationCommand, class_name
 
 __all__ = (
     "InvokableContextMenuCommand",

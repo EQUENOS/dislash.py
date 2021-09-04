@@ -3,10 +3,7 @@ from .message_components import *
 from .interaction import *
 
 
-__all__ = (
-    "MessageInteraction",
-    "ButtonInteraction"
-)
+__all__ = ("MessageInteraction", "ButtonInteraction")
 
 
 class PartialTextChannel:
@@ -35,6 +32,7 @@ class MessageInteraction(BaseInteraction):
     component : :class:`Component`
         The component that author interacted with
     """
+
     def __init__(self, client, data):
         super().__init__(client, data)
         state = client._connection
@@ -53,22 +51,17 @@ class MessageInteraction(BaseInteraction):
                 msg_data["channel_id"] = self.channel_id
                 channel = self.channel
                 # For some reason "channel_id" in message reference might not be included
-            if (
-                "message_reference" in msg_data
-                and "channel_id" not in msg_data["message_reference"]
-            ):
+            if "message_reference" in msg_data and "channel_id" not in msg_data["message_reference"]:
                 msg_data["message_reference"]["channel_id"] = None if channel is None else channel.id
             # channel must not be None, because channel.id attr is needed in discord.Message.__init__
             self.message = discord.Message(
-                state=state,
-                channel=channel or PartialTextChannel(0), # type: ignore
-                data=msg_data
+                state=state, channel=channel or PartialTextChannel(0), data=msg_data  # type: ignore
             )
 
         component_data = data.get("data", {})
         component_type = component_data.get("component_type", 1)
         custom_id = component_data.get("custom_id")
-        self.component: Component = None # type: ignore
+        self.component: Component = None  # type: ignore
         for action_row in self.components:
             for component in action_row.components:
                 if component.custom_id == custom_id and component.type == component_type:
@@ -83,7 +76,7 @@ class MessageInteraction(BaseInteraction):
     def clicked_button(self) -> Button:
         if self.component.type == ComponentType.Button and isinstance(self.component, Button):
             return self.component
-        return None # type: ignore
+        return None  # type: ignore
 
     @property
     def button(self) -> Button:
@@ -93,7 +86,7 @@ class MessageInteraction(BaseInteraction):
     def select_menu(self) -> SelectMenu:
         if self.component.type == ComponentType.SelectMenu and isinstance(self.component, SelectMenu):
             return self.component
-        return None # type: ignore
+        return None  # type: ignore
 
 
 ButtonInteraction = MessageInteraction

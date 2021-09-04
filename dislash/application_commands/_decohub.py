@@ -6,7 +6,7 @@ from discord import Client
 
 
 class _HANDLER:
-    client: Client = None # type: ignore
+    client: Client = None  # type: ignore
     slash_commands: Dict[str, Any] = {}
     user_commands: Dict[str, Any] = {}
     message_commands: Dict[str, Any] = {}

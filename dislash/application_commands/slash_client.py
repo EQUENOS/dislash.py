@@ -1,33 +1,26 @@
 import asyncio
-from discord.guild import Guild
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
-from discord.permissions import Permissions
-from dislash.interactions.application_command import MessageCommand, Option, SlashCommand, UserCommand
 import discord
-from discord.abc import Messageable
+from discord import Guild
 from discord.ext import commands
-import discord.state
-from discord.state import ConnectionState
 from discord.http import Route
-from discord.ext.commands import Context
-from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Tuple, Union
-
-from .slash_core import CommandParent, slash_command
-from .context_menus_core import InvokableMessageCommand, InvokableUserCommand, user_command, message_command
-from .utils import ClickListener, _on_button_click
-from ._decohub import _HANDLER
 
 from ..interactions import (
-    ComponentType,
-    BaseInteraction,
-    SlashInteraction,
-    MessageInteraction,
-    ContextMenuInteraction,
     ApplicationCommand,
     ApplicationCommandPermissions,
-    application_command_factory
+    BaseInteraction,
+    ComponentType,
+    ContextMenuInteraction,
+    MessageInteraction,
+    SlashCommand,
+    SlashInteraction,
+    application_command_factory,
 )
-
+from ._decohub import _HANDLER
+from .context_menus_core import InvokableMessageCommand, InvokableUserCommand, message_command, user_command
+from .slash_core import CommandParent, slash_command
+from .utils import ClickListener, _on_button_click
 
 __all__ = ("InteractionClient", "SlashClient")
 
@@ -65,8 +58,16 @@ class InteractionClient:
     is_ready : bool
         Equals to ``True`` if SlashClient is ready, otherwise it's ``False``
     """
-    def __init__(self, client, *, test_guilds: List[int] = None, sync_commands: bool = True,
-                show_warnings: bool = True, modify_send: bool = True) -> None:
+
+    def __init__(
+        self,
+        client,
+        *,
+        test_guilds: List[int] = None,
+        sync_commands: bool = True,
+        show_warnings: bool = True,
+        modify_send: bool = True,
+    ) -> None:
         self._uses_discord_2 = hasattr(client, "add_view")
         _HANDLER.client = client
         self.client: Any = _HANDLER.client
@@ -78,7 +79,7 @@ class InteractionClient:
         self._cogs_with_err_listeners = {
             "on_slash_command_error": [],
             "on_user_command_error": [],
-            "on_message_command_error": []
+            "on_message_command_error": [],
         }
         self._test_guilds = test_guilds
         self._sync_commands = sync_commands
@@ -98,15 +99,15 @@ class InteractionClient:
             self._inject_cogs(cog)
 
     def _register_listeners(self) -> None:
-        self.client.add_listener(self._on_guild_remove, 'on_guild_remove')
-        self.client.add_listener(self._on_socket_response, 'on_socket_response')
+        self.client.add_listener(self._on_guild_remove, "on_guild_remove")
+        self.client.add_listener(self._on_socket_response, "on_socket_response")
         if isinstance(self.client, commands.AutoShardedBot):
-            self.client.add_listener(self._on_shard_connect, 'on_shard_connect')
-            self.client.add_listener(self._on_ready, 'on_ready')
+            self.client.add_listener(self._on_shard_connect, "on_shard_connect")
+            self.client.add_listener(self._on_ready, "on_ready")
         else:
-            self.client.add_listener(self._on_connect, 'on_connect')
+            self.client.add_listener(self._on_connect, "on_connect")
         # For nice click listener
-        self.client.add_listener(_on_button_click, 'on_button_click')
+        self.client.add_listener(_on_button_click, "on_button_click")
 
     def _modify_discord(self) -> None:
         # Modify cog loader
@@ -115,6 +116,7 @@ class InteractionClient:
         def add_cog_2(cog):
             self._inject_cogs(cog)
             _add_cog(cog)
+
         self.client.add_cog = add_cog_2
         # Modify cog unloader
         _rem_cog = self.client.remove_cog
@@ -122,6 +124,7 @@ class InteractionClient:
         def rem_cog_2(name):
             self._eject_cogs(name)
             _rem_cog(name)
+
         self.client.remove_cog = rem_cog_2
         # Multiple wait for
         self.client.multiple_wait_for = self.multiple_wait_for
@@ -138,6 +141,7 @@ class InteractionClient:
                 if message.id != inter.message.id:
                     return False
                 return check(inter)
+
             return await self.wait_for_button_click(auto_check, timeout)
 
         async def message_wait_for_dropdown(message, check=None, timeout=None):
@@ -148,6 +152,7 @@ class InteractionClient:
                 if message.id != inter.message.id:
                     return False
                 return check(inter)
+
             return await self.wait_for_dropdown(auto_check, timeout)
 
         async def fetch_commands(guild):
@@ -157,7 +162,7 @@ class InteractionClient:
             return await self.fetch_guild_command(guild.id, command_id)
 
         async def edit_command(guild, command_id, slash_command):
-            return await self.edit_guild_slash_command(guild.id, command_id, slash_command) # type: ignore
+            return await self.edit_guild_slash_command(guild.id, command_id, slash_command)  # type: ignore
 
         async def edit_command_permissions(guild, command_id, permissions):
             return await self.edit_guild_command_permissions(guild.id, command_id, permissions)
@@ -184,25 +189,24 @@ class InteractionClient:
             return ClickListener(message.id, timeout)
 
         # hack to allow monkey patching by declaring a module as Any
-        discord = globals()['discord']
-        commands = globals()['commands']
+        discord = globals()["discord"]
+        commands = globals()["commands"]
 
         if self._modify_send:
             if self._uses_discord_2:
-                from ._modifications.new import (
-                    send as send_with_components,
-                    edit as edit_with_components
-                )
+                from ._modifications.new import edit as edit_with_components
+                from ._modifications.new import send as send_with_components
             else:
                 from ._modifications.old import (
                     create_message_with_components,
+                    edit_with_components,
                     send_with_components,
-                    edit_with_components
                 )
+
                 discord.state.create_message = create_message_with_components
             discord.abc.Messageable.send = send_with_components
             discord.Message.edit = edit_with_components
-        
+
         commands.Context.wait_for_button_click = ctx_wait_for_button_click
         discord.Message.create_click_listener = create_click_listener
         discord.Message.wait_for_button_click = message_wait_for_button_click
@@ -217,25 +221,23 @@ class InteractionClient:
         discord.Guild.batch_edit_command_permissions = batch_edit_command_permissions
         discord.Guild.delete_command = delete_command
         discord.Guild.delete_commands = delete_commands
-        
-        
 
     def teardown(self) -> None:
-        '''Cleanup the client by removing all registered listeners and caches.'''
-        self.client.remove_listener(self._on_guild_remove, 'on_guild_remove')
-        self.client.remove_listener(self._on_socket_response, 'on_socket_response')
+        """Cleanup the client by removing all registered listeners and caches."""
+        self.client.remove_listener(self._on_guild_remove, "on_guild_remove")
+        self.client.remove_listener(self._on_socket_response, "on_socket_response")
         if isinstance(self.client, commands.AutoShardedBot):
-            self.client.remove_listener(self._on_shard_connect, 'on_shard_connect')
-            self.client.remove_listener(self._on_ready, 'on_ready')
+            self.client.remove_listener(self._on_shard_connect, "on_shard_connect")
+            self.client.remove_listener(self._on_ready, "on_ready")
         else:
-            self.client.remove_listener(self._on_connect, 'on_connect')
+            self.client.remove_listener(self._on_connect, "on_connect")
 
         self.events.clear()
         self._listeners.clear()
         self._global_commands.clear()
         self._guild_commands.clear()
         if hasattr(self.client, "slash"):
-            del self.client.slash # type: ignore
+            del self.client.slash  # type: ignore
         self.is_ready = False
 
     @property
@@ -252,11 +254,7 @@ class InteractionClient:
 
     @property
     def commands(self) -> Dict[str, CommandParent]:
-        return dict(
-            **_HANDLER.slash_commands,
-            **_HANDLER.user_commands,
-            **_HANDLER.message_commands
-        )
+        return dict(**_HANDLER.slash_commands, **_HANDLER.user_commands, **_HANDLER.message_commands)
 
     @property
     def global_commands(self) -> List[ApplicationCommand]:
@@ -276,9 +274,9 @@ class InteractionClient:
         | ``on_slash_command``, ``on_slash_command_error``
         """
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError(f'<{func.__qualname__}> must be a coroutine function')
+            raise TypeError(f"<{func.__qualname__}> must be a coroutine function")
         name = func.__name__
-        if name.startswith('on_'):
+        if name.startswith("on_"):
             name = name[3:]
             self.events[name] = func
         return func
@@ -312,7 +310,7 @@ class InteractionClient:
 
     def user_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableUserCommand]:
         return user_command(*args, **kwargs)
-    
+
     def message_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableMessageCommand]:
         return message_command(*args, **kwargs)
 
@@ -426,11 +424,7 @@ class InteractionClient:
         global_commands : List[ApplicationCommand]
         """
         data = await self.client.http.request(
-            Route(
-                'GET',
-                '/applications/{application_id}/commands',
-                application_id=self.application_id
-            )
+            Route("GET", "/applications/{application_id}/commands", application_id=self.application_id)
         )
         return [application_command_factory(dat) for dat in data]
 
@@ -450,9 +444,10 @@ class InteractionClient:
         """
         data = await self.client.http.request(
             Route(
-                'GET', '/applications/{application_id}/guilds/{guild_id}/commands',
+                "GET",
+                "/applications/{application_id}/guilds/{guild_id}/commands",
                 application_id=self.application_id,
-                guild_id=guild_id
+                guild_id=guild_id,
             )
         )
         return [application_command_factory(dat) for dat in data]
@@ -476,7 +471,7 @@ class InteractionClient:
                 "GET",
                 "/applications/{application_id}/commands/{cmd_id}",
                 application_id=self.application_id,
-                cmd_id=command_id
+                cmd_id=command_id,
             )
         )
         return application_command_factory(data)
@@ -503,7 +498,7 @@ class InteractionClient:
                 "/applications/{application_id}/guilds/{guild_id}/commands/{cmd_id}",
                 application_id=self.application_id,
                 guild_id=guild_id,
-                cmd_id=command_id
+                cmd_id=command_id,
             )
         )
         return application_command_factory(data)
@@ -518,14 +513,10 @@ class InteractionClient:
         app_command : ApplicationCommand
         """
         if not isinstance(app_command, ApplicationCommand):
-            raise discord.InvalidArgument('Expected an ApplicationCommand instance')
+            raise discord.InvalidArgument("Expected an ApplicationCommand instance")
         r = await self.client.http.request(
-            Route(
-                "POST",
-                "/applications/{application_id}/commands",
-                application_id=self.application_id
-            ),
-            json=app_command.to_dict()
+            Route("POST", "/applications/{application_id}/commands", application_id=self.application_id),
+            json=app_command.to_dict(),
         )
         sc = application_command_factory(r)
         self._global_commands[sc.id] = sc
@@ -543,15 +534,15 @@ class InteractionClient:
         app_command : :class:`ApplicationCommand`
         """
         if not isinstance(app_command, ApplicationCommand):
-            raise discord.InvalidArgument('Expected a ApplicationCommand instance')
+            raise discord.InvalidArgument("Expected a ApplicationCommand instance")
         r = await self.client.http.request(
             Route(
                 "POST",
                 "/applications/{app_id}/guilds/{guild_id}/commands",
                 app_id=self.application_id,
-                guild_id=guild_id
+                guild_id=guild_id,
             ),
-            json=app_command.to_dict()
+            json=app_command.to_dict(),
         )
         # Update cache
         sc = application_command_factory(r)
@@ -571,12 +562,8 @@ class InteractionClient:
         if not all(isinstance(sc, ApplicationCommand) for sc in app_commands):
             raise discord.InvalidArgument("app_commands must contain only ApplicationCommand instances")
         await self.client.http.request(
-            Route(
-                "PUT",
-                "/applications/{app_id}/commands",
-                app_id=self.application_id
-            ),
-            json=[sc.to_dict() for sc in app_commands]
+            Route("PUT", "/applications/{app_id}/commands", app_id=self.application_id),
+            json=[sc.to_dict() for sc in app_commands],
         )
         # Update cache
         new_commands = await self.fetch_global_commands()
@@ -601,9 +588,9 @@ class InteractionClient:
                 "PUT",
                 "/applications/{app_id}/guilds/{guild_id}/commands",
                 app_id=self.application_id,
-                guild_id=guild_id
+                guild_id=guild_id,
             ),
-            json=[sc.to_dict() for sc in app_commands]
+            json=[sc.to_dict() for sc in app_commands],
         )
         # Update cache
         new_commands = await self.fetch_guild_commands(guild_id)
@@ -620,16 +607,11 @@ class InteractionClient:
             replacement of the old data
         """
         if not isinstance(app_command, ApplicationCommand):
-            raise discord.InvalidArgument('parameter app_command must be ApplicationCommand')
+            raise discord.InvalidArgument("parameter app_command must be ApplicationCommand")
         ignore_name = kwargs.get("ignore_name", False)
         r = await self.client.http.request(
-            Route(
-                "PATCH",
-                "/applications/{app_id}/commands/{cmd_id}",
-                app_id=self.application_id,
-                cmd_id=command_id
-            ),
-            json=app_command.to_dict(hide_name=ignore_name)
+            Route("PATCH", "/applications/{app_id}/commands/{cmd_id}", app_id=self.application_id, cmd_id=command_id),
+            json=app_command.to_dict(hide_name=ignore_name),
         )
         # Update cache
         sc = application_command_factory(r)
@@ -648,7 +630,7 @@ class InteractionClient:
             replacement of the old data
         """
         if not isinstance(app_command, ApplicationCommand):
-            raise discord.InvalidArgument('parameter app_command must be ApplicationCommand')
+            raise discord.InvalidArgument("parameter app_command must be ApplicationCommand")
         ignore_name = kwargs.get("ignore_name", False)
         r = await self.client.http.request(
             Route(
@@ -656,9 +638,9 @@ class InteractionClient:
                 "/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}",
                 app_id=self.application_id,
                 guild_id=guild_id,
-                cmd_id=command_id
+                cmd_id=command_id,
             ),
-            json=app_command.to_dict(hide_name=ignore_name)
+            json=app_command.to_dict(hide_name=ignore_name),
         )
         # Update cache
         sc = application_command_factory(r)
@@ -674,12 +656,7 @@ class InteractionClient:
         command_id : int
         """
         await self.client.http.request(
-            Route(
-                "DELETE",
-                "/applications/{app_id}/commands/{cmd_id}",
-                app_id=self.application_id,
-                cmd_id=command_id
-            )
+            Route("DELETE", "/applications/{app_id}/commands/{cmd_id}", app_id=self.application_id, cmd_id=command_id)
         )
         # Update cache
         self._remove_global_command(command_id)
@@ -699,7 +676,7 @@ class InteractionClient:
                 "/applications/{app_id}/guilds/{guild_id}/commands/{cmd_id}",
                 app_id=self.application_id,
                 guild_id=guild_id,
-                cmd_id=command_id
+                cmd_id=command_id,
             )
         )
         # Update cache
@@ -743,7 +720,7 @@ class InteractionClient:
                 "/applications/{app_id}/guilds/{guild_id}/commands/{command_id}/permissions",
                 app_id=self.application_id,
                 guild_id=guild_id,
-                command_id=command_id
+                command_id=command_id,
             )
         )
         return ApplicationCommandPermissions.from_dict(r)
@@ -762,12 +739,14 @@ class InteractionClient:
                 "GET",
                 "/applications/{app_id}/guilds/{guild_id}/commands/permissions",
                 app_id=self.application_id,
-                guild_id=guild_id
+                guild_id=guild_id,
             )
         )
         return {int(obj["id"]): ApplicationCommandPermissions.from_dict(obj) for obj in array}
 
-    async def edit_guild_command_permissions(self, guild_id: int, command_id: int, permissions: ApplicationCommandPermissions):
+    async def edit_guild_command_permissions(
+        self, guild_id: int, command_id: int, permissions: ApplicationCommandPermissions
+    ):
         """
         Edits command permissions for a specific command in a guild.
 
@@ -791,14 +770,16 @@ class InteractionClient:
                 "/applications/{app_id}/guilds/{guild_id}/commands/{command_id}/permissions",
                 app_id=self.application_id,
                 guild_id=guild_id,
-                command_id=command_id
+                command_id=command_id,
             ),
-            json=permissions.to_dict()
+            json=permissions.to_dict(),
         )
         # Update cache
         self._set_permissions(guild_id, command_id, permissions)
 
-    async def batch_edit_guild_command_permissions(self, guild_id: int, permissions: Dict[int, ApplicationCommandPermissions]):
+    async def batch_edit_guild_command_permissions(
+        self, guild_id: int, permissions: Dict[int, ApplicationCommandPermissions]
+    ):
         """
         Batch edits permissions for all commands in a guild.
 
@@ -821,9 +802,9 @@ class InteractionClient:
                 "PUT",
                 "/applications/{app_id}/guilds/{guild_id}/commands/permissions",
                 app_id=self.application_id,
-                guild_id=guild_id
+                guild_id=guild_id,
             ),
-            json=data
+            json=data,
         )
 
     # Even slower API methods
@@ -954,11 +935,11 @@ class InteractionClient:
     def _error_handler_exists(self, handler_name: str) -> bool:
         cog_names = self._cogs_with_err_listeners.get(handler_name, [])
         return not (
-            len(cog_names) == 0 and
-            not hasattr(self.client, handler_name) and
-            handler_name not in self.client._listeners and
-            handler_name not in self._listeners and
-            handler_name not in self.events
+            len(cog_names) == 0
+            and not hasattr(self.client, handler_name)
+            and handler_name not in self.client._listeners
+            and handler_name not in self._listeners
+            and handler_name not in self.events
         )
 
     def _inject_cogs(self, cog: Any):
@@ -1038,12 +1019,14 @@ class InteractionClient:
     def _modify_parser(self, parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
         def empty_func(data):
             pass
+
         old_func: Callable = parsers.get(event, empty_func)
         original_func = getattr(old_func, "__original_parser__", old_func)
 
         def new_func(data):
             func(data)
             return original_func(data)
+
         new_func.__original_parser__ = original_func
         parsers[event] = new_func
 
@@ -1104,13 +1087,13 @@ class InteractionClient:
                 try:
                     if deletion_required:
                         await self.delete_guild_commands(guild_id)
-                    await self.overwrite_guild_commands(guild_id, cmds) # type: ignore
+                    await self.overwrite_guild_commands(guild_id, cmds)  # type: ignore
                     patched_guilds.append(guild_id)
                 except Exception as e:
                     if self._show_warnings:
                         print(f"[WARNING] Failed to overwrite commands in <Guild id={guild_id}> due to {e}")
         # Dispatch an event
-        self.dispatch('auto_register', global_commands_patched, patched_guilds)
+        self.dispatch("auto_register", global_commands_patched, patched_guilds)
 
     async def _maybe_unregister_commands(self, guild_id: Optional[int]):
         """
@@ -1120,7 +1103,7 @@ class InteractionClient:
         """
         if guild_id is None:
             return
-        
+
         app_commands = await self.fetch_guild_commands(guild_id)
         local_app_commands = self.get_guild_commands(guild_id)
         good_commands = []
@@ -1155,7 +1138,7 @@ class InteractionClient:
                 pass
 
     # Special waiter
-    async def wait_for_button_click(self, check: Callable[..., bool]=None, timeout: float=None):
+    async def wait_for_button_click(self, check: Callable[..., bool] = None, timeout: float = None):
         if check is None:
             check = lambda ctx: True
         future = self.client.loop.create_future()
@@ -1165,7 +1148,7 @@ class InteractionClient:
         listeners.append((future, check))
         return await asyncio.wait_for(future, timeout)
 
-    async def wait_for_dropdown(self, check: Callable[..., bool]=None, timeout: float=None):
+    async def wait_for_dropdown(self, check: Callable[..., bool] = None, timeout: float = None):
         if check is None:
             check = lambda ctx: True
         future = self.client.loop.create_future()
@@ -1256,28 +1239,24 @@ class InteractionClient:
             self._modify_parser(
                 self.client._AutoShardedClient__shards[shard_id].ws._discord_parsers,
                 "INTERACTION_CREATE",
-                self._on_raw_interaction
+                self._on_raw_interaction,
             )
 
     async def _on_connect(self):
         if not isinstance(self.client, discord.AutoShardedClient):
             if self._uses_discord_2:
-                self._modify_parser(
-                    self.client.ws._discord_parsers,
-                    "INTERACTION_CREATE",
-                    self._on_raw_interaction
-                )
+                self._modify_parser(self.client.ws._discord_parsers, "INTERACTION_CREATE", self._on_raw_interaction)
             await self._fill_app_id()
             await self._cache_global_commands()
             await self._cache_guild_commands()
             await self._auto_register_or_patch()
             self.is_ready = True
-            await self._activate_event('ready')
+            await self._activate_event("ready")
 
     async def _on_ready(self):
         if isinstance(self.client, discord.AutoShardedClient):
             self.is_ready = True
-            await self._activate_event('ready')
+            await self._activate_event("ready")
 
     async def _on_guild_remove(self, guild: Guild):
         if guild.id in self._guild_commands:
@@ -1290,7 +1269,7 @@ class InteractionClient:
             return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None 
+            is_global = self.get_global_command(inter.data.id) is not None
             if guild_ids is None:
                 usable = is_global
             else:
@@ -1300,7 +1279,7 @@ class InteractionClient:
                 await app_command.invoke(inter)
             except Exception as err:
                 if self._error_handler_exists("on_slash_command_error"):
-                    await self._activate_event('slash_command_error', inter, err)
+                    await self._activate_event("slash_command_error", inter, err)
                 elif app_command._error_handler is None:
                     raise err
         else:
@@ -1313,7 +1292,7 @@ class InteractionClient:
             return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None 
+            is_global = self.get_global_command(inter.data.id) is not None
             if guild_ids is None:
                 usable = is_global
             else:
@@ -1323,12 +1302,12 @@ class InteractionClient:
                 await app_command.invoke(inter)
             except Exception as err:
                 if self._error_handler_exists("on_user_command_error"):
-                    await self._activate_event('user_command_error', inter, err)
+                    await self._activate_event("user_command_error", inter, err)
                 elif app_command._error_handler is None:
                     raise err
         else:
             await self._maybe_unregister_commands(inter.guild_id)
-    
+
     async def _on_message_command(self, inter: ContextMenuInteraction):
         app_command = _HANDLER.message_commands.get(inter.data.name)
         if app_command is None:
@@ -1336,7 +1315,7 @@ class InteractionClient:
             return
         else:
             guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None 
+            is_global = self.get_global_command(inter.data.id) is not None
             if guild_ids is None:
                 usable = is_global
             else:
@@ -1346,7 +1325,7 @@ class InteractionClient:
                 await app_command.invoke(inter)
             except Exception as err:
                 if self._error_handler_exists("on_message_command_error"):
-                    await self._activate_event('message_command_error', inter, err)
+                    await self._activate_event("message_command_error", inter, err)
                 elif app_command._error_handler is None:
                     raise err
         else:
@@ -1403,16 +1382,16 @@ class InteractionClient:
             if data_type == 1:
                 inter = SlashInteraction(self.client, payload)
                 self.dispatch(event_name, inter)
-                self.dispatch('slash_command', inter)
+                self.dispatch("slash_command", inter)
                 await self._on_slash_command(inter)
             elif data_type in (2, 3):
                 inter = ContextMenuInteraction(self.client, payload)
                 self.dispatch(event_name, inter)
                 if data_type == 2:
-                    self.dispatch('user_command', inter)
+                    self.dispatch("user_command", inter)
                     await self._on_user_command(inter)
                 elif data_type == 3:
-                    self.dispatch('message_command', inter)
+                    self.dispatch("message_command", inter)
                     await self._on_message_command(inter)
         # Message component clicked
         elif _type == 3:
@@ -1422,9 +1401,9 @@ class InteractionClient:
             if inter.component is None:
                 return
             if inter.component.type == ComponentType.Button:
-                self.dispatch('button_click', inter)
+                self.dispatch("button_click", inter)
             elif inter.component.type == ComponentType.SelectMenu:
-                self.dispatch('dropdown', inter)
+                self.dispatch("dropdown", inter)
 
     async def _fill_app_id(self):
         data = await self.client.http.application_info()

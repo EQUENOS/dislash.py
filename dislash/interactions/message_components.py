@@ -1,11 +1,10 @@
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
+
 import discord
-import re
-
-from discord.partial_emoji import PartialEmoji
-
+from discord import PartialEmoji
 
 __all__ = (
     "auto_rows",
@@ -17,7 +16,7 @@ __all__ = (
     "SelectOption",
     "MenuOption",
     "SelectMenu",
-    "_component_factory"
+    "_component_factory",
 )
 
 
@@ -30,7 +29,7 @@ def _partial_emoji_converter(argument: str):
         # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
 
-    match = re.match(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$', argument)
+    match = re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$", argument)
 
     if match:
         emoji_animated = bool(match.group(1))
@@ -82,10 +81,7 @@ def auto_rows(*buttons: "Button", max_in_row: int = 5):
     """
     if not (1 <= max_in_row <= 5):
         raise discord.InvalidArgument("max_in_row parameter should be between 1 and 5.")
-    return [
-        ActionRow(*buttons[i: i + max_in_row])
-        for i in range(0, len(buttons), max_in_row)
-    ]
+    return [ActionRow(*buttons[i : i + max_in_row]) for i in range(0, len(buttons), max_in_row)]
 
 
 class ComponentType(int, Enum):
@@ -98,6 +94,7 @@ class ComponentType(int, Enum):
     Button = 2
     SelectMenu = 3
     """
+
     ActionRow = 1
     Button = 2
     SelectMenu = 3
@@ -113,6 +110,7 @@ class ButtonStyle(int, Enum):
     red     = 4
     link    = 5
     """
+
     primary = 1
     blurple = 1
 
@@ -149,7 +147,14 @@ class SelectOption:
 
     __slots__ = ("label", "value", "description", "emoji", "default")
 
-    def __init__(self, label: str, value: str, description: str = None, emoji: Union[str, PartialEmoji] = None, default: bool = False):
+    def __init__(
+        self,
+        label: str,
+        value: str,
+        description: str = None,
+        emoji: Union[str, PartialEmoji] = None,
+        default: bool = False,
+    ):
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
 
@@ -167,23 +172,17 @@ class SelectOption:
 
     @classmethod
     def from_dict(cls, data: dict):
-        if "emoji" in data:
-            emoji = discord.PartialEmoji.from_dict(data["emoji"])
-        else:
-            emoji = None
+        emoji = discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None
         return SelectOption(
             label=data["label"],
             value=data["value"],
             description=data.get("description"),
             emoji=emoji,
-            default=data.get("default", False)
+            default=data.get("default", False),
         )
 
     def to_dict(self):
-        data: Dict[str, Any] = {
-            "label": self.label,
-            "value": self.value
-        }
+        data: Dict[str, Any] = {"label": self.label, "value": self.value}
         if self.description:
             data["description"] = self.description
         if self.emoji:
@@ -197,15 +196,17 @@ class Component(ABC):
     """
     The base class for message components
     """
+
     disabled: bool
     custom_id: Optional[str]
-    
+
     def __init__(self, type: int):
         self.type = type
 
     @abstractmethod
     def to_dict(self):
         raise NotImplementedError
+
 
 class SelectMenu(Component):
     """
@@ -244,8 +245,16 @@ class SelectMenu(Component):
         the list of chosen options, max 25
     """
 
-    def __init__(self, *, custom_id: str = None, placeholder: str = None, min_values: int = 1, max_values: int = 1,
-                 options: List[SelectOption] = None, disabled: bool = False):
+    def __init__(
+        self,
+        *,
+        custom_id: str = None,
+        placeholder: str = None,
+        min_values: int = 1,
+        max_values: int = 1,
+        options: List[SelectOption] = None,
+        disabled: bool = False,
+    ):
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
@@ -263,7 +272,7 @@ class SelectMenu(Component):
         ).format(self)
 
     def _select_options(self, values: List[SelectOption]):
-        self.selected_options: List[SelectOption] = []
+        self.selected_options = []
         for option in self.options:
             if option.value in values:
                 self.selected_options.append(option)
@@ -274,13 +283,7 @@ class SelectMenu(Component):
         Parameters are the same as in :class:`SelectOption`.
         """
         self.options.append(
-            SelectOption(
-                label=label,
-                value=value,
-                description=description,
-                emoji=emoji,
-                default=default
-            )
+            SelectOption(label=label, value=value, description=description, emoji=emoji, default=default)
         )
 
     @classmethod
@@ -292,7 +295,7 @@ class SelectMenu(Component):
             min_values=data.get("min_values", 1),
             max_values=data.get("max_values", 1),
             options=[SelectOption.from_dict(o) for o in options],
-            disabled=data.get("disabled", False)
+            disabled=data.get("disabled", False),
         )
 
     def to_dict(self):
@@ -301,7 +304,7 @@ class SelectMenu(Component):
             "custom_id": self.custom_id,
             "min_values": self.min_values,
             "max_values": self.max_values,
-            "options": [o.to_dict() for o in self.options]
+            "options": [o.to_dict() for o in self.options],
         }
         if self.placeholder:
             payload["placeholder"] = self.placeholder
@@ -332,8 +335,17 @@ class Button(Component):
     disabled : :class:`bool`
         Whether the button is disabled or not. Defaults to false.
     """
-    def __init__(self, *, style: ButtonStyle, label: str = None, emoji: Union[discord.PartialEmoji, str] = None,
-                 custom_id: str = None, url: str = None, disabled: bool = False):
+
+    def __init__(
+        self,
+        *,
+        style: ButtonStyle,
+        label: str = None,
+        emoji: Union[discord.PartialEmoji, str] = None,
+        custom_id: str = None,
+        url: str = None,
+        disabled: bool = False,
+    ):
         global ID_SOURCE  # Ugly as hell
 
         if custom_id is None:
@@ -371,24 +383,17 @@ class Button(Component):
 
     @classmethod
     def from_dict(cls, data: dict):
-        if "emoji" in data:
-            emoji = discord.PartialEmoji.from_dict(data["emoji"])
-        else:
-            emoji = None
         return Button(
             style=data["style"],
             label=data.get("label"),
-            emoji=emoji,
+            emoji=discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None,
             custom_id=data.get("custom_id"),
             url=data.get("url"),
-            disabled=data.get("disabled", False)
+            disabled=data.get("disabled", False),
         )
 
     def to_dict(self):
-        payload = {
-            "type": self.type,
-            "style": self.style
-        }
+        payload = {"type": self.type, "style": self.style}
         if self.label is not None:
             payload["label"] = self.label
         if self.emoji is not None:
@@ -412,6 +417,7 @@ class ActionRow(Component):
     components : :class:`List[Button]`
         a list of up to 5 buttons to place in a row
     """
+
     def __init__(self, *components: Component):
         self._limit = 5
         if len(components) > self._limit:
@@ -435,10 +441,7 @@ class ActionRow(Component):
         return ActionRow(*buttons)
 
     def to_dict(self):
-        return {
-            "type": self.type,
-            "components": [comp.to_dict() for comp in self.components]
-        }
+        return {"type": self.type, "components": [comp.to_dict() for comp in self.components]}
 
     def disable_buttons(self, *positions: int):
         """
@@ -468,28 +471,36 @@ class ActionRow(Component):
                 if component.type == ComponentType.Button:
                     component.disabled = False
 
-    def add_button(self, *, style: ButtonStyle, label: str = None, emoji: str = None,
-                   custom_id: str = None, url: str = None, disabled: bool = False):
+    def add_button(
+        self,
+        *,
+        style: ButtonStyle,
+        label: str = None,
+        emoji: str = None,
+        custom_id: str = None,
+        url: str = None,
+        disabled: bool = False,
+    ):
         self.components.append(
-            Button(
-                style=style,
-                label=label,
-                emoji=emoji,
-                custom_id=custom_id,
-                url=url,
-                disabled=disabled
-            )
+            Button(style=style, label=label, emoji=emoji, custom_id=custom_id, url=url, disabled=disabled)
         )
 
-    def add_menu(self, *, custom_id: str, placeholder: str = None, min_values: int = 1, max_values: int = 1,
-                 options: List[SelectOption] = None):
+    def add_menu(
+        self,
+        *,
+        custom_id: str,
+        placeholder: str = None,
+        min_values: int = 1,
+        max_values: int = 1,
+        options: List[SelectOption] = None,
+    ):
         self.components.append(
             SelectMenu(
                 custom_id=custom_id,
                 placeholder=placeholder,
                 min_values=min_values,
                 max_values=max_values,
-                options=options
+                options=options,
             )
         )
 
