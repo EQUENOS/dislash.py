@@ -9,6 +9,14 @@
 An extending library for [discord.py](https://github.com/Rapptz/discord.py) that allows to build awesome message components and slash commands.
 
 
+# Note about the future of discord.py
+
+Since discord.py will no longer stay up to date, we decided to create a fork: **[disnake](https://github.com/EQUENOS/disnake)**. It has all features of dpy 2.0 + application commands.
+
+* [GitHub repo](https://github.com/EQUENOS/disnake)
+* [Discord server](https://discord.gg/gJDbCw8aQy)
+
+
 # Table Of Contents
 
 1. [Installation](#installation)
