@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from dislash import InteractionClient, Option, OptionParam, SlashInteraction
-from dislash.interactions.application_command import OptionChoice, OptionType
+from dislash.interactions.application_command import OptionChoice, OptionType, option_enum
 
 bot = commands.Bot(command_prefix="!")
 inter_client = InteractionClient(bot, test_guilds=[570841314200125460])
@@ -46,7 +46,7 @@ async def enumerator(
 
 
 # using one-line Enum
-OneLineArg = Enum("OneLineArg", {"argument 1": "arg1", "argument 2": "arg2", "argument 3": "arg3"}, type=str)
+OneLineArg = option_enum({"argument 1": "arg1", "argument 2": "arg2", "argument 3": "arg3"})
 # type=str declares the dict value type, this must be provided so typing is correct
 
 @inter_client.slash_command()

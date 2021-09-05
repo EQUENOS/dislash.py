@@ -319,8 +319,10 @@ Choices are highly simplified using :class:`OptionParam`. Simply use either :cla
 
     # ------------------------------
     # using one-line Enum:
-    OneLineArg = Enum("OneLineArg", {"argument 1": "arg1", "argument 2": "arg2", "argument 3": "arg3"}, type=str)
-    # type=str declares the dict value type, this must be provided so typing is correct
+    from dislash import option_enum
+    # both of these options are valid:
+    OneLineArg = option_enum({"argument 1": "arg1", "argument 2": "arg2", "argument 3": "arg3"})
+    OneLineArg = option_enum(argument_1="arg1", argument_2="arg2", argument_3="arg3"})
 
     @inter_client.slash_command()
     async def oneline_enumerator(
