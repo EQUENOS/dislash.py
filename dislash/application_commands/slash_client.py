@@ -263,7 +263,7 @@ class InteractionClient:
 
     @property
     def global_commands(self) -> List[ApplicationCommand]:
-        return [sc for sc in self._global_commands.values()]
+        return list(self._global_commands.values())
 
     def event(self, func: Callable[..., Awaitable]) -> Callable[..., Awaitable]:
         """
@@ -416,7 +416,7 @@ class InteractionClient:
         ~:class:`List[ApplicationCommand]`
         """
         granula = self._guild_commands.get(guild_id, {})
-        return [sc for sc in granula.values()]
+        return list(granula.values())
 
     # Straight references to API
     async def fetch_global_commands(self):
