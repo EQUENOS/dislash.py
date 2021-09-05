@@ -118,7 +118,7 @@ class BaseInteraction:
         Acknowledge that the interaction was received without giving a visible response.
         Use this first if you will take more than 3 seconds to respond to an button interaction.
         """
-        await self.reply(type=7)
+        await self.reply(type=6)
 
 
 
