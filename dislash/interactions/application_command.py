@@ -123,7 +123,8 @@ class Option:
         choices: List[OptionChoice] = None,
         options: List["Option"] = None,
     ):
-        assert name.islower(), f"Option name {name!r} must be lowercase"
+        if not name.islower():
+            raise AssertionError(f"Option name {name!r} must be lowercase")
         self.name = name
         self.description = description
         self.type = type or 3
@@ -390,9 +391,10 @@ class SlashCommand(ApplicationCommand):
     def __init__(self, name: str, description: str, options: List[Option] = None, default_permission: bool = True, **kwargs):
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
-        assert (
+        if not (
             re.match(r"^[\w-]{1,32}$", name) is not None and name.islower()
-        ), f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _"
+        ):
+            raise AssertionError(f"Slash command name {name!r} should consist of these symbols: a-z, 0-9, -, _")
 
         self.name = name
         self.description = description
