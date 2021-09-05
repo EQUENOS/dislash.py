@@ -149,6 +149,7 @@ class CommandParent(BaseSlashCommand):
         
         return options, connectors
     
+    @staticmethod
     def _parse_annotation(self, annotation: Any) -> Union[Tuple[int, None], Tuple[Literal[3], List[OptionChoice]]]:
         """Extracts type or choices from an annotation"""
         if annotation is inspect.Parameter.empty or annotation is Any:
