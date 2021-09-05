@@ -1,4 +1,5 @@
 import re
+import typing
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Callable, Dict, List, Union
@@ -17,6 +18,8 @@ __all__ = (
     "OptionType",
     "OptionChoice",
     "Option",
+    "OptionParam",
+    "option_enum",
     "ApplicationCommandPermissions",
     "SlashCommandPermissions",
     "RawCommandPermission",
@@ -296,6 +299,8 @@ def option_param(
         raise TypeError("Only desc or description may be used, not both")
     return OptionParam(default, name=name, description=desc or description, converter=converter)
 
+def option_enum(choices: Dict[str, str], **kwargs: str) -> typing.Type[str]:
+    return Enum('', choices or kwargs, type=str)
 
 class ApplicationCommandType(int, Enum):
     CHAT_INPUT = 1
