@@ -286,7 +286,8 @@ class InteractionClient:
             self.events[name] = func
         return func
 
-    def slash_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
+    @staticmethod
+    def slash_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
         """
         A decorator that allows to build a slash command.
 
@@ -313,10 +314,12 @@ class InteractionClient:
         """
         return slash_command(*args, **kwargs)
 
-    def user_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableUserCommand]:
+    @staticmethod
+    def user_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableUserCommand]:
         return user_command(*args, **kwargs)
 
-    def message_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableMessageCommand]:
+    @staticmethod
+    def message_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableMessageCommand]:
         return message_command(*args, **kwargs)
 
     # Getters
@@ -1021,6 +1024,7 @@ class InteractionClient:
                         guilds[guild_id].append(cmd.registerable)
         return global_cmds, guilds
 
+    @staticmethod
     def _modify_parser(self, parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
         def empty_func(data):
             pass
