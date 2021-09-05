@@ -24,15 +24,14 @@ class BaseSlashCommand(InvokableApplicationCommand):
         argcount = code.co_argcount + code.co_kwonlyargcount
         if from_cog:
             return argcount > 2
-        else:
-            return argcount > 1
+        return argcount > 1
 
     async def _maybe_cog_call(self, cog: Any, inter: SlashInteraction, data: Any):
         params = data._to_dict_values(self.connectors) if self._uses_ui(cog) else {}
         if cog:
             return await self(cog, inter, **params)
-        else:
-            return await self(inter, **params)
+
+        return await self(inter, **params)
 
 
 class SubCommand(BaseSlashCommand):
