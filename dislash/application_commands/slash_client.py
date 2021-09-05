@@ -1272,13 +1272,13 @@ class InteractionClient:
         if app_command is None:
             await self._maybe_unregister_commands(inter.guild_id)
             return
+
+        guild_ids = app_command.guild_ids or self._test_guilds
+        is_global = self.get_global_command(inter.data.id) is not None
+        if guild_ids is None:
+            usable = is_global
         else:
-            guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None
-            if guild_ids is None:
-                usable = is_global
-            else:
-                usable = not is_global and inter.guild_id in guild_ids
+            usable = not is_global and inter.guild_id in guild_ids
         if usable:
             try:
                 await app_command.invoke(inter)
@@ -1295,13 +1295,13 @@ class InteractionClient:
         if app_command is None:
             await self._maybe_unregister_commands(inter.guild_id)
             return
+
+        guild_ids = app_command.guild_ids or self._test_guilds
+        is_global = self.get_global_command(inter.data.id) is not None
+        if guild_ids is None:
+            usable = is_global
         else:
-            guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None
-            if guild_ids is None:
-                usable = is_global
-            else:
-                usable = not is_global and inter.guild_id in guild_ids
+            usable = not is_global and inter.guild_id in guild_ids
         if usable:
             try:
                 await app_command.invoke(inter)
@@ -1318,13 +1318,12 @@ class InteractionClient:
         if app_command is None:
             await self._maybe_unregister_commands(inter.guild_id)
             return
+        guild_ids = app_command.guild_ids or self._test_guilds
+        is_global = self.get_global_command(inter.data.id) is not None
+        if guild_ids is None:
+            usable = is_global
         else:
-            guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None
-            if guild_ids is None:
-                usable = is_global
-            else:
-                usable = not is_global and inter.guild_id in guild_ids
+            usable = not is_global and inter.guild_id in guild_ids
         if usable:
             try:
                 await app_command.invoke(inter)
