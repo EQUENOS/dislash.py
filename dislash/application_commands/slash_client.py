@@ -1025,7 +1025,7 @@ class InteractionClient:
         return global_cmds, guilds
 
     @staticmethod
-    def _modify_parser(self, parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
+    def _modify_parser(parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
         def empty_func(data):
             pass
 
