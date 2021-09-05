@@ -102,8 +102,7 @@ class BaseInteraction:
         utcnow = datetime.datetime.utcnow()
         if self._sent:
             return utcnow - self.received_at > datetime.timedelta(minutes=15)
-        else:
-            return utcnow - self.received_at > datetime.timedelta(seconds=3)
+        return utcnow - self.received_at > datetime.timedelta(seconds=3)
 
     @property
     def client(self) -> Client:
