@@ -112,6 +112,26 @@ class BaseInteraction:
     @property
     def me(self) -> Union[Member, ClientUser]:
         return self.guild.me if self.guild is not None else self.bot.user
+    
+    
+    async def acknowledge(self):
+        """
+        ~For buttons~
+        Acknowledge that the interaction was received without giving a visible response.
+        Use this first if you will take more than 3 seconds to respond to an button interaction.
+        """
+        await self.reply(type=6)
+
+
+
+    async def defer(self):
+        """
+        Creates and initial response to the interaction giving a 'bot is thinking' state.
+        Use this first if you will take more than 3 seconds to respond to an interaction.
+        If you use defer(), use edit() instead of reply() to make the next response.
+        """
+        await self.reply(type=5)
+
 
     async def reply(
         self,
