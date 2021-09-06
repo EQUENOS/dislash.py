@@ -1053,15 +1053,12 @@ class InteractionClient:
         deletion_required = False
         for cmd in global_cmds:
             old_cmd = self.get_global_command_named(cmd.name)
-            if old_cmd is None:
+            if old_cmd is None or old_cmd.type == cmd.type and cmd != old_cmd:
                 update_required = True
                 break
             elif old_cmd.type != cmd.type:
                 update_required = True
                 deletion_required = True
-                break
-            elif cmd != old_cmd:
-                update_required = True
                 break
         if update_required or len(global_cmds) != len(self._global_commands):
             try:
@@ -1078,15 +1075,12 @@ class InteractionClient:
             deletion_required = False
             for cmd in cmds:
                 old_cmd = self.get_guild_command_named(guild_id, cmd.name)
-                if old_cmd is None:
+                if old_cmd is None or old_cmd.type == cmd.type and cmd != old_cmd:
                     update_required = True
                     break
                 elif old_cmd.type != cmd.type:
                     update_required = True
                     deletion_required = True
-                    break
-                elif cmd != old_cmd:
-                    update_required = True
                     break
             if update_required or len(cmds) != len(self.get_guild_commands(guild_id)):
                 try:
@@ -1111,10 +1105,7 @@ class InteractionClient:
 
         app_commands = await self.fetch_guild_commands(guild_id)
         local_app_commands = self.get_guild_commands(guild_id)
-        good_commands = []
-        for cmd in app_commands:
-            if cmd.name in local_app_commands:
-                good_commands.append(cmd)
+        good_commands = [cmd for cmd in app_commands if cmd.name in local_app_commands]
         try:
             await self.overwrite_guild_commands(guild_id, good_commands)
         except Exception:

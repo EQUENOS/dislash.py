@@ -69,45 +69,11 @@ class InvokableApplicationCommand:
                 setattr(self, kw, value)
 
     async def __call__(self, *args, **kwargs):
-        kwargs = self._process_arguments(args[0], kwargs)
         return await self.func(*args, **kwargs)
-
-    def _process_arguments(self, inter: SlashInteraction, kwargs: Dict[str, Any]):
-        sig = inspect.signature(self.func)
-        for param in sig.parameters.values():
-            # fix accidental defaults
-            if param.name not in kwargs or isinstance(kwargs[param.name], OptionParam):
-                if isinstance(param.default, OptionParam):
-                    if callable(param.default.default):
-                        kwargs[param.name] = param.default.default(inter)
-                    elif param.default.default is not ...:
-                        kwargs[param.name] = param.default.default
-                elif param.default is not inspect.Parameter.empty:
-                    kwargs[param.name] = param.default
-            elif (
-                param.name in kwargs and isinstance(param.default, OptionParam) and param.default.converter is not None
-            ):
-                try:
-                    kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
-                except Exception as e:
-                    raise ConversionError(param.default.converter, e) from e  # type: ignore
-
-            # verify types
-            if param.name in kwargs and isinstance(param.default, OptionParam) and (param.annotation):
-                if not self._isinstance(kwargs[param.name], (param.annotation)):
-                    error = TypeError(
-                        f"Expected option {param.default.name or param.name!r} "
-                        f"to be of type {param.annotation!r} but received {kwargs[param.name]!r}"
-                    )
-                    raise ConversionError(None, error) from error  # type: ignore
-
-        return kwargs
 
     @staticmethod
     def _isinstance(obj: Any, typ: type) -> bool:
-        if not isinstance(typ, type):  # special annotation?
-            return True
-        elif isinstance(typ, EnumMeta):
+        if not isinstance(typ, type) or isinstance(typ, EnumMeta):  # special annotation
             return True
         if issubclass(typ, discord.User):
             return isinstance(obj, (discord.User, discord.Member, discord.ClientUser))
