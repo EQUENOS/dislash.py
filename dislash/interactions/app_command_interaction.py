@@ -143,7 +143,7 @@ class InteractionDataOption:
     def __repr__(self):
         return "<InteractionDataOption name='{0.name}' value={0.value} options={0.options}>".format(self)
 
-    def _to_dict_values(self, connectors: Dict[str, str] = None):
+    def _to_dict_values(self, connectors: Dict[str, str] = None) -> Dict[str, Any]:
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
@@ -237,7 +237,7 @@ class SlashInteractionData(ApplicationCommandInteractionData):
             return None
         return opt.value if opt.type > 2 else opt
 
-    def _to_dict_values(self, connectors: Dict[str, str] = None) -> Dict[Any, Any]:  # idk what this func is for
+    def _to_dict_values(self, connectors: Dict[str, str] = None) -> Dict[str, Any]:
         connectors = connectors or {}
         out = {}
         for kw, val in self.options.items():
@@ -322,7 +322,6 @@ class SlashInteractionData(ApplicationCommandInteractionData):
             the option located at the specified index
         """
         return list(self.options.values())[index] if 0 <= index < len(self.options) else None
-
 
 class ContextMenuInteractionData(ApplicationCommandInteractionData):
     def __init__(self, data, guild, state):

@@ -191,8 +191,7 @@ This can be fixed using a :ref:`fastapi-like<https://fastapi.tiangolo.com/>` par
     import discord
     from discord.ext import commands
 
-    from dislash import InteractionClient, Option, OptionParam, SlashInteraction
-    from dislash.interactions.application_command import OptionType
+    from dislash import InteractionClient, Option, OptionType, OptionParam, SlashInteraction
 
     bot = commands.Bot(command_prefix="!")
     inter_client = InteractionClient(bot, test_guilds=[12345])
