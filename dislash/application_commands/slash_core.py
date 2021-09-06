@@ -3,12 +3,83 @@ import inspect
 from enum import EnumMeta
 from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional, Tuple, Union, get_origin
 
-from ..interactions import Option, SlashCommand, SlashInteraction, Type
-from ..interactions.application_command import OptionChoice, OptionParam, OptionType
+from ..interactions import (
+    InteractionDataOption,
+    Option,
+    OptionChoice,
+    SlashCommand,
+    SlashInteraction,
+    SlashInteractionData,
+    Type,
+)
+from ..interactions.application_command import OptionParam
 from ._decohub import _HANDLER
 from .core import InvokableApplicationCommand, class_name
 
 __all__ = ("SubCommand", "SubCommandGroup", "CommandParent", "slash_command", "command")
+
+
+def fix_required(func: Callable, options: List[Option], connectors: Dict[str, str] = None) -> List[Option]:
+    """Add a required to every option that doesn't have one"""
+    connectors = connectors or {}
+
+    sig = inspect.signature(func)
+    for option in options:
+        param = sig.parameters.get(connectors.get(option.name, option.name))
+        if param is not None and not option.required and param.default is inspect.Parameter.empty:
+            option.required = False
+    return options
+
+
+def extract_options(func: Callable) -> Tuple[List[Option], Dict[str, str]]:
+    """Helper function to extract options and connectors from a function"""
+    empty = inspect.Parameter.empty  # helper
+
+    sig = inspect.signature(func)
+    if "." in func.__qualname__:
+        params = list(sig.parameters.values())[2:]
+    else:
+        params = list(sig.parameters.values())[1:]
+
+    options = []
+    connectors = {}
+    for param in params:
+        option_type, choices = parse_annotation(param.annotation)
+
+        if isinstance(param.default, OptionParam):
+            d = param.default
+            option = Option(d.name or param.name, d.description, option_type, d.required, choices)
+            if d.name is not None:
+                connectors[d.name] = param.name
+        else:
+            option = Option(param.name, "-", type=option_type, required=param.default is empty, choices=choices)
+
+        options.append(option)
+
+    return options, connectors
+
+
+def parse_annotation(annotation: Any) -> Tuple[int, Optional[List[OptionChoice]]]:
+    """Extracts type or choices from an annotation"""
+    if annotation is inspect.Parameter.empty or annotation is Any:
+        return 3, None
+
+    elif get_origin(annotation) is Literal:
+        t = OptionParam.TYPES[type(annotation.__args__[0])]
+        choices = [OptionChoice(str(i), i) for i in annotation.__args__]
+        return t, choices
+
+    elif isinstance(annotation, EnumMeta):
+        members = [(i.name, i.value) for i in annotation]  # type: ignore
+        t = OptionParam.TYPES[type(members[0][1])]
+        choices = [OptionChoice(str(name).replace("_", " "), value) for name, value in members]
+        return t, choices
+
+    elif annotation in OptionParam.TYPES:
+        return OptionParam.TYPES[annotation], None
+
+    valid = ", ".join(getattr(i, "__name__", str(i)) for i in OptionParam.TYPES)
+    raise TypeError(f"{annotation} is not a valid type. Must be one of: " + valid)
 
 
 class BaseSlashCommand(InvokableApplicationCommand):
@@ -26,12 +97,51 @@ class BaseSlashCommand(InvokableApplicationCommand):
             return argcount > 2
         return argcount > 1
 
-    async def _maybe_cog_call(self, cog: Any, inter: SlashInteraction, data: Any):
-        params = data._to_dict_values(self.connectors) if self._uses_ui(cog) else {}
+    async def _maybe_cog_call(
+        self, cog: Any, inter: SlashInteraction, data: Union[SlashInteractionData, InteractionDataOption]
+    ):
+        kwargs = data._to_dict_values(self.connectors) if self._uses_ui(cog) else {}
+        if isinstance(self, (CommandParent, SubCommandGroup)) and self.children:
+            # this fixes a bug where command parents with OptionParam recieve subcommand options
+            kwargs = {}
+        else:
+            kwargs = self._process_arguments(inter, kwargs)
+
         if cog:
             return await self(cog, inter, **params)
-
         return await self(inter, **params)
+
+    def _process_arguments(self, inter: SlashInteraction, kwargs: Dict[str, Any]):
+        sig = inspect.signature(self.func)
+        for param in sig.parameters.values():
+            # fix accidental defaults
+            if param.name not in kwargs or isinstance(kwargs[param.name], OptionParam):
+                if isinstance(param.default, OptionParam):
+                    if callable(param.default.default):
+                        kwargs[param.name] = param.default.default(inter)
+                    elif param.default.default is not ...:
+                        kwargs[param.name] = param.default.default
+                elif param.default is not inspect.Parameter.empty:
+                    kwargs[param.name] = param.default
+            elif isinstance(param.default, OptionParam) and param.default.converter is not None:
+                try:
+                    kwargs[param.name] = param.default.converter(inter, kwargs[param.name])
+                except Exception as e:
+                    raise ConversionError(param.default.converter, e) from e  # type: ignore
+
+            # verify types
+            if (
+                param.name in kwargs
+                and isinstance(param.default, OptionParam)
+                and not self._isinstance(kwargs[param.name], param.annotation)
+            ):
+                error = TypeError(
+                    f"Expected option {param.default.name or param.name!r} "
+                    f"to be of type {param.annotation!r} but received {kwargs[param.name]!r}"
+                )
+                raise ConversionError(None, error) from error  # type: ignore
+
+        return kwargs
 
 
 class SubCommand(BaseSlashCommand):
@@ -46,6 +156,15 @@ class SubCommand(BaseSlashCommand):
         **kwargs,
     ):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
+        if options:
+            options = fix_required(func, options)
+        else:
+            options, connectors = extract_options(func)
+            if self.connectors:
+                self.connectors.update(connectors)
+            else:
+                self.connectors = connectors
+
         self.option = Option(name=self.name, description=description or "-", type=Type.SUB_COMMAND, options=options)
 
 
@@ -96,8 +215,10 @@ class CommandParent(BaseSlashCommand):
         **kwargs,
     ):
         super().__init__(func, name=name, connectors=connectors, **kwargs)
-        if not options:
-            options, connectors = self._extract_options(func)
+        if options:
+            options = fix_required(func, options)
+        else:
+            options, connectors = extract_options(func)
             if self.connectors:
                 self.connectors.update(connectors)
             else:
@@ -164,7 +285,6 @@ class CommandParent(BaseSlashCommand):
         valid = ", ".join(i.__name__ for i in OptionParam.TYPES)
         raise TypeError(f"{annotation} is not a valid type. Must be one of: " + valid)
         
-
     def sub_command(
         self,
         name: str = None,
@@ -258,7 +378,7 @@ class CommandParent(BaseSlashCommand):
                 group._dispatch_error(self._cog, interaction, err)
                 raise err
 
-        if subcmd is not None:
+        if subcmd is not None and option is not None:
             interaction.invoked_with += f" {subcmd.name}"
             interaction.sub_command = subcmd
             try:

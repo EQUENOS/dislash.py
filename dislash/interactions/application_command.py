@@ -2,7 +2,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, TypeVar, Union
 
 import discord
 
@@ -26,6 +26,7 @@ __all__ = (
     "Type",
 )
 
+T_StrFloat = TypeVar('T_StrFloat', str, float)
 
 def application_command_factory(data: Dict[str, Any]) -> "ApplicationCommand":
     cmd_type = data.get("type", 1)
@@ -300,8 +301,11 @@ def option_param(
         raise TypeError("Only desc or description may be used, not both")
     return OptionParam(default, name=name, description=desc or description, converter=converter)
 
-def option_enum(choices: Dict[str, str], **kwargs: str) -> typing.Type[str]:
-    return Enum('', choices or kwargs, type=str)
+
+def option_enum(choices: Dict[str, T_StrFloat], **kwargs: T_StrFloat) -> typing.Type[T_StrFloat]:
+    choices = choices or kwargs
+    return Enum('', choices, type=type(next(iter(choices.values()))))
+
 
 class ApplicationCommandType(int, Enum):
     CHAT_INPUT = 1
