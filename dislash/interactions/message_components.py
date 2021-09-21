@@ -140,7 +140,7 @@ class SelectOption:
     description : :class:`str`
         an additional description of the option, max 50 characters
     emoji : :class:`str`
-        well add an emoji to the option
+        will add an emoji to the option
     default : :class:`bool`
         will render this option as selected by default
     """
