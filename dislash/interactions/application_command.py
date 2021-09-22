@@ -360,23 +360,25 @@ class ApplicationCommand(ABC):
 
 
 class UserCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, **kwargs: ApplicationCommandPayload) -> None:
         super().__init__(ApplicationCommandType.USER, **kwargs)
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<UserCommand name={self.name!r}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return self.type == other.type and self.name == other.name
 
-    def to_dict(self, **kwargs):
+    def to_dict(self) -> ApplicationCommandPayload:
         return {"type": self.type, "name": self.name}
 
     @classmethod
-    def from_dict(cls, data: dict):
-        if data.pop("type", 1) == ApplicationCommandType.USER:
+    def from_dict(cls, data: ApplicationCommandPayload) -> UserCommand:
+        if data.get("type", 1) == ApplicationCommandType.USER:
             return UserCommand(**data)
+        else:
+            raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.USER}")
 
 
 class MessageCommand(ApplicationCommand):
