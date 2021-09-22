@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 import discord
 
 from .app_command_interaction import SlashInteraction
-from .types import OptionPayload, OptionChoicePayload
+from .types import OptionPayload, OptionChoicePayload, ApplicationCommandType, ApplicationCommandPayload
 
 __all__ = (
     "application_command_factory",
@@ -333,32 +333,29 @@ def option_enum(choices: Dict[str, T_StrFloat], **kwargs: T_StrFloat) -> typing.
     return Enum('', choices, type=type(next(iter(choices.values()))))
 
 
-class ApplicationCommandType(int, Enum):
-    CHAT_INPUT = 1
-    SLASH = 1
-    USER = 2
-    MESSAGE = 3
-
-
 class ApplicationCommand(ABC):
     """
     Base class for application commands
     """
 
+    id: int
     name: str
+    type: ApplicationCommandType
+    application_id: Optional[int] = None
 
-    def __init__(self, type: ApplicationCommandType, **kwargs):
+    def __init__(self, type: ApplicationCommandType, **kwargs: ApplicationCommandPayload) -> None:
         self.type = type
-        self.id: int = int(kwargs.pop("id", 0))
-        self.application_id = kwargs.pop("application_id", None)
-        if self.application_id:
-            self.application_id = int(self.application_id)
+        self.id = int(kwargs.get("id", 0))
+        if application_id := kwargs.get("application_id"):
+            self.application_id = int(application_id)
+        else:
+            self.application_id = application_id
 
-    def __eq__(self, other):
+    def __eq__(self, _):  # type: ignore
         return False
 
     @abstractmethod
-    def to_dict(self, **kwargs):
+    def to_dict(self) -> ApplicationCommandPayload:
         raise NotImplementedError
 
 
