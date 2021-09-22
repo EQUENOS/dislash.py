@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 import discord
 
 from .app_command_interaction import SlashInteraction
-from .types import OptionPayload, OptionChoicePayload, ApplicationCommandType, ApplicationCommandPayload, SlashCommandPayload
+from .types import ApplicationCommandPermissionsPayload, OptionPayload, OptionChoicePayload, ApplicationCommandType, ApplicationCommandPayload, RawCommandPermissionPayload, SlashCommandPayload
 
 __all__ = (
     "application_command_factory",
@@ -517,16 +517,18 @@ class ApplicationCommandPermissions:
         might be more convenient.
     """
 
-    def __init__(self, raw_permissions: list = None):
+    permissions: List[RawCommandPermission]
+
+    def __init__(self, raw_permissions: Optional[List[RawCommandPermission]] = None) -> None:
         self.permissions = raw_permissions or []
 
-    def __repr__(self):
-        return "<SlashCommandPermissions permissions={0.permissions!r}>".format(self)
+    def __repr__(self) -> str:
+        return "<{0.__name__} permissions={0.permissions!r}>".format(self)
 
     @classmethod
-    def from_pairs(cls, permissions: dict):
+    def from_pairs(cls, permissions: Dict[Union[discord.Role, discord.User], bool]) -> ApplicationCommandPermissions:
         """
-        Creates :class:`SlashCommandPermissions` using
+        Creates :class:`ApplicationCommandPermissions` using
         instances of :class:`discord.Role` and :class:`discord.User`
 
         Parameters
@@ -536,12 +538,16 @@ class ApplicationCommandPermissions:
         """
         raw_perms = [RawCommandPermission.from_pair(target, perm) for target, perm in permissions.items()]
 
-        return SlashCommandPermissions(raw_perms)
+        return ApplicationCommandPermissions(raw_perms)
 
     @classmethod
-    def from_ids(cls, role_perms: dict = None, user_perms: dict = None):
+    def from_ids(
+        cls,
+        role_perms: Optional[Dict[int, bool]] = None,
+        user_perms: Optional[Dict[int, bool]] = None,
+    ) -> ApplicationCommandPermissions:
         """
-        Creates :class:`SlashCommandPermissions` from
+        Creates :class:`ApplicationCommandPermissions` from
         2 dictionaries of IDs and permissions.
 
         Parameters
@@ -557,13 +563,13 @@ class ApplicationCommandPermissions:
 
         for user_id, perm in user_perms.items():
             raw_perms.append(RawCommandPermission(user_id, 2, perm))
-        return SlashCommandPermissions(raw_perms)
+        return ApplicationCommandPermissions(raw_perms)
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: ApplicationCommandPermissionsPayload) -> ApplicationCommandPermissions:
         return SlashCommandPermissions([RawCommandPermission.from_dict(perm) for perm in data["permissions"]])
 
-    def to_dict(self):
+    def to_dict(self) -> ApplicationCommandPermissionsPayload:
         return {"permissions": [perm.to_dict() for perm in self.permissions]}
 
 
@@ -583,16 +589,20 @@ class RawCommandPermission:
 
     __slots__ = ("id", "type", "permission")
 
-    def __init__(self, id: int, type: int, permission: bool):
+    id: int
+    type: int
+    permission: bool
+
+    def __init__(self, id: int, type: int, permission: bool) -> None:
         self.id = id
         self.type = type
         self.permission = permission
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RawCommandPermission id={0.id} type={0.type} permission={0.permission}>".format(self)
 
     @classmethod
-    def from_pair(cls, target: Union[discord.Role, discord.User], permission: bool):
+    def from_pair(cls, target: Union[discord.Role, discord.User], permission: bool) -> RawCommandPermission:
         if not isinstance(target, (discord.Role, discord.User)):
             raise discord.InvalidArgument("target should be Role or User")
         if not isinstance(permission, bool):
@@ -602,10 +612,10 @@ class RawCommandPermission:
         )
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return RawCommandPermission(id=data["id"], type=data["type"], permission=data["permission"])
+    def from_dict(cls, data: RawCommandPermissionPayload) -> RawCommandPermission:
+        return RawCommandPermission(**data)
 
-    def to_dict(self):
+    def to_dict(self) -> RawCommandPermissionPayload:
         return {"id": self.id, "type": self.type, "permission": self.permission}
 
 

@@ -35,3 +35,13 @@ class SlashCommandPayload(ApplicationCommandPayload, total=False):
     description: str
     options: Optional[List[OptionPayload]]
     default_permission: bool
+
+
+class RawCommandPermissionPayload(TypedDict):
+    id: int
+    type: int
+    permission: bool
+
+
+class ApplicationCommandPermissionsPayload(TypedDict):
+    permissions: List[RawCommandPermissionPayload]
