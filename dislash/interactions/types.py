@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, List, Optional, TypedDict
 
 
@@ -12,4 +13,4 @@ class OptionPayload(TypedDict, total=False):
     required: bool
     type: int
     choices: List[OptionChoicePayload]
-    options: List["OptionPayload"]  # type: ignore
+    options: List[OptionPayload]  # type: ignore
