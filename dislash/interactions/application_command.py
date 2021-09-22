@@ -153,12 +153,12 @@ class Option:
                     self._choice_connectors[valid_value] = choice.value
                     choice.value = valid_value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         string = "name='{0.name}' description='{0.description}' type={0.type} required={0.required}".format(self)
-        if len(self.options) > 0:
-            string = f"{string} options={self.options}"
-        if len(self.choices) > 0:
-            string = f"{string} choices={self.choices}"
+        if self.options:
+            string += " options={self.options}"
+        if self.choices:
+            string += " choices={self.choices}"
         return f"<Option {string}>"
 
     def __eq__(self, other):
