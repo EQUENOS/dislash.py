@@ -304,7 +304,7 @@ def option_param(
     desc: Optional[str] = None,
     description: Optional[str] = None,
     converter: Optional[Callable[[SlashInteraction, Any], Any]] = None,
-) -> Any:
+) -> OptionParam:
     if desc is not None and description is not None:
         raise TypeError("Only desc or description may be used, not both")
     return OptionParam(default, name=name, description=desc or description, converter=converter)
@@ -349,7 +349,7 @@ class UserCommand(ApplicationCommand):
     def __repr__(self) -> str:
         return f"<UserCommand name={self.name!r}>"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other):  # type: ignore
         return self.type == other.type and self.name == other.name
 
     def to_dict(self) -> ApplicationCommandPayload:
@@ -364,7 +364,7 @@ class UserCommand(ApplicationCommand):
 
 
 class MessageCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs: Any) -> str:
+    def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(ApplicationCommandType.MESSAGE, **kwargs)
         self.name = name
 
@@ -411,7 +411,7 @@ class SlashCommand(ApplicationCommand):
         description: str,
         options: Optional[List[Option]] = None,
         default_permission: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
@@ -441,8 +441,17 @@ class SlashCommand(ApplicationCommand):
         if payload.get("type", 1) != ApplicationCommandType.CHAT_INPUT:
             raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.CHAT_INPUT}")
 
-        options = [Option.from_dict(p) for p in payload.pop["options"]]
-        return SlashCommand(**payload, options=options)
+        options = payload.pop("options") or []
+        return SlashCommand(
+            id=payload["id"],
+            name=payload["name"],
+            description=payload["description"],
+            type=payload["type"],
+            default_permission=payload["default_permission"],
+            options=[
+                Option.from_dict(p) for p in options
+            ],
+        )
 
     def add_option(
         self,
