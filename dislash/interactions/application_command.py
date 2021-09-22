@@ -85,14 +85,17 @@ class OptionChoice:
         the value of the option-choice
     """
 
-    def __init__(self, name: str, value: Any):
+    name: str
+    value: Any
+
+    def __init__(self, name: str, value: Any) -> None:
         self.name = name
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<OptionChoice name='{0.name}' value={0.value}>".format(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return self.name == other.name and self.value == other.value
 
 
