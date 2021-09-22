@@ -201,19 +201,19 @@ class Option:
     def add_option(
         self,
         name: str,
-        description: str = None,
-        type: int = None,
+        description: Optional[str] = None,
+        type: int = 3,
         required: bool = False,
-        choices: List[OptionChoice] = None,
-        options: list = None,
-    ):
+        choices: Optional[List[OptionChoice]] = None,
+        options: Optional[List["Option"]] = None,
+    ) -> None:
         """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
         """
         if self.type == 1:
-            if type and type < 3:
+            if type < 3:
                 raise ValueError("sub_command can only be nested in a sub_command_group")
         elif self.type == 2:
             if type != 1:
