@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 import typing
 from abc import ABC, abstractmethod
@@ -121,7 +122,7 @@ class Option:
     type: int
     required: bool
     choices: List[OptionChoice]
-    options: List["Option"]
+    options: List[Option]
 
     def __init__(
         self,
@@ -130,7 +131,7 @@ class Option:
         type: int = 3,
         required: bool = False,
         choices: Optional[List[OptionChoice]] = None,
-        options: Optional[List["Option"]] = None,
+        options: Optional[List[Option]] = None,
     ) -> None:
         assert name.islower(), f"Option name {name!r} must be lowercase"
         self.name = name
@@ -180,7 +181,7 @@ class Option:
         )
 
     @classmethod
-    def from_dict(cls, payload: OptionPayload) -> "Option":
+    def from_dict(cls, payload: OptionPayload) -> Option:
         return Option(
             name=payload["name"],
             description=payload["description"],
@@ -222,7 +223,7 @@ class Option:
         type: int = 3,
         required: bool = False,
         choices: Optional[List[OptionChoice]] = None,
-        options: Optional[List["Option"]] = None,
+        options: Optional[List[Option]] = None,
     ) -> None:
         """
         Adds an option to the current list of options
