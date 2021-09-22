@@ -398,5 +398,4 @@ def slash_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], Comma
     return decorator
 
 
-def command(*args, **kwargs):
-    return slash_command(*args, **kwargs)
+command = slash_command
