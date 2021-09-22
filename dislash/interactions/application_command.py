@@ -116,6 +116,13 @@ class Option:
 
     __slots__ = ("name", "description", "type", "required", "choices", "options", "_choice_connectors")
 
+    name: str
+    description: Optional[str]
+    type: int
+    required: bool
+    choices: List[OptionChoice]
+    options: List["Option"]
+
     def __init__(
         self,
         name: str,
