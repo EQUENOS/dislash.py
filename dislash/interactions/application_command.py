@@ -325,7 +325,7 @@ class ApplicationCommand(ABC):
     type: ApplicationCommandType
     application_id: Optional[int] = None
 
-    def __init__(self, type: ApplicationCommandType, **kwargs: ApplicationCommandPayload) -> None:
+    def __init__(self, type: ApplicationCommandType, **kwargs: Any) -> None:
         self.type = type
         self.id = int(kwargs.get("id", 0))
         if application_id := kwargs.get("application_id"):
@@ -342,7 +342,7 @@ class ApplicationCommand(ABC):
 
 
 class UserCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs: ApplicationCommandPayload) -> None:
+    def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(ApplicationCommandType.USER, **kwargs)
         self.name = name
 
@@ -364,7 +364,7 @@ class UserCommand(ApplicationCommand):
 
 
 class MessageCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs: ApplicationCommandPayload) -> str:
+    def __init__(self, name: str, **kwargs: Any) -> str:
         super().__init__(ApplicationCommandType.MESSAGE, **kwargs)
         self.name = name
 
@@ -411,7 +411,7 @@ class SlashCommand(ApplicationCommand):
         description: str,
         options: Optional[List[Option]] = None,
         default_permission: bool = True,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
