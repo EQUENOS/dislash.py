@@ -30,21 +30,18 @@ __all__ = (
 
 T_StrFloat = TypeVar('T_StrFloat', str, float)
 
-def application_command_factory(data: Dict[str, Any]) -> "ApplicationCommand":
+
+def application_command_factory(data: ApplicationCommandPayload) -> ApplicationCommand:
     cmd_type = data.get("type", 1)
     if cmd_type == ApplicationCommandType.CHAT_INPUT:
-        cmd = SlashCommand.from_dict(data)
+        data = typing.cast(SlashCommandPayload, data)
+        return SlashCommand.from_dict(data)
     elif cmd_type == ApplicationCommandType.USER:
-        cmd = UserCommand.from_dict(data)
+        return UserCommand.from_dict(data)
     elif cmd_type == ApplicationCommandType.MESSAGE:
-        cmd = MessageCommand.from_dict(data)
+        return MessageCommand.from_dict(data)
     else:
-        cmd = None
-
-    if cmd is not None:
-        return cmd
-
-    raise ValueError("Invalid command type")
+        raise ValueError("Invalid command type")
 
 
 class OptionType(int, Enum):
