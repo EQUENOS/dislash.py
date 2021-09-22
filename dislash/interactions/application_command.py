@@ -179,7 +179,7 @@ class Option:
             payload["choices"] = [OptionChoice(**p) for p in payload["choices"]]
         return Option(**payload)
 
-    def add_choice(self, name: str, value: Any):
+    def add_choice(self, name: str, value: Any) -> None:
         """
         Adds an OptionChoice to the list of current choices
 
