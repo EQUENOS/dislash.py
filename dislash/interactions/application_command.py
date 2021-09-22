@@ -382,23 +382,25 @@ class UserCommand(ApplicationCommand):
 
 
 class MessageCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, **kwargs: ApplicationCommandPayload) -> str:
         super().__init__(ApplicationCommandType.MESSAGE, **kwargs)
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<MessageCommand name={self.name!r}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return self.type == other.type and self.name == other.name
 
-    def to_dict(self, **kwargs):
+    def to_dict(self) -> ApplicationCommandPayload:
         return {"type": self.type, "name": self.name}
 
     @classmethod
-    def from_dict(cls, data: dict):
-        if data.pop("type", 0) == ApplicationCommandType.MESSAGE:
+    def from_dict(cls, data: ApplicationCommandPayload) -> MessageCommand:
+        if data.get("type", 0) == ApplicationCommandType.MESSAGE:
             return MessageCommand(**data)
+        else:
+            raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.MESSAGE}")
 
 
 class SlashCommand(ApplicationCommand):
