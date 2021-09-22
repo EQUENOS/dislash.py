@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 import discord
 
 from .app_command_interaction import SlashInteraction
+from .types import OptionPayload, OptionChoicePayload
 
 __all__ = (
     "application_command_factory",
@@ -172,12 +173,21 @@ class Option:
         )
 
     @classmethod
-    def from_dict(cls, payload: dict):
-        if "options" in payload:
-            payload["options"] = [Option.from_dict(p) for p in payload["options"]]
-        if "choices" in payload:
-            payload["choices"] = [OptionChoice(**p) for p in payload["choices"]]
-        return Option(**payload)
+    def from_dict(cls, payload: OptionPayload) -> "Option":
+        return Option(
+            name=payload["name"],
+            description=payload["description"],
+            type=payload["type"],
+            required=payload["required"],
+            options=[
+                Option.from_dict(p) for p
+                in payload.get("options", ())
+            ],
+            choices=[
+                OptionChoice(**p) for p
+                in payload.get("options", ())
+            ],
+        )
 
     def add_choice(self, name: str, value: Any) -> None:
         """
@@ -222,15 +232,21 @@ class Option:
             Option(name=name, description=description, type=type, required=required, choices=choices, options=options)
         )
 
-    def to_dict(self):
-        payload = {"name": self.name, "description": self.description, "type": self.type}
-        if self.required:
-            payload["required"] = True
-        if len(self.choices) > 0:
-            payload["choices"] = [c.__dict__ for c in self.choices]
-        if len(self.options) > 0:
-            payload["options"] = [o.to_dict() for o in self.options]
-        return payload
+    def to_dict(self) -> OptionPayload:
+        return OptionPayload(
+            name=self.name,
+            description=self.description,
+            type=self.type,
+            required=self.required,
+            choices=[
+                OptionChoicePayload(name=choice.name, value=choice.value)
+                for choice in self.choices
+            ],
+            options=[
+                option.to_dict() for
+                option in self.options
+            ],
+        )
 
 
 class OptionParam:
