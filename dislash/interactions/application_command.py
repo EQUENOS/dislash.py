@@ -161,7 +161,7 @@ class Option:
             string += " choices={self.choices}"
         return f"<Option {string}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return (
             self.name == other.name
             and self.description == other.description
