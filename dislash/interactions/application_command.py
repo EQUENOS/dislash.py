@@ -8,7 +8,16 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 import discord
 
 from .app_command_interaction import SlashInteraction
-from .types import ApplicationCommandPermissionsPayload, OptionPayload, OptionChoicePayload, ApplicationCommandType, ApplicationCommandPayload, RawCommandPermissionPayload, SlashCommandPayload
+from .types import (
+    ApplicationCommandPayload,
+    ApplicationCommandPermissionsPayload,
+    ApplicationCommandType,
+    OptionChoicePayload,
+    OptionPayload,
+    OptionType,
+    RawCommandPermissionPayload,
+    SlashCommandPayload,
+)
 
 __all__ = (
     "application_command_factory",
@@ -42,34 +51,6 @@ def application_command_factory(data: ApplicationCommandPayload) -> ApplicationC
         return MessageCommand.from_dict(data)
     else:
         raise ValueError("Invalid command type")
-
-
-class OptionType(int, Enum):
-    """
-    Attributes
-    ----------
-    SUB_COMMAND = 1
-    SUB_COMMAND_GROUP = 2
-    STRING = 3
-    INTEGER = 4
-    BOOLEAN = 5
-    USER = 6
-    CHANNEL = 7
-    ROLE = 8
-    MENTIONABLE = 9
-    NUMBER = 10
-    """
-
-    SUB_COMMAND = 1
-    SUB_COMMAND_GROUP = 2
-    STRING = 3
-    INTEGER = 4
-    BOOLEAN = 5
-    USER = 6
-    CHANNEL = 7
-    ROLE = 8
-    MENTIONABLE = 9
-    NUMBER = 10
 
 
 class OptionChoice:
