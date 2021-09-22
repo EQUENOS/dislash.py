@@ -2,7 +2,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 
 import discord
 
@@ -118,16 +118,16 @@ class Option:
     def __init__(
         self,
         name: str,
-        description: str = None,
-        type: int = None,
+        description: Optional[str] = None,
+        type: int = 3,
         required: bool = False,
-        choices: List[OptionChoice] = None,
-        options: List["Option"] = None,
-    ):
+        choices: Optional[List[OptionChoice]] = None,
+        options: Optional[List["Option"]] = None,
+    ) -> None:
         assert name.islower(), f"Option name {name!r} must be lowercase"
         self.name = name
         self.description = description
-        self.type = type or 3
+        self.type = type
         self.required = required
         self.choices = choices or []
         if options is not None:
@@ -140,7 +140,7 @@ class Option:
                     if option.type != 1:
                         raise ValueError("Expected sub_command in this sub_command_group")
         self.options = options or []
-        self._choice_connectors = {}
+        self._choice_connectors: Dict[Union[int, str], Any] = {}
         # Wrap choices
         for i, choice in enumerate(self.choices):
             if self.type == Type.INTEGER:
