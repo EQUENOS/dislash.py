@@ -29,3 +29,9 @@ class ApplicationCommandPayload(TypedDict, total=False):
     name: str
     type: ApplicationCommandType
     application_id: Optional[SupportsInt]
+
+
+class SlashCommandPayload(ApplicationCommandPayload, total=False):
+    description: str
+    options: Optional[List[OptionPayload]]
+    default_permission: bool

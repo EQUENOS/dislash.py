@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 import discord
 
 from .app_command_interaction import SlashInteraction
-from .types import OptionPayload, OptionChoicePayload, ApplicationCommandType, ApplicationCommandPayload
+from .types import OptionPayload, OptionChoicePayload, ApplicationCommandType, ApplicationCommandPayload, SlashCommandPayload
 
 __all__ = (
     "application_command_factory",
@@ -419,7 +419,18 @@ class SlashCommand(ApplicationCommand):
         Whether the command is enabled by default when the app is added to a guild
     """
 
-    def __init__(self, name: str, description: str, options: List[Option] = None, default_permission: bool = True, **kwargs):
+    options: List[Option]
+    default_permission: bool
+    permissions: SlashCommandPermissions
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        options: Optional[List[Option]] = None,
+        default_permission: bool = True,
+        **kwargs
+    ) -> None:
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
         assert (
@@ -432,10 +443,10 @@ class SlashCommand(ApplicationCommand):
         self.default_permission = default_permission
         self.permissions = SlashCommandPermissions()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SlashCommand name='{0.name}' description='{0.description}' options={0.options}>".format(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return (
             self.type == other.type
             and self.name == other.name
@@ -444,33 +455,44 @@ class SlashCommand(ApplicationCommand):
         )
 
     @classmethod
-    def from_dict(cls, payload: dict):
-        if payload.pop("type", 1) != ApplicationCommandType.CHAT_INPUT:
-            return None
-        if "options" in payload:
-            payload["options"] = [Option.from_dict(p) for p in payload["options"]]
-        return SlashCommand(**payload)
+    def from_dict(cls, payload: SlashCommandPayload) -> SlashCommand:
+        if payload.get("type", 1) != ApplicationCommandType.CHAT_INPUT:
+            raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.CHAT_INPUT}")
+
+        options = [Option.from_dict(p) for p in payload.pop["options"]]
+        return SlashCommand(**payload, options=options)
 
     def add_option(
         self,
         name: str,
-        description: str = None,
-        type: int = None,
+        description: Optional[str] = None,
+        type: int = 3,
         required: bool = False,
-        choices: List[OptionChoice] = None,
-        options: list = None,
-    ):
+        choices: Optional[List[OptionChoice]] = None,
+        options: Optional[List[Option]] = None,
+    ) -> None:
         """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
         """
         self.options.append(
-            Option(name=name, description=description, type=type, required=required, choices=choices, options=options)
+            Option(
+                name=name,
+                description=description,
+                type=type,
+                required=required,
+                choices=choices,
+                options=options
+            )
         )
 
-    def to_dict(self, *, hide_name=False):
-        res = {"type": self.type, "description": self.description, "options": [o.to_dict() for o in self.options]}
+    def to_dict(self, *, hide_name: bool = False) -> SlashCommandPayload:
+        res: SlashCommandPayload = {
+            "type": self.type,
+            "description": self.description,
+            "options": [o.to_dict() for o in self.options],
+        }
         if not self.default_permission:
             res["default_permission"] = False
         if not hide_name:
