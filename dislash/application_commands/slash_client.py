@@ -263,7 +263,7 @@ class InteractionClient:
 
     @property
     def global_commands(self) -> List[ApplicationCommand]:
-        return [sc for sc in self._global_commands.values()]
+        return list(self._global_commands.values())
 
     def event(self, func: Callable[..., Awaitable]) -> Callable[..., Awaitable]:
         """
@@ -286,7 +286,8 @@ class InteractionClient:
             self.events[name] = func
         return func
 
-    def slash_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
+    @staticmethod
+    def slash_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], CommandParent]:
         """
         A decorator that allows to build a slash command.
 
@@ -313,10 +314,12 @@ class InteractionClient:
         """
         return slash_command(*args, **kwargs)
 
-    def user_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableUserCommand]:
+    @staticmethod
+    def user_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableUserCommand]:
         return user_command(*args, **kwargs)
 
-    def message_command(self, *args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableMessageCommand]:
+    @staticmethod
+    def message_command(*args, **kwargs) -> Callable[[Callable[..., Awaitable]], InvokableMessageCommand]:
         return message_command(*args, **kwargs)
 
     # Getters
@@ -416,7 +419,7 @@ class InteractionClient:
         ~:class:`List[ApplicationCommand]`
         """
         granula = self._guild_commands.get(guild_id, {})
-        return [sc for sc in granula.values()]
+        return list(granula.values())
 
     # Straight references to API
     async def fetch_global_commands(self):
@@ -1021,7 +1024,8 @@ class InteractionClient:
                         guilds[guild_id].append(cmd.registerable)
         return global_cmds, guilds
 
-    def _modify_parser(self, parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
+    @staticmethod
+    def _modify_parser(parsers: Dict[str, Callable[..., Any]], event: str, func: Callable[[Any], Any]):
         def empty_func(data):
             pass
 
@@ -1263,13 +1267,13 @@ class InteractionClient:
         if app_command is None:
             await self._maybe_unregister_commands(inter.guild_id)
             return
+
+        guild_ids = app_command.guild_ids or self._test_guilds
+        is_global = self.get_global_command(inter.data.id) is not None
+        if guild_ids is None:
+            usable = is_global
         else:
-            guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None
-            if guild_ids is None:
-                usable = is_global
-            else:
-                usable = not is_global and inter.guild_id in guild_ids
+            usable = not is_global and inter.guild_id in guild_ids
         if usable:
             try:
                 await app_command.invoke(inter)
@@ -1286,13 +1290,13 @@ class InteractionClient:
         if app_command is None:
             await self._maybe_unregister_commands(inter.guild_id)
             return
+
+        guild_ids = app_command.guild_ids or self._test_guilds
+        is_global = self.get_global_command(inter.data.id) is not None
+        if guild_ids is None:
+            usable = is_global
         else:
-            guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None
-            if guild_ids is None:
-                usable = is_global
-            else:
-                usable = not is_global and inter.guild_id in guild_ids
+            usable = not is_global and inter.guild_id in guild_ids
         if usable:
             try:
                 await app_command.invoke(inter)
@@ -1309,13 +1313,12 @@ class InteractionClient:
         if app_command is None:
             await self._maybe_unregister_commands(inter.guild_id)
             return
+        guild_ids = app_command.guild_ids or self._test_guilds
+        is_global = self.get_global_command(inter.data.id) is not None
+        if guild_ids is None:
+            usable = is_global
         else:
-            guild_ids = app_command.guild_ids or self._test_guilds
-            is_global = self.get_global_command(inter.data.id) is not None
-            if guild_ids is None:
-                usable = is_global
-            else:
-                usable = not is_global and inter.guild_id in guild_ids
+            usable = not is_global and inter.guild_id in guild_ids
         if usable:
             try:
                 await app_command.invoke(inter)

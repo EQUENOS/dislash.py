@@ -95,8 +95,7 @@ class BaseSlashCommand(InvokableApplicationCommand):
         argcount = code.co_argcount + code.co_kwonlyargcount
         if from_cog:
             return argcount > 2
-        else:
-            return argcount > 1
+        return argcount > 1
 
     async def _maybe_cog_call(
         self, cog: Any, inter: SlashInteraction, data: Union[SlashInteractionData, InteractionDataOption]
@@ -109,9 +108,8 @@ class BaseSlashCommand(InvokableApplicationCommand):
             kwargs = self._process_arguments(inter, kwargs)
 
         if cog:
-            return await self(cog, inter, **kwargs)
-        else:
-            return await self(inter, **kwargs)
+            return await self(cog, inter, **params)
+        return await self(inter, **params)
 
     def _process_arguments(self, inter: SlashInteraction, kwargs: Dict[str, Any]):
         sig = inspect.signature(self.func)
@@ -245,6 +243,48 @@ class CommandParent(BaseSlashCommand):
         self._cog = cog
         self._cog_name = cog.qualified_name
 
+    def _extract_options(self, func: Callable) -> Tuple[List[Option], Dict[str, str]]:
+        """Helper function to extract options and connectors from a function"""
+        empty = inspect.Parameter.empty  # helper
+
+        sig = inspect.signature(func)
+        if inspect.ismethod(func):
+            params = list(sig.parameters.values())[2:]
+        else:
+            params = list(sig.parameters.values())[1:]
+
+        options = []
+        connectors = {}
+        for param in params:
+            option_type, choices = self._parse_annotation(param.annotation)
+
+            if isinstance(param.default, OptionParam):
+                d = param.default
+                option = Option(d.name or param.name, d.description, option_type, d.required, choices)
+                if d.name is not None:
+                    connectors[d.name] = param.name
+            else:
+                option = Option(param.name, "-", type=option_type, required=param.default is empty, choices=choices)
+            
+            options.append(option)
+        
+        return options, connectors
+    
+    @staticmethod
+    def _parse_annotation(annotation: Any) -> Union[Tuple[int, None], Tuple[Literal[3], List[OptionChoice]]]:
+        """Extracts type or choices from an annotation"""
+        if annotation is inspect.Parameter.empty or annotation is Any:
+            return 3, None
+        elif get_origin(annotation) is Literal:
+            return 3, [OptionChoice(str(i), i) for i in annotation.__args__]
+        elif isinstance(annotation, EnumMeta):
+            return 3, [OptionChoice(str(i.name).replace('_', ' '), i.value) for i in annotation] # type: ignore
+        elif annotation in OptionParam.TYPES:
+            return OptionParam.TYPES[annotation], None
+        
+        valid = ", ".join(i.__name__ for i in OptionParam.TYPES)
+        raise TypeError(f"{annotation} is not a valid type. Must be one of: " + valid)
+        
     def sub_command(
         self,
         name: str = None,

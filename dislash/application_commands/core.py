@@ -77,8 +77,7 @@ class InvokableApplicationCommand:
             return True
         if issubclass(typ, discord.User):
             return isinstance(obj, (discord.User, discord.Member, discord.ClientUser))
-        else:
-            return isinstance(obj, typ)
+        return isinstance(obj, typ)
 
     def _prepare_cooldowns(self, inter: Any):
         if self._buckets.valid:
@@ -100,16 +99,14 @@ class InvokableApplicationCommand:
     async def _maybe_cog_call(self, cog: Any, inter: BaseInteraction):
         if cog:
             return await self(cog, inter)
-        else:
-            return await self(inter)
+        return await self(inter)
 
     async def _invoke_error_handler(self, cog: Any, inter: BaseInteraction, error: Exception):
         if self._error_handler is None:
             return
         if cog:
             await self._error_handler(cog, inter, error)
-        else:
-            await self._error_handler(inter, error)
+        await self._error_handler(inter, error)
 
     def error(self, func: Callable[..., Awaitable]):
         """

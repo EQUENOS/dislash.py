@@ -73,7 +73,8 @@ class BaseInteraction:
         if "guild_id" in data:
             self.guild_id = int(data["guild_id"])
             self.guild = client.get_guild(self.guild_id)
-            assert self.guild is not None, "invalid data"
+            if self.guild is None:
+                raise AssertionError("invalid data")
             self.author = discord.Member(data=data["member"], guild=self.guild, state=state)
         else:
             self.guild_id = None
