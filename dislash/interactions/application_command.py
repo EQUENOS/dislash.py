@@ -3,7 +3,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Hashable, List, Optional, TypeVar, Union
 
 import discord
 
@@ -26,7 +26,6 @@ __all__ = (
     "SlashCommand",
     "UserCommand",
     "MessageCommand",
-    "OptionType",
     "OptionChoice",
     "Option",
     "OptionParam",
@@ -252,7 +251,7 @@ class OptionParam:
         the option's converter, takes in an interaction and the argument
     """
 
-    TYPES: Dict[type, int] = {
+    TYPES: Dict[Hashable, int] = {
         str: 3,
         int: 4,
         bool: 5,
@@ -271,13 +270,18 @@ class OptionParam:
         float: 10,
     }
 
+    default: Any
+    name: Optional[str]
+    description: str
+    converter: Optional[Callable[[SlashInteraction, Any], Any]]
+
     def __init__(
         self,
-        default: Any = ...,
+        default: Any = None,
         *,
-        name: str = None,
-        description: str = None,
-        converter: Callable[[SlashInteraction, Any], Any] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        converter: Optional[Callable[[SlashInteraction, Any], Any]] = None,
     ) -> None:
         self.default = default
         self.name = name
@@ -285,10 +289,10 @@ class OptionParam:
         self.converter = converter
 
     @property
-    def required(self):
-        return self.default is ...
+    def required(self) -> bool:
+        return self.default is None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         string = "default={0.default} name='{0.name}' description='{0.description}'".format(self)
         return f"<Option {string}>"
 
@@ -296,17 +300,17 @@ class OptionParam:
 def option_param(
     default: Any = ...,
     *,
-    name: str = None,
-    desc: str = None,
-    description: str = None,
-    converter: Callable[[SlashInteraction, Any], Any] = None,
+    name: Optional[str] = None,
+    desc: Optional[str] = None,
+    description: Optional[str] = None,
+    converter: Optional[Callable[[SlashInteraction, Any], Any]] = None,
 ) -> Any:
-    if desc and description:
+    if desc is not None and description is not None:
         raise TypeError("Only desc or description may be used, not both")
     return OptionParam(default, name=name, description=desc or description, converter=converter)
 
 
-def option_enum(choices: Dict[str, T_StrFloat], **kwargs: T_StrFloat) -> typing.Type[T_StrFloat]:
+def option_enum(choices: Dict[str, T_StrFloat], **kwargs: T_StrFloat) -> Enum:
     choices = choices or kwargs
     return Enum('', choices, type=type(next(iter(choices.values()))))
 
@@ -345,7 +349,7 @@ class UserCommand(ApplicationCommand):
     def __repr__(self) -> str:
         return f"<UserCommand name={self.name!r}>"
 
-    def __eq__(self, other):  # type: ignore
+    def __eq__(self, other: Any) -> bool:
         return self.type == other.type and self.name == other.name
 
     def to_dict(self) -> ApplicationCommandPayload:
