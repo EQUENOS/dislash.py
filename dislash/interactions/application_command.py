@@ -270,14 +270,14 @@ class OptionParam:
         float: 10,
     }
 
-    default: Any
+    default: Any = ...
     name: Optional[str]
     description: str
     converter: Optional[Callable[[SlashInteraction, Any], Any]]
 
     def __init__(
         self,
-        default: Any = None,
+        default: Any = ...,
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
@@ -290,7 +290,7 @@ class OptionParam:
 
     @property
     def required(self) -> bool:
-        return self.default is None
+        return self.default is ...
 
     def __repr__(self) -> str:
         string = "default={0.default} name='{0.name}' description='{0.description}'".format(self)
