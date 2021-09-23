@@ -83,3 +83,9 @@ class SelectOptionPayload(TypedDict, total=False):
     description: Optional[str]
     emoji: Optional[Union[str, PartialEmoji]]
     default: bool
+
+
+class ComponentPayload(TypedDict, total=False):
+    disabled: bool
+    custom_id: Optional[str]
+    type: int

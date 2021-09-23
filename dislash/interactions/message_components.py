@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 import discord
 from discord import PartialEmoji
 
-from .types import SelectOptionPayload
+from .types import ComponentPayload, SelectOptionPayload
 
 __all__ = (
     "auto_rows",
@@ -209,12 +209,13 @@ class Component(ABC):
 
     disabled: bool
     custom_id: Optional[str]
+    type: int
 
-    def __init__(self, type: int):
+    def __init__(self, type: int) -> None:
         self.type = type
 
     @abstractmethod
-    def to_dict(self):
+    def to_dict(self) -> ComponentPayload:
         raise NotImplementedError
 
 
