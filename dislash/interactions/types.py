@@ -130,3 +130,7 @@ class ButtonPayload(ComponentPayload, total=False):
     label: Optional[str]
     emoji: Optional[Union[PartialEmoji, str]]
     url: Optional[str]
+
+
+class ActionRowPayload(ComponentPayload):
+    components: Optional[List[ComponentPayload]]

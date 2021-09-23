@@ -2,12 +2,12 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import discord
 from discord import PartialEmoji
 
-from .types import ComponentPayload, SelectMenuPayload, SelectOptionPayload, ButtonStyle, ButtonPayload
+from .types import ActionRowPayload, ComponentPayload, SelectMenuPayload, SelectOptionPayload, ButtonStyle, ButtonPayload
 
 __all__ = (
     "auto_rows",
@@ -433,6 +433,8 @@ class ActionRow(Component):
         a list of up to 5 buttons to place in a row
     """
 
+    components: List[Component]
+
     def __init__(self, *components: Component):
         self._limit = 5
         if len(components) > self._limit:
@@ -441,45 +443,50 @@ class ActionRow(Component):
             raise discord.InvalidArgument("components must be a list of Component")
 
         super().__init__(1)
-        self.components = list(components)
+        self.components = list(*components)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionRow components={0.components!r}>".format(self)
 
     @property
-    def buttons(self):
+    def buttons(self) -> List[Component]:
         return self.components
 
+    @property
+    def _buttons(self) -> Iterable[Button]:
+        return (c for c in self.components if isinstance(c, Button))
+
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: ActionRowPayload) -> ActionRow:
         buttons = [_component_factory(elem) for elem in data.get("components", [])]
-        return ActionRow(*buttons)
+        return cls(*buttons)
 
-    def to_dict(self):
-        return {"type": self.type, "components": [comp.to_dict() for comp in self.components]}
+    def to_dict(self) -> ActionRowPayload:
+        return ActionRowPayload(
+            type=self.type,
+            components=[c.to_dict() for c in self.components],
+        )
 
-    def disable_buttons(self, *positions: int):
+    def disable_buttons(self, *positions: int) -> None:
         """
         Sets ``disabled`` to ``True`` for all buttons in this row.
         """
-        if len(positions) == 0:
-            for component in self.components:
-                if component.type == ComponentType.Button:
-                    component.disabled = True
+        if not positions:
+            for button in self._buttons:
+                button.disabled = True
         else:
             for i in positions:
                 component = self.components[i]
                 if component.type == ComponentType.Button:
                     component.disabled = True
 
-    def enable_buttons(self, *positions: int):
+    def enable_buttons(self, *positions: int) -> None:
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
         """
-        if len(positions) == 0:
-            for component in self.components:
-                if component.type == ComponentType.Button:
-                    component.disabled = False
+        if not positions:
+            for button in self._buttons:
+                button.disabled = False
         else:
             for i in positions:
                 component = self.components[i]
@@ -490,25 +497,32 @@ class ActionRow(Component):
         self,
         *,
         style: ButtonStyle,
-        label: str = None,
-        emoji: str = None,
-        custom_id: str = None,
-        url: str = None,
+        label: Optional[str] = None,
+        emoji: Optional[str] = None,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
         disabled: bool = False,
-    ):
+    ) -> None:
         self.components.append(
-            Button(style=style, label=label, emoji=emoji, custom_id=custom_id, url=url, disabled=disabled)
+            Button(
+                style=style,
+                label=label,
+                emoji=emoji,
+                custom_id=custom_id,
+                url=url,
+                disabled=disabled,
+            )
         )
 
     def add_menu(
         self,
         *,
         custom_id: str,
-        placeholder: str = None,
+        placeholder: Optional[str] = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: List[SelectOption] = None,
-    ):
+        options: Optional[List[SelectOption]] = None,
+    ) -> None:
         self.components.append(
             SelectMenu(
                 custom_id=custom_id,
