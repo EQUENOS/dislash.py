@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 import discord
 from discord import PartialEmoji
 
-from .types import ComponentPayload, SelectMenuPayload, SelectOptionPayload
+from .types import ComponentPayload, SelectMenuPayload, SelectOptionPayload, ButtonStyle, ButtonPayload
 
 __all__ = (
     "auto_rows",
@@ -101,33 +101,6 @@ class ComponentType(int, Enum):
     ActionRow = 1
     Button = 2
     SelectMenu = 3
-
-
-class ButtonStyle(int, Enum):
-    """
-    Attributes
-    ----------
-    blurple = 1
-    grey    = 2
-    green   = 3
-    red     = 4
-    link    = 5
-    """
-
-    primary = 1
-    blurple = 1
-
-    secondary = 2
-    grey = 2
-    gray = 2
-
-    success = 3
-    green = 3
-
-    danger = 4
-    red = 4
-
-    link = 5
 
 
 class SelectOption:
@@ -368,16 +341,21 @@ class Button(Component):
         Whether the button is disabled or not. Defaults to false.
     """
 
+    style: ButtonStyle
+    label: Optional[str]
+    emoji: Optional[discord.PartialEmoji]
+    url: Optional[str]
+
     def __init__(
         self,
         *,
         style: ButtonStyle,
-        label: str = None,
-        emoji: Union[discord.PartialEmoji, str] = None,
-        custom_id: str = None,
-        url: str = None,
+        label: Optional[str] = None,
+        emoji: Optional[Union[discord.PartialEmoji, str]] = None,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
         disabled: bool = False,
-    ):
+    ) -> None:
         global ID_SOURCE  # Ugly as hell
 
         if custom_id is None:
@@ -402,7 +380,7 @@ class Button(Component):
         self.url = url
         self.disabled = disabled
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<Button custom_id={self.custom_id!r} label={self.label!r} "
             f"style={self.style!r} emoji={self.emoji!r} "
@@ -410,22 +388,27 @@ class Button(Component):
         )
 
     @property
-    def id(self):
+    def id(self) -> Optional[str]:
         return self.custom_id
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return Button(
+    def from_dict(cls, data: ButtonPayload) -> Button:
+        if emoji := data.get("emoji"):
+            emoji = discord.PartialEmoji.from_dict(emoji)
+        return cls(
             style=data["style"],
             label=data.get("label"),
-            emoji=discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None,
+            emoji=emoji,
             custom_id=data.get("custom_id"),
             url=data.get("url"),
             disabled=data.get("disabled", False),
         )
 
-    def to_dict(self):
-        payload = {"type": self.type, "style": self.style}
+    def to_dict(self) -> ButtonPayload:
+        payload = ButtonPayload(
+            type=self.type,
+            style=self.style,
+        )
         if self.label is not None:
             payload["label"] = self.label
         if self.emoji is not None:
