@@ -2,7 +2,7 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, cast, Dict, Iterable, List, Optional, Union
 
 import discord
 from discord import PartialEmoji
@@ -42,13 +42,16 @@ def _partial_emoji_converter(argument: str) -> discord.PartialEmoji:
     raise discord.InvalidArgument(f"Failed to convert {argument} to PartialEmoji")
 
 
-def _component_factory(data: dict) -> "Component":
+def _component_factory(data: ComponentPayload) -> Component:
     _type = data.get("type")
     if _type == 1:
+        data = cast(ActionRowPayload, data)
         return ActionRow.from_dict(data)
-    if _type == 2:
+    elif _type == 2:
+        data = cast(ButtonPayload, data)
         return Button.from_dict(data)
-    if _type == 3:
+    elif _type == 3:
+        data = cast(SelectMenuPayload, data)
         return SelectMenu.from_dict(data)
     raise ValueError("Invalid component type")
 
