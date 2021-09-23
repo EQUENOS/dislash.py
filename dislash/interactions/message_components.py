@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 import discord
 from discord import PartialEmoji
 
-from .types import ComponentPayload, SelectOptionPayload
+from .types import ComponentPayload, SelectMenuPayload, SelectOptionPayload
 
 __all__ = (
     "auto_rows",
@@ -256,16 +256,22 @@ class SelectMenu(Component):
         the list of chosen options, max 25
     """
 
+    placeholder: Optional[str] = None
+    min_values: int = 1
+    max_values: int = 1
+    options: List[SelectOption]
+    disabled: bool = False
+
     def __init__(
         self,
         *,
-        custom_id: str = None,
-        placeholder: str = None,
+        custom_id: Optional[str] = None,
+        placeholder: Optional[str] = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: List[SelectOption] = None,
+        options: Optional[List[SelectOption]] = None,
         disabled: bool = False,
-    ):
+    ) -> None:
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
@@ -275,48 +281,63 @@ class SelectMenu(Component):
         self.disabled = disabled
         self.selected_options: List[SelectOption] = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<SelectMenu custom_id={0.custom_id!r} placeholder={0.placeholder!r} "
             "min_values={0.min_values!r} max_values={0.max_values!r} options={0.options!r}"
             "disabled={0.disabled} selected_options={0.selected_options!r}>"
         ).format(self)
 
-    def _select_options(self, values: List[SelectOption]):
+    def _select_options(self, values: List[str]) -> None:
         self.selected_options = []
         for option in self.options:
             if option.value in values:
                 self.selected_options.append(option)
 
-    def add_option(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
+    def add_option(
+        self,
+        label: str,
+        value: str,
+        description: Optional[str] = None,
+        emoji: Optional[str] = None,
+        default: bool = False,
+    ) -> None:
         """
         Adds an option to the list of options of the menu.
         Parameters are the same as in :class:`SelectOption`.
         """
         self.options.append(
-            SelectOption(label=label, value=value, description=description, emoji=emoji, default=default)
+            SelectOption(
+                label=label,
+                value=value,
+                description=description,
+                emoji=emoji,
+                default=default
+            )
         )
 
     @classmethod
-    def from_dict(cls, data: dict):
-        options = data.get("options", [])
-        return SelectMenu(
+    def from_dict(cls, data: SelectMenuPayload) -> SelectMenu:
+        return cls(
             custom_id=data.get("custom_id"),
             placeholder=data.get("placeholder"),
             min_values=data.get("min_values", 1),
             max_values=data.get("max_values", 1),
-            options=[SelectOption.from_dict(o) for o in options],
+            options=[
+                SelectOption.from_dict(o) for o
+                in data.get("options", [])
+            ],
             disabled=data.get("disabled", False),
         )
 
-    def to_dict(self):
-        payload = {
-            "type": self.type,
-            "custom_id": self.custom_id,
-            "min_values": self.min_values,
-            "max_values": self.max_values,
-            "options": [o.to_dict() for o in self.options],
-        }
+    def to_dict(self) -> SelectMenuPayload:
+        payload = SelectMenuPayload(
+            type=self.type,
+            custom_id=self.custom_id,
+            min_values=self.min_values,
+            max_values=self.max_values,
+            options=[o.to_dict() for o in self.options],
+        )
         if self.placeholder:
             payload["placeholder"] = self.placeholder
         if self.disabled:

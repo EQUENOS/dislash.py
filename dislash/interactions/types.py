@@ -89,3 +89,10 @@ class ComponentPayload(TypedDict, total=False):
     disabled: bool
     custom_id: Optional[str]
     type: int
+
+
+class SelectMenuPayload(ComponentPayload, total=False):
+    placeholder: Optional[str]
+    min_values: int
+    max_values: int
+    options: List[SelectOptionPayload]
