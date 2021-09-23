@@ -56,7 +56,7 @@ def _component_factory(data: ComponentPayload) -> Component:
     raise ValueError("Invalid component type")
 
 
-def auto_rows(*buttons: "Button", max_in_row: int = 5):
+def auto_rows(*buttons: Button, max_in_row: int = 5) -> List[ActionRow]:
     """
     Distributes buttons across multiple rows
     and returns the list of rows.
@@ -85,7 +85,10 @@ def auto_rows(*buttons: "Button", max_in_row: int = 5):
     """
     if not (1 <= max_in_row <= 5):
         raise discord.InvalidArgument("max_in_row parameter should be between 1 and 5.")
-    return [ActionRow(*buttons[i : i + max_in_row]) for i in range(0, len(buttons), max_in_row)]
+    return [
+        ActionRow(*buttons[i : i + max_in_row]) for i
+        in range(0, len(buttons), max_in_row)
+    ]
 
 
 class SelectOption:
