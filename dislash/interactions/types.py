@@ -85,6 +85,22 @@ class SelectOptionPayload(TypedDict, total=False):
     default: bool
 
 
+class ComponentType(int, Enum):
+    """
+    An enumerator for component types.
+
+    Attributes
+    ----------
+    ActionRow = 1
+    Button = 2
+    SelectMenu = 3
+    """
+
+    ActionRow = 1
+    Button = 2
+    SelectMenu = 3
+
+
 class ComponentPayload(TypedDict, total=False):
     disabled: bool
     custom_id: Optional[str]
