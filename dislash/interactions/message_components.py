@@ -27,14 +27,12 @@ ID_SOURCE = 0
 MAX_ID = 25
 
 
-def _partial_emoji_converter(argument: str):
+def _partial_emoji_converter(argument: str) -> discord.PartialEmoji:
     if len(argument) < 5:
         # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
 
-    match = re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$", argument)
-
-    if match:
+    if match := re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$", argument):
         emoji_animated = bool(match.group(1))
         emoji_name = match.group(2)
         emoji_id = int(match.group(3))
