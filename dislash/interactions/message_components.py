@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -5,6 +6,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import discord
 from discord import PartialEmoji
+
+from .types import SelectOptionPayload
 
 __all__ = (
     "auto_rows",
@@ -147,14 +150,20 @@ class SelectOption:
 
     __slots__ = ("label", "value", "description", "emoji", "default")
 
+    label: str
+    value: str
+    description: Optional[str] = None
+    emoji: Optional[PartialEmoji] = None
+    default: bool = False
+
     def __init__(
         self,
         label: str,
         value: str,
-        description: str = None,
-        emoji: Union[str, PartialEmoji] = None,
+        description: Optional[str] = None,
+        emoji: Optional[Union[str, PartialEmoji]] = None,
         default: bool = False,
-    ):
+    ) -> None:
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
 
@@ -164,16 +173,17 @@ class SelectOption:
         self.emoji = emoji
         self.default = default
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<OptionSelect label={0.label!r} value={0.value!r} "
             "description={0.description!r} emoji={0.emoji!r} default={0.default!r}>"
         ).format(self)
 
     @classmethod
-    def from_dict(cls, data: dict):
-        emoji = discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None
-        return SelectOption(
+    def from_dict(cls, data: SelectOptionPayload) -> SelectOption:
+        if emoji := data.get("emoji"):
+            emoji = discord.PartialEmoji.from_dict(emoji)
+        return cls(
             label=data["label"],
             value=data["value"],
             description=data.get("description"),
@@ -181,11 +191,11 @@ class SelectOption:
             default=data.get("default", False),
         )
 
-    def to_dict(self):
-        data: Dict[str, Any] = {"label": self.label, "value": self.value}
-        if self.description:
+    def to_dict(self) -> SelectOptionPayload:
+        data = SelectOptionPayload(label=self.label, value=self.value)
+        if self.description is not None:
             data["description"] = self.description
-        if self.emoji:
+        if self.emoji is not None:
             data["emoji"] = self.emoji.to_dict()
         if self.default:
             data["default"] = self.default

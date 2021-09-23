@@ -1,6 +1,8 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Any, List, Optional, TypedDict, SupportsInt
+from typing import Any, List, Optional, TypedDict, SupportsInt, Union
+
+from discord import PartialEmoji
 
 
 class OptionType(int, Enum):
@@ -73,3 +75,11 @@ class RawCommandPermissionPayload(TypedDict):
 
 class ApplicationCommandPermissionsPayload(TypedDict):
     permissions: List[RawCommandPermissionPayload]
+
+
+class SelectOptionPayload(TypedDict, total=False):
+    label: str
+    value: str
+    description: Optional[str]
+    emoji: Optional[Union[str, PartialEmoji]]
+    default: bool
