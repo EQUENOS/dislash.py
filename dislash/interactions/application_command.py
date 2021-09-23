@@ -3,12 +3,21 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Hashable, List, Optional, TypeVar, Union
 
 import discord
 
 from .app_command_interaction import SlashInteraction
-from .types import OptionPayload, OptionChoicePayload
+from .types import (
+    ApplicationCommandPayload,
+    ApplicationCommandPermissionsPayload,
+    ApplicationCommandType,
+    OptionChoicePayload,
+    OptionPayload,
+    OptionType,
+    RawCommandPermissionPayload,
+    SlashCommandPayload,
+)
 
 __all__ = (
     "application_command_factory",
@@ -17,7 +26,6 @@ __all__ = (
     "SlashCommand",
     "UserCommand",
     "MessageCommand",
-    "OptionType",
     "OptionChoice",
     "Option",
     "OptionParam",
@@ -30,49 +38,18 @@ __all__ = (
 
 T_StrFloat = TypeVar('T_StrFloat', str, float)
 
-def application_command_factory(data: Dict[str, Any]) -> "ApplicationCommand":
+
+def application_command_factory(data: ApplicationCommandPayload) -> ApplicationCommand:
     cmd_type = data.get("type", 1)
     if cmd_type == ApplicationCommandType.CHAT_INPUT:
-        cmd = SlashCommand.from_dict(data)
+        data = typing.cast(SlashCommandPayload, data)
+        return SlashCommand.from_dict(data)
     elif cmd_type == ApplicationCommandType.USER:
-        cmd = UserCommand.from_dict(data)
+        return UserCommand.from_dict(data)
     elif cmd_type == ApplicationCommandType.MESSAGE:
-        cmd = MessageCommand.from_dict(data)
+        return MessageCommand.from_dict(data)
     else:
-        cmd = None
-
-    if cmd is not None:
-        return cmd
-
-    raise ValueError("Invalid command type")
-
-
-class OptionType(int, Enum):
-    """
-    Attributes
-    ----------
-    SUB_COMMAND = 1
-    SUB_COMMAND_GROUP = 2
-    STRING = 3
-    INTEGER = 4
-    BOOLEAN = 5
-    USER = 6
-    CHANNEL = 7
-    ROLE = 8
-    MENTIONABLE = 9
-    NUMBER = 10
-    """
-
-    SUB_COMMAND = 1
-    SUB_COMMAND_GROUP = 2
-    STRING = 3
-    INTEGER = 4
-    BOOLEAN = 5
-    USER = 6
-    CHANNEL = 7
-    ROLE = 8
-    MENTIONABLE = 9
-    NUMBER = 10
+        raise ValueError("Invalid command type")
 
 
 class OptionChoice:
@@ -85,14 +62,17 @@ class OptionChoice:
         the value of the option-choice
     """
 
-    def __init__(self, name: str, value: Any):
+    name: str
+    value: Any
+
+    def __init__(self, name: str, value: Any) -> None:
         self.name = name
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<OptionChoice name='{0.name}' value={0.value}>".format(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return self.name == other.name and self.value == other.value
 
 
@@ -271,7 +251,7 @@ class OptionParam:
         the option's converter, takes in an interaction and the argument
     """
 
-    TYPES: Dict[type, int] = {
+    TYPES: Dict[Hashable, int] = {
         str: 3,
         int: 4,
         bool: 5,
@@ -290,13 +270,18 @@ class OptionParam:
         float: 10,
     }
 
+    default: Any
+    name: Optional[str]
+    description: str
+    converter: Optional[Callable[[SlashInteraction, Any], Any]]
+
     def __init__(
         self,
-        default: Any = ...,
+        default: Any = None,
         *,
-        name: str = None,
-        description: str = None,
-        converter: Callable[[SlashInteraction, Any], Any] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        converter: Optional[Callable[[SlashInteraction, Any], Any]] = None,
     ) -> None:
         self.default = default
         self.name = name
@@ -304,10 +289,10 @@ class OptionParam:
         self.converter = converter
 
     @property
-    def required(self):
-        return self.default is ...
+    def required(self) -> bool:
+        return self.default is None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         string = "default={0.default} name='{0.name}' description='{0.description}'".format(self)
         return f"<Option {string}>"
 
@@ -315,26 +300,19 @@ class OptionParam:
 def option_param(
     default: Any = ...,
     *,
-    name: str = None,
-    desc: str = None,
-    description: str = None,
-    converter: Callable[[SlashInteraction, Any], Any] = None,
-) -> Any:
-    if desc and description:
+    name: Optional[str] = None,
+    desc: Optional[str] = None,
+    description: Optional[str] = None,
+    converter: Optional[Callable[[SlashInteraction, Any], Any]] = None,
+) -> OptionParam:
+    if desc is not None and description is not None:
         raise TypeError("Only desc or description may be used, not both")
     return OptionParam(default, name=name, description=desc or description, converter=converter)
 
 
-def option_enum(choices: Dict[str, T_StrFloat], **kwargs: T_StrFloat) -> typing.Type[T_StrFloat]:
+def option_enum(choices: Dict[str, T_StrFloat], **kwargs: T_StrFloat) -> Enum:
     choices = choices or kwargs
     return Enum('', choices, type=type(next(iter(choices.values()))))
-
-
-class ApplicationCommandType(int, Enum):
-    CHAT_INPUT = 1
-    SLASH = 1
-    USER = 2
-    MESSAGE = 3
 
 
 class ApplicationCommand(ABC):
@@ -342,61 +320,69 @@ class ApplicationCommand(ABC):
     Base class for application commands
     """
 
+    id: int
     name: str
+    type: ApplicationCommandType
+    application_id: Optional[int] = None
 
-    def __init__(self, type: ApplicationCommandType, **kwargs):
+    def __init__(self, type: ApplicationCommandType, **kwargs: Any) -> None:
         self.type = type
-        self.id: int = int(kwargs.pop("id", 0))
-        self.application_id = kwargs.pop("application_id", None)
-        if self.application_id:
-            self.application_id = int(self.application_id)
+        self.id = int(kwargs.get("id", 0))
+        if application_id := kwargs.get("application_id"):
+            self.application_id = int(application_id)
+        else:
+            self.application_id = application_id
 
-    def __eq__(self, other):
+    def __eq__(self, _):  # type: ignore
         return False
 
     @abstractmethod
-    def to_dict(self, **kwargs):
+    def to_dict(self) -> ApplicationCommandPayload:
         raise NotImplementedError
 
 
 class UserCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(ApplicationCommandType.USER, **kwargs)
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<UserCommand name={self.name!r}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return self.type == other.type and self.name == other.name
 
-    def to_dict(self, **kwargs):
+    def to_dict(self) -> ApplicationCommandPayload:
         return {"type": self.type, "name": self.name}
 
     @classmethod
-    def from_dict(cls, data: dict):
-        if data.pop("type", 1) == ApplicationCommandType.USER:
+    def from_dict(cls, data: ApplicationCommandPayload) -> UserCommand:
+        if data.get("type", 1) == ApplicationCommandType.USER:
             return UserCommand(**data)
+        else:
+            raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.USER}")
 
 
 class MessageCommand(ApplicationCommand):
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(ApplicationCommandType.MESSAGE, **kwargs)
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<MessageCommand name={self.name!r}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return self.type == other.type and self.name == other.name
 
-    def to_dict(self, **kwargs):
+    def to_dict(self) -> ApplicationCommandPayload:
         return {"type": self.type, "name": self.name}
 
     @classmethod
-    def from_dict(cls, data: dict):
-        if data.pop("type", 0) == ApplicationCommandType.MESSAGE:
+    def from_dict(cls, data: ApplicationCommandPayload) -> MessageCommand:
+        if data.get("type", 0) == ApplicationCommandType.MESSAGE:
             return MessageCommand(**data)
+        else:
+            raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.MESSAGE}")
 
 
 class SlashCommand(ApplicationCommand):
@@ -415,7 +401,18 @@ class SlashCommand(ApplicationCommand):
         Whether the command is enabled by default when the app is added to a guild
     """
 
-    def __init__(self, name: str, description: str, options: List[Option] = None, default_permission: bool = True, **kwargs):
+    options: List[Option]
+    default_permission: bool
+    permissions: SlashCommandPermissions
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        options: Optional[List[Option]] = None,
+        default_permission: bool = True,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
         assert (
@@ -428,10 +425,10 @@ class SlashCommand(ApplicationCommand):
         self.default_permission = default_permission
         self.permissions = SlashCommandPermissions()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SlashCommand name='{0.name}' description='{0.description}' options={0.options}>".format(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore
         return (
             self.type == other.type
             and self.name == other.name
@@ -440,33 +437,53 @@ class SlashCommand(ApplicationCommand):
         )
 
     @classmethod
-    def from_dict(cls, payload: dict):
-        if payload.pop("type", 1) != ApplicationCommandType.CHAT_INPUT:
-            return None
-        if "options" in payload:
-            payload["options"] = [Option.from_dict(p) for p in payload["options"]]
-        return SlashCommand(**payload)
+    def from_dict(cls, payload: SlashCommandPayload) -> SlashCommand:
+        if payload.get("type", 1) != ApplicationCommandType.CHAT_INPUT:
+            raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.CHAT_INPUT}")
+
+        options = payload.pop("options") or []
+        return SlashCommand(
+            id=payload["id"],
+            name=payload["name"],
+            description=payload["description"],
+            type=payload["type"],
+            default_permission=payload["default_permission"],
+            options=[
+                Option.from_dict(p) for p in options
+            ],
+        )
 
     def add_option(
         self,
         name: str,
-        description: str = None,
-        type: int = None,
+        description: Optional[str] = None,
+        type: int = 3,
         required: bool = False,
-        choices: List[OptionChoice] = None,
-        options: list = None,
-    ):
+        choices: Optional[List[OptionChoice]] = None,
+        options: Optional[List[Option]] = None,
+    ) -> None:
         """
         Adds an option to the current list of options
 
         Parameters are the same as for :class:`Option`
         """
         self.options.append(
-            Option(name=name, description=description, type=type, required=required, choices=choices, options=options)
+            Option(
+                name=name,
+                description=description,
+                type=type,
+                required=required,
+                choices=choices,
+                options=options
+            )
         )
 
-    def to_dict(self, *, hide_name=False):
-        res = {"type": self.type, "description": self.description, "options": [o.to_dict() for o in self.options]}
+    def to_dict(self, *, hide_name: bool = False) -> SlashCommandPayload:
+        res: SlashCommandPayload = {
+            "type": self.type,
+            "description": self.description,
+            "options": [o.to_dict() for o in self.options],
+        }
         if not self.default_permission:
             res["default_permission"] = False
         if not hide_name:
@@ -491,16 +508,18 @@ class ApplicationCommandPermissions:
         might be more convenient.
     """
 
-    def __init__(self, raw_permissions: list = None):
+    permissions: List[RawCommandPermission]
+
+    def __init__(self, raw_permissions: Optional[List[RawCommandPermission]] = None) -> None:
         self.permissions = raw_permissions or []
 
-    def __repr__(self):
-        return "<SlashCommandPermissions permissions={0.permissions!r}>".format(self)
+    def __repr__(self) -> str:
+        return "<{0.__name__} permissions={0.permissions!r}>".format(self)
 
     @classmethod
-    def from_pairs(cls, permissions: dict):
+    def from_pairs(cls, permissions: Dict[Union[discord.Role, discord.User], bool]) -> ApplicationCommandPermissions:
         """
-        Creates :class:`SlashCommandPermissions` using
+        Creates :class:`ApplicationCommandPermissions` using
         instances of :class:`discord.Role` and :class:`discord.User`
 
         Parameters
@@ -510,12 +529,16 @@ class ApplicationCommandPermissions:
         """
         raw_perms = [RawCommandPermission.from_pair(target, perm) for target, perm in permissions.items()]
 
-        return SlashCommandPermissions(raw_perms)
+        return ApplicationCommandPermissions(raw_perms)
 
     @classmethod
-    def from_ids(cls, role_perms: dict = None, user_perms: dict = None):
+    def from_ids(
+        cls,
+        role_perms: Optional[Dict[int, bool]] = None,
+        user_perms: Optional[Dict[int, bool]] = None,
+    ) -> ApplicationCommandPermissions:
         """
-        Creates :class:`SlashCommandPermissions` from
+        Creates :class:`ApplicationCommandPermissions` from
         2 dictionaries of IDs and permissions.
 
         Parameters
@@ -531,13 +554,13 @@ class ApplicationCommandPermissions:
 
         for user_id, perm in user_perms.items():
             raw_perms.append(RawCommandPermission(user_id, 2, perm))
-        return SlashCommandPermissions(raw_perms)
+        return ApplicationCommandPermissions(raw_perms)
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: ApplicationCommandPermissionsPayload) -> ApplicationCommandPermissions:
         return SlashCommandPermissions([RawCommandPermission.from_dict(perm) for perm in data["permissions"]])
 
-    def to_dict(self):
+    def to_dict(self) -> ApplicationCommandPermissionsPayload:
         return {"permissions": [perm.to_dict() for perm in self.permissions]}
 
 
@@ -557,16 +580,20 @@ class RawCommandPermission:
 
     __slots__ = ("id", "type", "permission")
 
-    def __init__(self, id: int, type: int, permission: bool):
+    id: int
+    type: int
+    permission: bool
+
+    def __init__(self, id: int, type: int, permission: bool) -> None:
         self.id = id
         self.type = type
         self.permission = permission
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RawCommandPermission id={0.id} type={0.type} permission={0.permission}>".format(self)
 
     @classmethod
-    def from_pair(cls, target: Union[discord.Role, discord.User], permission: bool):
+    def from_pair(cls, target: Union[discord.Role, discord.User], permission: bool) -> RawCommandPermission:
         if not isinstance(target, (discord.Role, discord.User)):
             raise discord.InvalidArgument("target should be Role or User")
         if not isinstance(permission, bool):
@@ -576,10 +603,10 @@ class RawCommandPermission:
         )
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return RawCommandPermission(id=data["id"], type=data["type"], permission=data["permission"])
+    def from_dict(cls, data: RawCommandPermissionPayload) -> RawCommandPermission:
+        return RawCommandPermission(**data)
 
-    def to_dict(self):
+    def to_dict(self) -> RawCommandPermissionPayload:
         return {"id": self.id, "type": self.type, "permission": self.permission}
 
 
