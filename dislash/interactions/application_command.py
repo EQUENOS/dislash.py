@@ -328,7 +328,8 @@ class ApplicationCommand(ABC):
     def __init__(self, type: ApplicationCommandType, **kwargs: Any) -> None:
         self.type = type
         self.id = int(kwargs.get("id", 0))
-        if application_id := kwargs.get("application_id"):
+        application_id = kwargs.get("application_id")
+        if application_id is not None:
             self.application_id = int(application_id)
         else:
             self.application_id = application_id

@@ -32,7 +32,8 @@ def _partial_emoji_converter(argument: str) -> discord.PartialEmoji:
         # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
 
-    if match := re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$", argument):
+    match = re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$", argument)
+    if match is not None:
         emoji_animated = bool(match.group(1))
         emoji_name = match.group(2)
         emoji_id = int(match.group(3))
@@ -142,7 +143,8 @@ class SelectOption:
 
     @classmethod
     def from_dict(cls, data: SelectOptionPayload) -> SelectOption:
-        if emoji := data.get("emoji"):
+        emoji = data.get("emoji")
+        if emoji is not None:
             emoji = discord.PartialEmoji.from_dict(emoji)
         return cls(
             label=data["label"],
@@ -381,7 +383,8 @@ class Button(Component):
 
     @classmethod
     def from_dict(cls, data: ButtonPayload) -> Button:
-        if emoji := data.get("emoji"):
+        emoji = data.get("emoji")
+        if emoji is not None:
             emoji = discord.PartialEmoji.from_dict(emoji)
         return cls(
             style=data["style"],
