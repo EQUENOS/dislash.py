@@ -1,6 +1,8 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Any, List, Optional, TypedDict, SupportsInt
+from typing import Any, ByteString, List, Optional, TypedDict, SupportsInt, Union
+
+from discord import PartialEmoji
 
 
 class OptionType(int, Enum):
@@ -73,3 +75,78 @@ class RawCommandPermissionPayload(TypedDict):
 
 class ApplicationCommandPermissionsPayload(TypedDict):
     permissions: List[RawCommandPermissionPayload]
+
+
+class SelectOptionPayload(TypedDict, total=False):
+    label: str
+    value: str
+    description: Optional[str]
+    emoji: Optional[Union[str, PartialEmoji]]
+    default: bool
+
+
+class ComponentType(int, Enum):
+    """
+    An enumerator for component types.
+
+    Attributes
+    ----------
+    ActionRow = 1
+    Button = 2
+    SelectMenu = 3
+    """
+
+    ActionRow = 1
+    Button = 2
+    SelectMenu = 3
+
+
+class ComponentPayload(TypedDict, total=False):
+    disabled: bool
+    custom_id: Optional[str]
+    type: int
+
+
+class SelectMenuPayload(ComponentPayload, total=False):
+    placeholder: Optional[str]
+    min_values: int
+    max_values: int
+    options: List[SelectOptionPayload]
+
+
+class ButtonStyle(int, Enum):
+    """
+    Attributes
+    ----------
+    blurple = 1
+    grey    = 2
+    green   = 3
+    red     = 4
+    link    = 5
+    """
+
+    primary = 1
+    blurple = 1
+
+    secondary = 2
+    grey = 2
+    gray = 2
+
+    success = 3
+    green = 3
+
+    danger = 4
+    red = 4
+
+    link = 5
+
+
+class ButtonPayload(ComponentPayload, total=False):
+    style: ButtonStyle
+    label: Optional[str]
+    emoji: Optional[Union[PartialEmoji, str]]
+    url: Optional[str]
+
+
+class ActionRowPayload(ComponentPayload):
+    components: Optional[List[ComponentPayload]]

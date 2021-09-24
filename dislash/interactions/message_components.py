@@ -1,10 +1,13 @@
+from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, cast, Dict, Iterable, List, Optional, Union
 
 import discord
 from discord import PartialEmoji
+
+from .types import ActionRowPayload, ComponentPayload, SelectMenuPayload, SelectOptionPayload, ButtonStyle, ButtonPayload, ComponentType
 
 __all__ = (
     "auto_rows",
@@ -24,14 +27,13 @@ ID_SOURCE = 0
 MAX_ID = 25
 
 
-def _partial_emoji_converter(argument: str):
+def _partial_emoji_converter(argument: str) -> discord.PartialEmoji:
     if len(argument) < 5:
         # Sometimes unicode emojis are actually more than 1 symbol
         return discord.PartialEmoji(name=argument)
 
     match = re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>$", argument)
-
-    if match:
+    if match is not None:
         emoji_animated = bool(match.group(1))
         emoji_name = match.group(2)
         emoji_id = int(match.group(3))
@@ -41,18 +43,21 @@ def _partial_emoji_converter(argument: str):
     raise discord.InvalidArgument(f"Failed to convert {argument} to PartialEmoji")
 
 
-def _component_factory(data: dict) -> "Component":
+def _component_factory(data: ComponentPayload) -> Component:
     _type = data.get("type")
     if _type == 1:
+        data = cast(ActionRowPayload, data)
         return ActionRow.from_dict(data)
-    if _type == 2:
+    elif _type == 2:
+        data = cast(ButtonPayload, data)
         return Button.from_dict(data)
-    if _type == 3:
+    elif _type == 3:
+        data = cast(SelectMenuPayload, data)
         return SelectMenu.from_dict(data)
     raise ValueError("Invalid component type")
 
 
-def auto_rows(*buttons: "Button", max_in_row: int = 5):
+def auto_rows(*buttons: Button, max_in_row: int = 5) -> List[ActionRow]:
     """
     Distributes buttons across multiple rows
     and returns the list of rows.
@@ -81,50 +86,10 @@ def auto_rows(*buttons: "Button", max_in_row: int = 5):
     """
     if not (1 <= max_in_row <= 5):
         raise discord.InvalidArgument("max_in_row parameter should be between 1 and 5.")
-    return [ActionRow(*buttons[i : i + max_in_row]) for i in range(0, len(buttons), max_in_row)]
-
-
-class ComponentType(int, Enum):
-    """
-    An enumerator for component types.
-
-    Attributes
-    ----------
-    ActionRow = 1
-    Button = 2
-    SelectMenu = 3
-    """
-
-    ActionRow = 1
-    Button = 2
-    SelectMenu = 3
-
-
-class ButtonStyle(int, Enum):
-    """
-    Attributes
-    ----------
-    blurple = 1
-    grey    = 2
-    green   = 3
-    red     = 4
-    link    = 5
-    """
-
-    primary = 1
-    blurple = 1
-
-    secondary = 2
-    grey = 2
-    gray = 2
-
-    success = 3
-    green = 3
-
-    danger = 4
-    red = 4
-
-    link = 5
+    return [
+        ActionRow(*buttons[i : i + max_in_row]) for i
+        in range(0, len(buttons), max_in_row)
+    ]
 
 
 class SelectOption:
@@ -147,14 +112,20 @@ class SelectOption:
 
     __slots__ = ("label", "value", "description", "emoji", "default")
 
+    label: str
+    value: str
+    description: Optional[str] = None
+    emoji: Optional[PartialEmoji] = None
+    default: bool = False
+
     def __init__(
         self,
         label: str,
         value: str,
-        description: str = None,
-        emoji: Union[str, PartialEmoji] = None,
+        description: Optional[str] = None,
+        emoji: Optional[Union[str, PartialEmoji]] = None,
         default: bool = False,
-    ):
+    ) -> None:
         if isinstance(emoji, str):
             emoji = _partial_emoji_converter(emoji)
 
@@ -164,16 +135,18 @@ class SelectOption:
         self.emoji = emoji
         self.default = default
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<OptionSelect label={0.label!r} value={0.value!r} "
             "description={0.description!r} emoji={0.emoji!r} default={0.default!r}>"
         ).format(self)
 
     @classmethod
-    def from_dict(cls, data: dict):
-        emoji = discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None
-        return SelectOption(
+    def from_dict(cls, data: SelectOptionPayload) -> SelectOption:
+        emoji = data.get("emoji")
+        if emoji is not None:
+            emoji = discord.PartialEmoji.from_dict(emoji)
+        return cls(
             label=data["label"],
             value=data["value"],
             description=data.get("description"),
@@ -181,11 +154,11 @@ class SelectOption:
             default=data.get("default", False),
         )
 
-    def to_dict(self):
-        data: Dict[str, Any] = {"label": self.label, "value": self.value}
-        if self.description:
+    def to_dict(self) -> SelectOptionPayload:
+        data = SelectOptionPayload(label=self.label, value=self.value)
+        if self.description is not None:
             data["description"] = self.description
-        if self.emoji:
+        if self.emoji is not None:
             data["emoji"] = self.emoji.to_dict()
         if self.default:
             data["default"] = self.default
@@ -199,12 +172,13 @@ class Component(ABC):
 
     disabled: bool
     custom_id: Optional[str]
+    type: int
 
-    def __init__(self, type: int):
+    def __init__(self, type: int) -> None:
         self.type = type
 
     @abstractmethod
-    def to_dict(self):
+    def to_dict(self) -> ComponentPayload:
         raise NotImplementedError
 
 
@@ -245,16 +219,22 @@ class SelectMenu(Component):
         the list of chosen options, max 25
     """
 
+    placeholder: Optional[str] = None
+    min_values: int = 1
+    max_values: int = 1
+    options: List[SelectOption]
+    disabled: bool = False
+
     def __init__(
         self,
         *,
-        custom_id: str = None,
-        placeholder: str = None,
+        custom_id: Optional[str] = None,
+        placeholder: Optional[str] = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: List[SelectOption] = None,
+        options: Optional[List[SelectOption]] = None,
         disabled: bool = False,
-    ):
+    ) -> None:
         super().__init__(3)
         self.custom_id = custom_id or "0"
         self.placeholder = placeholder
@@ -264,48 +244,63 @@ class SelectMenu(Component):
         self.disabled = disabled
         self.selected_options: List[SelectOption] = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<SelectMenu custom_id={0.custom_id!r} placeholder={0.placeholder!r} "
             "min_values={0.min_values!r} max_values={0.max_values!r} options={0.options!r}"
             "disabled={0.disabled} selected_options={0.selected_options!r}>"
         ).format(self)
 
-    def _select_options(self, values: List[SelectOption]):
+    def _select_options(self, values: List[str]) -> None:
         self.selected_options = []
         for option in self.options:
             if option.value in values:
                 self.selected_options.append(option)
 
-    def add_option(self, label: str, value: str, description: str = None, emoji: str = None, default: bool = False):
+    def add_option(
+        self,
+        label: str,
+        value: str,
+        description: Optional[str] = None,
+        emoji: Optional[str] = None,
+        default: bool = False,
+    ) -> None:
         """
         Adds an option to the list of options of the menu.
         Parameters are the same as in :class:`SelectOption`.
         """
         self.options.append(
-            SelectOption(label=label, value=value, description=description, emoji=emoji, default=default)
+            SelectOption(
+                label=label,
+                value=value,
+                description=description,
+                emoji=emoji,
+                default=default
+            )
         )
 
     @classmethod
-    def from_dict(cls, data: dict):
-        options = data.get("options", [])
-        return SelectMenu(
+    def from_dict(cls, data: SelectMenuPayload) -> SelectMenu:
+        return cls(
             custom_id=data.get("custom_id"),
             placeholder=data.get("placeholder"),
             min_values=data.get("min_values", 1),
             max_values=data.get("max_values", 1),
-            options=[SelectOption.from_dict(o) for o in options],
+            options=[
+                SelectOption.from_dict(o) for o
+                in data.get("options", [])
+            ],
             disabled=data.get("disabled", False),
         )
 
-    def to_dict(self):
-        payload = {
-            "type": self.type,
-            "custom_id": self.custom_id,
-            "min_values": self.min_values,
-            "max_values": self.max_values,
-            "options": [o.to_dict() for o in self.options],
-        }
+    def to_dict(self) -> SelectMenuPayload:
+        payload = SelectMenuPayload(
+            type=self.type,
+            custom_id=self.custom_id,
+            min_values=self.min_values,
+            max_values=self.max_values,
+            options=[o.to_dict() for o in self.options],
+        )
         if self.placeholder:
             payload["placeholder"] = self.placeholder
         if self.disabled:
@@ -336,16 +331,21 @@ class Button(Component):
         Whether the button is disabled or not. Defaults to false.
     """
 
+    style: ButtonStyle
+    label: Optional[str]
+    emoji: Optional[discord.PartialEmoji]
+    url: Optional[str]
+
     def __init__(
         self,
         *,
         style: ButtonStyle,
-        label: str = None,
-        emoji: Union[discord.PartialEmoji, str] = None,
-        custom_id: str = None,
-        url: str = None,
+        label: Optional[str] = None,
+        emoji: Optional[Union[discord.PartialEmoji, str]] = None,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
         disabled: bool = False,
-    ):
+    ) -> None:
         global ID_SOURCE  # Ugly as hell
 
         if custom_id is None:
@@ -370,7 +370,7 @@ class Button(Component):
         self.url = url
         self.disabled = disabled
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<Button custom_id={self.custom_id!r} label={self.label!r} "
             f"style={self.style!r} emoji={self.emoji!r} "
@@ -378,22 +378,28 @@ class Button(Component):
         )
 
     @property
-    def id(self):
+    def id(self) -> Optional[str]:
         return self.custom_id
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return Button(
+    def from_dict(cls, data: ButtonPayload) -> Button:
+        emoji = data.get("emoji")
+        if emoji is not None:
+            emoji = discord.PartialEmoji.from_dict(emoji)
+        return cls(
             style=data["style"],
             label=data.get("label"),
-            emoji=discord.PartialEmoji.from_dict(data["emoji"]) if "emoji" in data else None,
+            emoji=emoji,
             custom_id=data.get("custom_id"),
             url=data.get("url"),
             disabled=data.get("disabled", False),
         )
 
-    def to_dict(self):
-        payload = {"type": self.type, "style": self.style}
+    def to_dict(self) -> ButtonPayload:
+        payload = ButtonPayload(
+            type=self.type,
+            style=self.style,
+        )
         if self.label is not None:
             payload["label"] = self.label
         if self.emoji is not None:
@@ -418,6 +424,8 @@ class ActionRow(Component):
         a list of up to 5 buttons to place in a row
     """
 
+    components: List[Component]
+
     def __init__(self, *components: Component):
         self._limit = 5
         if len(components) > self._limit:
@@ -426,45 +434,50 @@ class ActionRow(Component):
             raise discord.InvalidArgument("components must be a list of Component")
 
         super().__init__(1)
-        self.components = list(components)
+        self.components = list(*components)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionRow components={0.components!r}>".format(self)
 
     @property
-    def buttons(self):
+    def buttons(self) -> List[Component]:
         return self.components
 
+    @property
+    def _buttons(self) -> Iterable[Button]:
+        return (c for c in self.components if isinstance(c, Button))
+
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: ActionRowPayload) -> ActionRow:
         buttons = [_component_factory(elem) for elem in data.get("components", [])]
-        return ActionRow(*buttons)
+        return cls(*buttons)
 
-    def to_dict(self):
-        return {"type": self.type, "components": [comp.to_dict() for comp in self.components]}
+    def to_dict(self) -> ActionRowPayload:
+        return ActionRowPayload(
+            type=self.type,
+            components=[c.to_dict() for c in self.components],
+        )
 
-    def disable_buttons(self, *positions: int):
+    def disable_buttons(self, *positions: int) -> None:
         """
         Sets ``disabled`` to ``True`` for all buttons in this row.
         """
-        if len(positions) == 0:
-            for component in self.components:
-                if component.type == ComponentType.Button:
-                    component.disabled = True
+        if not positions:
+            for button in self._buttons:
+                button.disabled = True
         else:
             for i in positions:
                 component = self.components[i]
                 if component.type == ComponentType.Button:
                     component.disabled = True
 
-    def enable_buttons(self, *positions: int):
+    def enable_buttons(self, *positions: int) -> None:
         """
         Sets ``disabled`` to ``False`` for all buttons in this row.
         """
-        if len(positions) == 0:
-            for component in self.components:
-                if component.type == ComponentType.Button:
-                    component.disabled = False
+        if not positions:
+            for button in self._buttons:
+                button.disabled = False
         else:
             for i in positions:
                 component = self.components[i]
@@ -475,25 +488,32 @@ class ActionRow(Component):
         self,
         *,
         style: ButtonStyle,
-        label: str = None,
-        emoji: str = None,
-        custom_id: str = None,
-        url: str = None,
+        label: Optional[str] = None,
+        emoji: Optional[str] = None,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
         disabled: bool = False,
-    ):
+    ) -> None:
         self.components.append(
-            Button(style=style, label=label, emoji=emoji, custom_id=custom_id, url=url, disabled=disabled)
+            Button(
+                style=style,
+                label=label,
+                emoji=emoji,
+                custom_id=custom_id,
+                url=url,
+                disabled=disabled,
+            )
         )
 
     def add_menu(
         self,
         *,
         custom_id: str,
-        placeholder: str = None,
+        placeholder: Optional[str] = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: List[SelectOption] = None,
-    ):
+        options: Optional[List[SelectOption]] = None,
+    ) -> None:
         self.components.append(
             SelectMenu(
                 custom_id=custom_id,
