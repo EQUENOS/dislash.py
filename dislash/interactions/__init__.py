@@ -5,3 +5,4 @@ from .message_components import *
 from .application_command import *
 # for correct annotations
 from .application_command import option_param as OptionParam
+from .types import *

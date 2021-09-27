@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 import discord
 
 from .interaction import *
+from .types import OptionType
 
 __all__ = (
     "InteractionDataOption",
@@ -27,6 +28,10 @@ class Resolved:
 
         users = data.get("users", {})
         members = data.get("members", {})
+        roles = data.get("roles", {})
+        channels = data.get("channels", {})
+        messages = data.get("messages", {})
+
         for ID, data in users.items():
             user_id = int(ID)
             if ID in members:
@@ -36,16 +41,16 @@ class Resolved:
             else:
                 self.users[user_id] = discord.User(state=state, data=data)
 
-        for ID, data in data.get("roles", {}).items():
+        for ID, data in roles.items():
             self.roles[int(ID)] = discord.Role(guild=guild, state=state, data=data)
 
-        for ID, data in data.get("channels", {}).items():
+        for ID, data in channels.items():
             data["position"] = 0
             factory, ch_type = discord.channel._channel_factory(data["type"])
             if factory:
                 self.channels[int(ID)] = factory(guild=guild, data=data, state=state)
 
-        for ID, data in data.get("messages", {}).items():
+        for ID, data in messages.items():
             channel_id = int(data["channel_id"])
             channel = guild.get_channel(channel_id) if guild else None
             if channel is None:
@@ -100,41 +105,26 @@ class InteractionDataOption:
 
     def __init__(self, *, data, resolved: Resolved):
         self.name: str = data["name"]
+        self.type: int = data["type"]
         self.value: Any = data.get("value")
-        # Some devices may return old-formatted Interactions
-        # We have to figure out the best matching type in this case
-        if "type" in data:
-            self.type = data["type"]
-        elif isinstance(self.value, bool):
-            self.type = 5
-        elif isinstance(self.value, int):
-            self.type = 4
-        else:
-            self.type = 3
         # Type 6 and higher requires resolved data
-        if self.type == 6:
+        if self.type == OptionType.USER:
             self.value = int(self.value)
             if self.value in resolved.members:
                 self.value = resolved.members[self.value]
             elif self.value in resolved.users:
                 self.value = resolved.users[self.value]
-        elif self.type == 7:
+        elif self.type == OptionType.CHANNEL:
             self.value = int(self.value)
             if self.value in resolved.channels:
                 self.value = resolved.channels[self.value]
-        elif self.type == 8:
+        elif self.type == OptionType.ROLE:
             self.value = int(self.value)
             if self.value in resolved.roles:
                 self.value = resolved.roles[self.value]
-        elif self.type == 9:
+        elif self.type == OptionType.MENTIONABLE:
             self.value = int(self.value)
-            value = resolved.get(self.value)
-            if value is not None:
-                self.value = value
-        # I'm not sure if this is still useful
-        # They've probably updated arg validation on all platforms
-        if self.type > 5 and isinstance(self.value, str):
-            self.value = int(self.value)
+            self.value = resolved.get(self.value, self.value)
         # Converting sub options
         self.options: Dict[str, InteractionDataOption] = {
             o["name"]: InteractionDataOption(data=o, resolved=resolved) for o in data.get("options", [])
@@ -322,6 +312,7 @@ class SlashInteractionData(ApplicationCommandInteractionData):
             the option located at the specified index
         """
         return list(self.options.values())[index] if 0 <= index < len(self.options) else None
+
 
 class ContextMenuInteractionData(ApplicationCommandInteractionData):
     def __init__(self, data, guild, state):

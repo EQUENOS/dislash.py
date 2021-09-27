@@ -166,14 +166,14 @@ class Option:
             name=payload["name"],
             description=payload["description"],
             type=payload["type"],
-            required=payload["required"],
+            required=payload.get("required", False),
             options=[
                 Option.from_dict(p) for p
                 in payload.get("options", ())
             ],
             choices=[
                 OptionChoice(**p) for p
-                in payload.get("options", ())
+                in payload.get("choices", ())
             ],
         )
 
@@ -344,6 +344,7 @@ class ApplicationCommand(ABC):
 
 class UserCommand(ApplicationCommand):
     def __init__(self, name: str, **kwargs: Any) -> None:
+        kwargs.pop('type', 0)
         super().__init__(ApplicationCommandType.USER, **kwargs)
         self.name = name
 
@@ -366,6 +367,7 @@ class UserCommand(ApplicationCommand):
 
 class MessageCommand(ApplicationCommand):
     def __init__(self, name: str, **kwargs: Any) -> None:
+        kwargs.pop('type', 0)
         super().__init__(ApplicationCommandType.MESSAGE, **kwargs)
         self.name = name
 
@@ -414,6 +416,7 @@ class SlashCommand(ApplicationCommand):
         default_permission: bool = True,
         **kwargs: Any,
     ) -> None:
+        kwargs.pop('type', 0)
         super().__init__(ApplicationCommandType.CHAT_INPUT, **kwargs)
 
         assert (
@@ -448,7 +451,7 @@ class SlashCommand(ApplicationCommand):
             name=payload["name"],
             description=payload["description"],
             type=payload["type"],
-            default_permission=payload["default_permission"],
+            default_permission=payload.get("default_permission", True),
             options=[
                 Option.from_dict(p) for p in options
             ],

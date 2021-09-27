@@ -1,11 +1,19 @@
 from __future__ import annotations
-from enum import Enum
-from typing import Any, ByteString, List, Optional, TypedDict, SupportsInt, Union
+from enum import IntEnum
+from typing import Any, List, Optional, TypedDict, SupportsInt, Union
 
 from discord import PartialEmoji
 
 
-class OptionType(int, Enum):
+__all__ = (
+    'OptionType',
+    'ComponentType',
+    'ApplicationCommandType',
+    'ButtonStyle',
+)
+
+
+class OptionType(IntEnum):
     """
     Attributes
     ----------
@@ -47,7 +55,7 @@ class OptionPayload(TypedDict, total=False):
     options: List[OptionPayload]  # type: ignore
 
 
-class ApplicationCommandType(int, Enum):
+class ApplicationCommandType(IntEnum):
     CHAT_INPUT = 1
     SLASH = 1
     USER = 2
@@ -85,7 +93,7 @@ class SelectOptionPayload(TypedDict, total=False):
     default: bool
 
 
-class ComponentType(int, Enum):
+class ComponentType(IntEnum):
     """
     An enumerator for component types.
 
@@ -114,7 +122,7 @@ class SelectMenuPayload(ComponentPayload, total=False):
     options: List[SelectOptionPayload]
 
 
-class ButtonStyle(int, Enum):
+class ButtonStyle(IntEnum):
     """
     Attributes
     ----------

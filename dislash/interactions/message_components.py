@@ -1,8 +1,7 @@
 from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Any, cast, Dict, Iterable, List, Optional, Union
+from typing import cast, Iterable, List, Optional, Union
 
 import discord
 from discord import PartialEmoji
@@ -114,9 +113,9 @@ class SelectOption:
 
     label: str
     value: str
-    description: Optional[str] = None
-    emoji: Optional[PartialEmoji] = None
-    default: bool = False
+    description: str
+    emoji: PartialEmoji
+    default: bool
 
     def __init__(
         self,
