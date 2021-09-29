@@ -445,7 +445,7 @@ class SlashCommand(ApplicationCommand):
         if payload.get("type", 1) != ApplicationCommandType.CHAT_INPUT:
             raise ValueError(f"{cls.__name__} type can be only {ApplicationCommandType.CHAT_INPUT}")
 
-        options = payload.pop("options") or []
+        options = payload.pop("options", [])
         return SlashCommand(
             id=payload["id"],
             name=payload["name"],
