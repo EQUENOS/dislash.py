@@ -433,7 +433,7 @@ class ActionRow(Component):
             raise discord.InvalidArgument("components must be a list of Component")
 
         super().__init__(1)
-        self.components = list(*components)
+        self.components = list(components)
 
     def __repr__(self) -> str:
         return "<ActionRow components={0.components!r}>".format(self)
