@@ -329,8 +329,9 @@ class BaseInteraction:
             _components = None
 
         if components is not None:
-            if len(components) > 5:
+            if not isinstance(components, list) or len(components) > 5:
                 raise discord.InvalidArgument("components must be a list of up to 5 action rows")
+
             _components = _components or []
             for comp in components:
                 if isinstance(comp, ActionRow):
