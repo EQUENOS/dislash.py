@@ -1,6 +1,6 @@
 # Warning
 
-This library is no longer maintained in favour of **[disnake](https://github.com/DisnakeDev/disnake)**. Disnake is an updated version of discord.py with the latest API features implemented. The syntax for slash commands is very convenient so we really recommend using disnake if you're planning to switch to slash commands before April 2022.
+This library is no longer maintained in favor of **[disnake](https://github.com/DisnakeDev/disnake)**. Disnake is an updated version of discord.py with the latest API features implemented. The syntax for slash commands is very convenient so we really recommend using disnake if you're planning to switch to slash commands before April 2022.
 
 If you have any questions, join [Our Discord Server](https://discord.gg/gJDbCw8aQy)
 
